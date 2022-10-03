@@ -2072,7 +2072,7 @@ plot_names <- c("linear_rise", "linear_fall",
                 "linear_rise_sharp_fall", "linear_rise_sharp_fall_exp_rise")
 
 # Read Data and Create Folder for Saving Files
-data <- read.csv('data.csv') 
+data <- read.csv('./data/data.csv')
 dir.create("plots/analysis_plots")
 
 ## ================================= (1) Perform Exclusions and Process Data =====================================
@@ -2090,7 +2090,7 @@ d_raw <- PerformExclusions(data) #num_rows = num_ss
 n_after_exclusions <- d_raw$n_after_exclusions[1]
 num_subjects_and_plots <- n_after_exclusions*n_plots 
 
-data_long <- Preprocess(data_clean, n_plots, plot_names) #num_rows = num_ss*num_plots [to see data without exclusions, replace data_clean with data]
+data_long <- Preprocess(d_raw, n_plots, plot_names) #num_rows = num_ss*num_plots [to see data without exclusions, replace data_clean with data]
 data_long[, c("meaningfulness", "personal_desirability")] <- sapply(data_long[, c("meaningfulness", "personal_desirability")], as.numeric) #turn ratings to numeric
 
 

@@ -572,7 +572,7 @@ if(plot_experiment_figures == TRUE) {
     sapply(my_equations[i], plotter, "Age", "Happiness", c(start_age, end_age), c(0, end_y_axis))
     dev.off()
   }
-  dir.create("e1b_basic_effect/lifeline_plots")
+  dir.create("e1b_basic_effect/lifeline_plots", recursive = TRUE)
   plot_individuals <- c(list.files(pattern = ".png"))
   file.move(plot_individuals, "e1b_basic_effect/lifeline_plots", overwrite = TRUE)
   file.move('featuresZ.csv', "e1b_basic_effect/lifeline_plots", overwrite = TRUE)
@@ -786,7 +786,7 @@ for(plot in plot_array) {
   dev.off()
 }
 
-dir.create("e2_early_cutoffs/lifeline_plots")
+dir.create("e2_early_cutoffs/lifeline_plots", recursive = TRUE)
 files_2 <- c("early_cutoff_plots.pdf", "d1_cutoff_plots.pdf", "d2_cutoff_plots.pdf", "featuresZ_early_cutoff.csv")
 file.move(files_2, "e2_early_cutoffs/lifeline_plots", overwrite = TRUE)
 

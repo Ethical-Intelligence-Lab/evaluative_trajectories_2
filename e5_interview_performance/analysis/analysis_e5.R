@@ -1625,7 +1625,7 @@ plot_names <- c("linear_rise", "linear_fall",
                 "linear_rise_sharp_fall", "linear_rise_sharp_fall_exp_rise")
 
 # Read Data and Create Folder for Saving Files
-d <- read.csv('data/data.csv') 
+e5_data <- read.csv('./data/data.csv')
 dir.create("analysis_plots")
 
 ## ================================= (1) Perform Exclusions and Process Data =====================================
@@ -1651,7 +1651,7 @@ e5_data_long[, "hiring_likelihood"] <- sapply(e5_data_long[, "hiring_likelihood"
 analyze_words <- GetWordAnalysis(e5_data_long, n_plots)
 words_df <- as.data.frame(matrix(unlist(analyze_words), ncol = length(unlist(analyze_words[1]))))
 analyze_words_df <- cbind(plot_names = plot_names, words = words_df$V1)
-write.csv(analyze_words_df, "word_analysis_e5.csv", row.names = FALSE) #create word analysis csv for google colab code
+write.csv(analyze_words_df, "data/word_analysis_e5.csv", row.names = FALSE) #create word analysis csv for google colab code
 
 
 ### (ii) CREATE SEMANTIC EMBEDDINGS DATAFRAME [**NB: YOU NEED TO HAVE ALREADY EXTRACTED EMBEDDINGS FOR word_analysis_e5.csv]

@@ -49,8 +49,6 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
                                          ##FUNCTIONS##
 ##================================================================================================================
 
-data <- d_raw
-
 PerformExclusions <- function(data) {
     "
     Excludes participants if they do not finish the survey, finished it too quickly (under 120 seconds), 
