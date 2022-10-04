@@ -25,7 +25,7 @@ source2 <- function(file, start, end, ...) {
 }
 
 # Set working directory 
-#setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #set working directoy to current directory
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #set working directoy to current directory
 #setwd("..") #go one directory up
 #source2("Lifelines_Generate_Plots.R", 0, 545) #only get the defined functions and standardized features data frame
 #setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #go back to current directory
@@ -36,8 +36,8 @@ source2 <- function(file, start, end, ...) {
 ## -------------------------------------------------------------------------------------------------------------
 
 ## (1) Define and Save Standardized Features Data Frame 
-df <- z_scorer(features)
-write.csv(df, 'featuresZ.csv')
+#df <- z_scorer(features)
+#write.csv(df, 'featuresZ.csv')
 
 
 ## (2) Plot the functions

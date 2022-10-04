@@ -353,8 +353,8 @@ MakeGroupedBarPlotImages <- function(LifelinesPlot, plot_names) {
     
     # Make "clean" (no labels) version of individual images for x-axis
     Plotter_2 <- function(equation, x_range, y_range) {
-      start_age <- 10
-      end_age <- 100
+      start_age <- 0
+      end_age <- 80
       end_y_axis <- 100
       plot(equation, lwd = 30, xlim = c(start_age, end_age), ylim = c(0, end_y_axis), main = "",
            xlab = "", ylab = "", axes = FALSE, col = "firebrick3")
