@@ -3,9 +3,6 @@
 
 ## Needed for semantic analysis: https://colab.research.google.com/drive/19cwz29yei-RwLnQ8HuEbjy74HRx94A6b?usp=sharing
 
-## Clear workspace
-# rm(list = ls()) 
-
 ## Import libraries
 if (!require(pacman)) { install.packages("pacman") }
 pacman::p_load('data.table', #rename data frame columns 
@@ -44,21 +41,11 @@ pacman::p_load('data.table', #rename data frame columns
                'broom' #install separately if does not work 
 )
 
-# Call in the Lifelines_Customer_Journeys.R script from the Lifelines folder for plot images
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #set working directory to current directory
-#setwd("../e3_customer_journeys") #go to e3_customer_journeys directory if needed 
-#source("Lifelines_Customer_Journeys.R") #import plot-generating script
-#setwd("../e3_customer_journeys") #go back down to e3_customer_journeys directory
 
-# Read in Lifelines_analysis_e1b.R 
-#setwd("../e1b_basic_effect") #go one directory up
-#source("Lifelines_analysis_e1b.R") 
-#setwd("../e3_customer_journeys") #go back down to e3_customer_journeys directory
-
-
-##================================================================================================================
-##FUNCTIONS FOR PREPROCESSING##
-##================================================================================================================
+##===============================
+## FUNCTIONS FOR PREPROCESSING ##
+##===============================
 
 PerformExclusions <- function(data) {
     "
@@ -77,7 +64,8 @@ PerformExclusions <- function(data) {
 
     # Exclude those who gave the same answers to all satisfaction and personal desirability questions 
     satisfaction_cols <- data[, grep("satisfy", colnames(data), value = TRUE)]
-    satisfaction_dups <- satisfaction_cols[apply(satisfaction_cols, 1, function(x) length(unique(x[!is.na(x)])) == 1),]
+    satisfaction_dups <- satisfaction_cols[apply(satisfaction_cols, 1,
+                                                 function(x) length(unique(x[!is.na(x)])) == 1),]
     data <- anti_join(data, satisfaction_dups, by = grep("satisfy", colnames(data), value = TRUE))
 
     pd_cols <- data[, grep("preference", colnames(data), value = TRUE)]
@@ -175,8 +163,6 @@ Preprocess <- function(data, n_plots, plot_names) {
     Output: dataframe with number of rows = n_subjects*n_plot_types (=27)
     "
 
-    # Define new data frame that we'll extract preprocessed data into
-
     # Define row and column names
     data_subset <- 35:142
     last_cols <- 143:145
@@ -233,17 +219,6 @@ ProcessForPlots <- function(data, n_plots, plot_names) {
 
     # Bind the SE column to the rest of the dataframe
     data_plot_long <- cbind(dplyr::select(data_plot_long, plot_names, question_type, score), sd = stan_dev$sd)
-
-    # data_plot_long$plot_names <- factor(data_plot_long$plot_names, levels = c("linear_low", "linear_rise_sharp_fall", "linear_fall",                     
-    #                                                                           "exp_fall_convex", "logistic_fall", "sin_rf_partial",                  
-    #                                                                           "positive_change_partial", "linear_middle", "positive_change_full",            
-    #                                                                           "exp_fall_concave", "sin_rf_full", "sin_frf_partial",                 
-    #                                                                           "sin_frf_full", "sin_rfrf", "negative_change_full",            
-    #                                                                           "sin_rfr_partial", "sin_fr_full", "sin_frfr",                        
-    #                                                                           "sin_rfr_full", "linear_rise_sharp_fall_exp_rise", "exp_rise_convex",                 
-    #                                                                           "logistic_rise", "negative_change_partial", "sin_fr_partial",                  
-    #                                                                           "linear_rise", "exp_rise_concave", "linear_high"))
-
     data_plot_long$plot_names <- factor(data_plot_long$plot_names, levels = data_plot_long$plot_names[1:n_plots])
 
     return(data_plot_long)
@@ -251,12 +226,6 @@ ProcessForPlots <- function(data, n_plots, plot_names) {
 
 
 TransformWTP <- function(data_long) {
-    " 
-    Tranform willingness to pay measure  
-    Input: data_long 
-    Output: data_long 
-    "
-
     # Fix column name
     names(data_long)[names(data_long) == "willingness to pay"] <- "willingness_to_pay"
 
@@ -301,9 +270,9 @@ Get_stats <- function(data, n_plots) {
     return(equations)
 }
 
-##================================================================================================================
-##FUNCTIONS FOR PLOTTING BAR CHARTS##
-##================================================================================================================
+##=====================================
+## FUNCTIONS FOR PLOTTING BAR CHARTS ##
+##=====================================
 
 MakeGroupedBarPlot <- function(data_plot_long) {
     "
@@ -354,59 +323,25 @@ MakeGroupedBarPlotImages <- function(LifelinesPlot, plot_names) {
 
     # Make "clean" (no labels) version of individual images for x-axis
     Plotter_2 <- function(equation, x_range, y_range) {
-        start_age <- 0
-        end_age <- 80
-        end_y_axis <- 100
-        plot(equation, lwd = 30, xlim = c(start_age, end_age), ylim = c(0, end_y_axis), main = "",
-             xlab = "", ylab = "", axes = FALSE, col = "firebrick3")
+      plot(equation, lwd = 30, xlim = c(start_age, end_age), ylim = c(0, end_y_axis), main = "",
+           xlab = "", ylab = "", axes = FALSE, col = "firebrick3")
 
-        return(Plotter_2)
+      return(Plotter_2)
     }
 
     # Print the images that will comprise the x-axis
-    for (i in 1:length(plot_names)) { #print individual plots
-        png(file = paste0(plot_names[i], "_plot.png", ""))
-        sapply(plot_names[i], Plotter_2)
-        dev.off()
+    for(i in 1: 27) { #print individual plots
+      png(file = paste0(plot_names[i],"_plot.png", ""))
+      sapply(equations[i], Plotter_2)
+      dev.off()
     }
 
     # Assemble images in the order of data_plot_long$plot_names[1:27]
-    plot_images <- axis_canvas(LifelinesPlot, axis = 'x') +
-        # for(i in 1:length(data_plot_long$plot_names[1:n_plots])) {
-        #   placement = (i - 0.5)
-        #   plot_images <- axis_canvas(plot_images, axis = 'x') +
-        #     draw_image(paste0(data_plot_long$plot_names[i], "_plot.png"), x = placement)} +
+    plot_images <- axis_canvas(LifelinesPlot, axis = 'x')
 
-        draw_image(paste0(data_plot_long$plot_names[1], "_plot.png"), x = 0.5) +
-        draw_image(paste0(data_plot_long$plot_names[2], "_plot.png"), x = 1.5) +
-        draw_image(paste0(data_plot_long$plot_names[3], "_plot.png"), x = 2.5) +
-        draw_image(paste0(data_plot_long$plot_names[4], "_plot.png"), x = 3.5) +
-        draw_image(paste0(data_plot_long$plot_names[5], "_plot.png"), x = 4.5) +
-        draw_image(paste0(data_plot_long$plot_names[6], "_plot.png"), x = 5.5) +
-        draw_image(paste0(data_plot_long$plot_names[7], "_plot.png"), x = 6.5) +
-        draw_image(paste0(data_plot_long$plot_names[8], "_plot.png"), x = 7.5) +
-        draw_image(paste0(data_plot_long$plot_names[9], "_plot.png"), x = 8.5) +
-
-        draw_image(paste0(data_plot_long$plot_names[10], "_plot.png"), x = 9.5) +
-        draw_image(paste0(data_plot_long$plot_names[11], "_plot.png"), x = 10.5) +
-        draw_image(paste0(data_plot_long$plot_names[12], "_plot.png"), x = 11.5) +
-        draw_image(paste0(data_plot_long$plot_names[13], "_plot.png"), x = 12.5) +
-        draw_image(paste0(data_plot_long$plot_names[14], "_plot.png"), x = 13.5) +
-        draw_image(paste0(data_plot_long$plot_names[15], "_plot.png"), x = 14.5) +
-        draw_image(paste0(data_plot_long$plot_names[16], "_plot.png"), x = 15.5) +
-        draw_image(paste0(data_plot_long$plot_names[17], "_plot.png"), x = 16.5) +
-        draw_image(paste0(data_plot_long$plot_names[18], "_plot.png"), x = 17.5) +
-
-        draw_image(paste0(data_plot_long$plot_names[19], "_plot.png"), x = 18.5) +
-        draw_image(paste0(data_plot_long$plot_names[20], "_plot.png"), x = 19.5) +
-        draw_image(paste0(data_plot_long$plot_names[21], "_plot.png"), x = 20.5) +
-        draw_image(paste0(data_plot_long$plot_names[22], "_plot.png"), x = 21.5) +
-        draw_image(paste0(data_plot_long$plot_names[23], "_plot.png"), x = 22.5) +
-        draw_image(paste0(data_plot_long$plot_names[24], "_plot.png"), x = 23.5) +
-        draw_image(paste0(data_plot_long$plot_names[25], "_plot.png"), x = 24.5) +
-        draw_image(paste0(data_plot_long$plot_names[26], "_plot.png"), x = 25.5) +
-        draw_image(paste0(data_plot_long$plot_names[27], "_plot.png"), x = 26.5)
-
+    for( i in 27 ) {
+        plot_images <- plot_images + draw_image(paste0(data_plot_long$plot_names[i], "_plot.png"), x = i - 0.5)
+    }
 
     return(plot_images)
 }
@@ -1904,52 +1839,10 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
     satisfaction_bottom_y <- pd_bottom_y - 0.15 #y value for bottom stars
 
     # Add to the plot: stars indicating significance
-    predictors_plot <- predictors_plot +
-
-        # One-sided Wilcox test
-        ggplot2::annotate("text", x = satisfaction_bottom_x, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[1]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 1, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[2]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 2, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[3]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 3, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[4]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 4, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[5]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 5, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[6]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 6, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[7]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 7, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[8]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 8, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[9]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 9, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[10]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 10, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[11]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 11, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[12]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 12, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[13]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 13, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[14]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 14, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[15]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 15, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[16]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 16, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[17]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 17, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[18]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 18, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[19]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 19, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[20]]) +
-
-        ggplot2::annotate("text", x = pd_bottom_x, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[1]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 1, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[2]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 2, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[3]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 3, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[4]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 4, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[5]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 5, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[6]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 6, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[7]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 7, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[8]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 8, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[9]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 9, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[10]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 10, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[11]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 11, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[12]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 12, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[13]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 13, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[14]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 14, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[15]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 15, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[16]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 16, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[17]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 17, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[18]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 18, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[19]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 19, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[20]])
-
-    #-------------------------------------------------------------------------------------------------------------------
+    for( i in 1:20 ) {
+        predictors_plot <- predictors_plot + ggplot2::annotate("text", x = satisfaction_bottom_x + i - 1, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[i]])
+        predictors_plot <- predictors_plot + ggplot2::annotate("text", x = pd_bottom_x + i - 1, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[i]])
+    }
 
     return(predictors_plot)
 }
@@ -2173,7 +2066,7 @@ words_df <- as.data.frame(matrix(unlist(analyze_words), ncol = length(unlist(ana
 analyze_words_df <- cbind(plot_names = plot_names, words = words_df$V1)
 write.csv(analyze_words_df, "word_analysis_e3.csv", row.names = FALSE) #create word analysis csv for google colab code
 
-write.csv(data.frame(word=d_long['word']), "d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
+write.csv(data.frame(word = d_long['word']), "d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
 
 
 ### (ii) CREATE SEMANTIC EMBEDDINGS DATAFRAME [**NB: YOU NEED TO HAVE ALREADY EXTRACTED EMBEDDINGS FOR word_analysis_e3.csv]
@@ -2228,14 +2121,18 @@ if (FALSE) {
     #### (2.4) MAKE FREQUENCY PLOTS FOR TOPIC MODELING
     #topic_modeling <- TopicModeling(d_long, n_plots, plot_names)
 
+    plot_files <- list.files(pattern = c("(.pdf|.png)"))
+    file.move(plot_files, "analysis_plots", overwrite = TRUE)
+    analysis_files <- list.files(pattern = c("word_analysis_e3.csv|embeddings_e3.csv|correlations_e3.csv"))
+    file.move(analysis_files, "data", overwrite = TRUE)
+
 }
 
 CalculateSentiment <- function(rword) {
     rword <- word(tolower(rword), 1)
     rword <- gsub("[^a-z]", "", rword) #get rid of numbers and special characters, leaving only letters a-z
-    return( sentiment_by(rword)$ave_sentiment )
+    return(sentiment_by(rword)$ave_sentiment)
 }
-
 
 
 ## ============================================== (3) Analysis =====================================================
