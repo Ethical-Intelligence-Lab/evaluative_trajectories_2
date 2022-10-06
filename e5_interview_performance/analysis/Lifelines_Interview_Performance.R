@@ -19,7 +19,7 @@ source2 <- function(file, start, end, ...) {
 # Set working directory 
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #set working directoy to current directory
 setwd("..") #go one directory up
-source2("Lifelines_Generate_Plots.R", 0, 545) #only get the defined functions and standardized features data frame  
+source2("../tools/Lifelines_Generate_Plots.R", 0, 545) #only get the defined functions and standardized features data frame
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #go back to current directory
 
 

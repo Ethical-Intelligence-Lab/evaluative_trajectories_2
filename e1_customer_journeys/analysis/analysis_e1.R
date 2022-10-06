@@ -1298,7 +1298,7 @@ CreateDataFeaturesDF <- function(data, e3_dat_final, features_df, n_after_exclus
     Output: score_features_df (which contains all of the predictors and participant scores)
     "
 
-    score_features_df <- cbind(data, sentiment_score = e3_dat_final$sentiment_score[1:num_subjects_and_plots],
+    score_features_df <- cbind(data, sentiment_score = data$sentiment_score,
                                as.data.frame(do.call("rbind", replicate(n_after_exclusions, standardize(features_df), simplify = FALSE))))
     score_features_df["satisfaction"] <- as.data.frame(apply(score_features_df["satisfaction"], 2, as.numeric))
     score_features_df["personal_desirability"] <- as.data.frame(apply(score_features_df["personal_desirability"], 2, as.numeric))
@@ -2173,10 +2173,13 @@ words_df <- as.data.frame(matrix(unlist(analyze_words), ncol = length(unlist(ana
 analyze_words_df <- cbind(plot_names = plot_names, words = words_df$V1)
 write.csv(analyze_words_df, "word_analysis_e3.csv", row.names = FALSE) #create word analysis csv for google colab code
 
+write.csv(data.frame(word=d_long['word']), "d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
+
 
 ### (ii) CREATE SEMANTIC EMBEDDINGS DATAFRAME [**NB: YOU NEED TO HAVE ALREADY EXTRACTED EMBEDDINGS FOR word_analysis_e3.csv]
-my_embeddings <- read.csv("data/embeddings_e1b.csv", header = TRUE)
-embeddings_avg <- data.frame(embeddings = rowMeans(my_embeddings[2:28])) #create a dataframe
+my_embeddings <- read.csv("data/embeddings_long.csv", header = TRUE)
+my_embeddings$X = NULL
+embeddings <- data.frame(embeddings = rowMeans(my_embeddings)) #create a dataframe
 
 
 ### (iii) CREATE INTERESTINGNESS DATAFRAME
@@ -2184,7 +2187,8 @@ interestingness <- GetInterestingness(d_long, n_plots)
 
 
 ### (iv) PROCESS FOR PLOTS
-d_long <- cbind(d_long, embeddings_avg, interestingness)
+d_long <- cbind(d_long, embeddings)
+d_long <- cbind(d_long, interestingness)
 data_plot_long = NULL
 data_plot_long <- ProcessForPlots(d_long, n_plots, plot_names) #num_rows = num_plots*num_questions
 
@@ -2226,6 +2230,13 @@ if (FALSE) {
 
 }
 
+CalculateSentiment <- function(rword) {
+    rword <- word(tolower(rword), 1)
+    rword <- gsub("[^a-z]", "", rword) #get rid of numbers and special characters, leaving only letters a-z
+    return( sentiment_by(rword)$ave_sentiment )
+}
+
+
 
 ## ============================================== (3) Analysis =====================================================
 "
@@ -2234,11 +2245,13 @@ Get main statistical effects, and run descriptive and predictive analyses
 
 #### (3.1) GET MAIN EFFECTS
 
+d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment)
+
 # Get dataframe for analysis (e3_dat_final), with nrows = num_ss*num_plots*num_questions
 e3_dat <- gather(d_long, key = question_type, value = score, satisfaction, personal_desirability)
-e3_dat <- dplyr::select(e3_dat, subject, plot_names, question_type, score, willingness_to_pay) #rows = num_ss*num_plots*num_questions
-e3_sentiment_scores <- CreateSentimentDataframe(d_long, n_plots, plot_names)
-e3_dat_final <- cbind(e3_dat, sentiment_score = e3_sentiment_scores[rep(seq_len(nrow(e3_sentiment_scores)), n_after_exclusions),]$mean)
+e3_dat <- dplyr::select(e3_dat, subject, plot_names, question_type, score, willingness_to_pay, sentiment_score) #rows = num_ss*num_plots*num_questions
+
+e3_dat_final <- e3_dat
 
 # TODO: Need to fix this part
 if (FALSE) {

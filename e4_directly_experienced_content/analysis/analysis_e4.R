@@ -75,10 +75,10 @@ PerformExclusions <- function(data) {
     # Exclude those who finished it in less than 2 minutes
     data <- subset(data, (data$Duration..in.seconds. > 120))
 
-    # Exclude those who gave the same answers to all satisfaction and personal desirability questions
-    satisfaction_cols <- data[, grep("satisfy", colnames(data), value = TRUE)]
-    satisfaction_dups <- satisfaction_cols[apply(satisfaction_cols, 1, function(x) length(unique(x[!is.na(x)])) == 1),]
-    data <- anti_join(data, satisfaction_dups, by = grep("satisfy", colnames(data), value = TRUE))
+    # Exclude those who gave the same answers to all enjoyment and personal desirability questions
+    enjoyment_cols <- data[, grep("satisfy", colnames(data), value = TRUE)]
+    enjoyment_dups <- enjoyment_cols[apply(enjoyment_cols, 1, function(x) length(unique(x[!is.na(x)])) == 1),]
+    data <- anti_join(data, enjoyment_dups, by = grep("satisfy", colnames(data), value = TRUE))
 
     pd_cols <- data[, grep("preference", colnames(data), value = TRUE)]
     pd_dups <- pd_cols[apply(pd_cols, 1, function(x) length(unique(x[!is.na(x)])) == 1),]
@@ -131,7 +131,7 @@ PerformExclusions <- function(data) {
         &
         (data$comp_check_7 == 'Happiness') &
         (data$comp_check_8 == 'Customer Touchpoint') &
-        (data$comp_check_9 == 'Satisfaction')
+        (data$comp_check_9 == 'enjoyment')
         |
         ((data$comp_check_4 == 0) &
             (data$comp_check_5 == 80)
@@ -139,7 +139,7 @@ PerformExclusions <- function(data) {
             (data$comp_check_6 == 'They were highly stressed early in their customer experience, then highly unstressed later in their customer experience') &
             (data$comp_check_7 == 'Happiness') &
             (data$comp_check_8 == 'Customer Touchpoint') &
-            (data$comp_check_9 == 'Satisfaction')
+            (data$comp_check_9 == 'enjoyment')
         )), 0, 1)
 
     print(paste('percentage excluded, comprehension checks: ',
@@ -149,9 +149,9 @@ PerformExclusions <- function(data) {
     data <- subset(data, (data$attention_check == 0) & (data$comp_check == 0))
 
     # Number of subjects after exclusions
-    n_after_exclusions <- dim(data)[1]; n_after_exclusions #177
+    n_after_exclusions <- dim(data)[1]; #177
     print(paste('percentage excluded, duplicate answers: ',
-                (dim(satisfaction_dups)[1] + dim(pd_dups)[1]) / n_after_exclusions))
+                (dim(enjoyment_dups)[1] + dim(pd_dups)[1]) / n_after_exclusions))
     print(paste('total percentage excluded, comprehension checks: ',
                 (n_before_exclusions - n_after_exclusions) / n_before_exclusions))
 
@@ -178,10 +178,10 @@ Preprocess <- function(data, n_plots, plot_names) {
     # Define new data frame that we'll extract preprocessed data into
 
     # Define row and column names
-    data_subset <- 35:142
-    last_cols <- 143:145
+    data_subset <- 35:142 # TODO
+    last_cols <- 143:145 # TODO
 
-    column_names <- c('plot_names', 'satisfaction', 'personal_desirability', 'word', 'willingness to pay', 'subject')
+    column_names <- c('plot_names', 'willingness to pay', 'word', 'subject')
 
     df <- array(0, dim = c((nrow(data) * n_plots), length(column_names)))
     df <- as.data.frame(df, stringsAsFactors = FALSE)
@@ -195,9 +195,7 @@ Preprocess <- function(data, n_plots, plot_names) {
         df[1] <- plot_names
         df[2] <- long_data[seq(1, nrow(long_data), 4),]
         df[3] <- long_data[seq(2, nrow(long_data), 4),]
-        df[4] <- long_data[seq(3, nrow(long_data), 4),]
-        df[5] <- long_data[seq(4, nrow(long_data), 4),]
-        df[6] <- rep(1:dim(data)[1], each = n_plots)
+        df[4] <- rep(1:dim(data)[1], each = n_plots)
     }
 
     # Merge good data with first and last halves of the original data
@@ -209,27 +207,27 @@ Preprocess <- function(data, n_plots, plot_names) {
 
 ProcessForPlots <- function(data, n_plots, plot_names) {
     "
-    Create a new data frame to store the satisfaction and PD scores by ascending satisfaction scores
+    Create a new data frame to store the enjoyment and PD scores by ascending enjoyment scores
     Input: data_long, n_plots, plot_names   #num_rows = num_ss*num_plots
-    Output: data_plot_long (in order of ascending satisfaction scores)   #num_rows = num_plots*num_questions
+    Output: data_plot_long (in order of ascending enjoyment scores)   #num_rows = num_plots*num_questions
     "
 
     # Get mean scores for all questions, then reshape data from wide to long format
     stats <- Get_stats(data, n_plots)
     data_plot <- data.frame(plot_names = plot_names,
-                            satisfaction_score_avg = unlist(stats)[c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE)],
-                            satisfaction_score_sd = unlist(stats)[c(FALSE, TRUE, FALSE, FALSE, FALSE, FALSE)],
+                            enjoyment_score_avg = unlist(stats)[c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE)],
+                            enjoyment_score_sd = unlist(stats)[c(FALSE, TRUE, FALSE, FALSE, FALSE, FALSE)],
                             pd_score_avg = unlist(stats)[c(FALSE, FALSE, TRUE, FALSE, FALSE, FALSE)],
                             pd_score_sd = unlist(stats)[c(FALSE, FALSE, FALSE, TRUE, FALSE, FALSE)],
                             wtp_score_avg = unlist(stats)[c(FALSE, FALSE, FALSE, FALSE, TRUE, FALSE)],
                             wtp_score_sd = unlist(stats)[c(FALSE, FALSE, FALSE, FALSE, FALSE, TRUE)])
-    data_plot_sorted <- data_plot[order(data_plot$satisfaction_score_avg),] #order by satisfaction
+    data_plot_sorted <- data_plot[order(data_plot$enjoyment_score_avg),] #order by enjoyment
     data_plot_long <- gather(data_plot_sorted, key = question_type, #create separate entries for each question type, i.e., num_plots*num_questions
-                             value = score, satisfaction_score_avg, pd_score_avg)
+                             value = score, enjoyment_score_avg, pd_score_avg)
 
     # Compile all standard deviation values
     stan_dev <- gather(data_plot_sorted, key = question_type,
-                       value = sd, satisfaction_score_sd, pd_score_sd)
+                       value = sd, enjoyment_score_sd, pd_score_sd)
 
     # Bind the SE column to the rest of the dataframe
     data_plot_long <- cbind(dplyr::select(data_plot_long, plot_names, question_type, score), sd = stan_dev$sd)
@@ -278,24 +276,20 @@ TransformWTP <- function(data_long) {
 
 Get_stats <- function(data, n_plots) {
     "
-    Find satisfaction and personal desirability means and standard deviations for every plot
-    Every plot repeats every 27 times, since there are 27 plots title.
+    Find enjoyment and personal desirability means and standard deviations for every plot
+    Every plot repeats every 8 times, since there are 8 plots title.
     Hence the 'seq' indeces for each calculation
     Input: data_long, n_plots
-    Output: equations (a list of means and standard deviations of satisfaction and pd scores for every plot)
+    Output: equations (a list of means and standard deviations of enjoyment and pd scores for every plot)
     "
 
     # Transform all measures
-    satisfaction_score <- as.numeric(data$satisfaction)
-    pd_score <- as.numeric(data$personal_desirability)
-    wtp_score <- as.numeric(data$willingness_to_pay)
+    wtp_score <- as.numeric(data$willing)
 
     # Get means and standard deviations
     equations <- c()
     for (i in 1:n_plots) {
-        equations[[i]] <- c(mean(satisfaction_score[seq(i, length(satisfaction_score), n_plots)]), sd(satisfaction_score[seq(i, length(satisfaction_score), n_plots)]),
-                            mean(pd_score[seq(i, length(satisfaction_score), n_plots)]), sd(pd_score[seq(i, length(satisfaction_score), n_plots)]),
-                            mean(wtp_score[seq(i, length(satisfaction_score), n_plots)]), sd(wtp_score[seq(i, length(satisfaction_score), n_plots)]))
+        equations[[i]] <- c(mean(wtp_score[seq(i, length(wtp_score), n_plots)]), sd(wtp_score[seq(i, length(wtp_score), n_plots)]))
     }
 
     return(equations)
@@ -307,7 +301,7 @@ Get_stats <- function(data, n_plots) {
 
 MakeGroupedBarPlot <- function(data_plot_long) {
     "
-    Plot the grouped bar graph in order of ascending satisfaction scores
+    Plot the grouped bar graph in order of ascending enjoyment scores
     Input: data_plot_long
     Output: grouped_bar_plot (the grouped bar graph)
     "
@@ -316,7 +310,7 @@ MakeGroupedBarPlot <- function(data_plot_long) {
         geom_bar(position = "dodge", stat = "identity") +
         geom_errorbar(aes(ymin = score - sd, ymax = score + sd), width = .2,
                       position = position_dodge(.9)) +
-        ggtitle("Summarizing the Satisfaction and Desirability of Different Customer Journeys") +
+        ggtitle("Summarizing the enjoyment and Desirability of Different Customer Journeys") +
         xlab("Customer Journey Plots") +
         ylab("Scaled Rating") +
         scale_y_continuous(breaks = seq(0, 80, 40)) +
@@ -334,8 +328,8 @@ MakeGroupedBarPlot <- function(data_plot_long) {
         ) +
         scale_fill_manual(
             name = "Judgment Type",
-            breaks = c("satisfaction_score_avg", "pd_score_avg"),
-            labels = c("Satisfaction", "Personal Desirability"),
+            breaks = c("enjoyment_score_avg", "pd_score_avg"),
+            labels = c("enjoyment", "Personal Desirability"),
             values = c("#56B4E9", "#009E73"),
             guide = guide_legend(title.position = "top")
         )
@@ -346,7 +340,7 @@ MakeGroupedBarPlot <- function(data_plot_long) {
 MakeGroupedBarPlotImages <- function(LifelinesPlot, plot_names) {
     "
     Make a plotter function that produces 'clean' (no labels) version of individual images
-    for the x-axis. Then, plot the images in order of ascending satisfaction scores,
+    for the x-axis. Then, plot the images in order of ascending enjoyment scores,
     which can be determined by the order in data_plot_long$plot_names[1:27].
     Input: grouped_bar_plot, plot_names
     Output: the plot labels for the grouped bar graph and the sentiment bar graph
@@ -609,7 +603,7 @@ MakeWordClouds <- function(data, n_plots, plot_names) {
 ArrangeWordClouds <- function() {
     "Arrange word clouds and plot labels into a grid using ggplot.
     Input: none
-    Output: a grid of word clouds (arranged in order of ascending satisfaction scores)
+    Output: a grid of word clouds (arranged in order of ascending enjoyment scores)
     "
 
     # (The simpler alternative is to use grid.arrange with lapply([PNGs], rasterGrob),
@@ -750,73 +744,36 @@ ArrangeWordClouds <- function() {
 ##FUNCTIONS FOR PLOTTING SENTIMENT BAR PLOT##
 ##================================================================================================================
 
-Get_sentiment_stats <- function(data, n_plots) {
-    "
-    Find sentiment score means and standard deviations for every plot
-    Input: data_long, n_plots
-    Output: sentiment_list (a list of average mean and standard deviation sentiment scores for every plot)
-    "
-
-    # Clean words
-    word_clean <- word(tolower(data$word), 1) #make all words lowercase, and collect only the first word of a given sentence
-    word_gen <- gsub("[^a-z]", "", word_clean) #get rid of numbers and special characters, leaving only letters a-z
-
-    # Organize words by plot
-    equations <- c()
-    for (i in 1:n_plots) {
-        equations[[i]] <- word_gen[seq(i, length(word_gen), n_plots)]
-    }
-
-    # Get sentiment score means and standard deviations for every plot
-    sentiment_list <- c()
-    for (i in 1:n_plots) {
-        sentiment_list[[i]] <- c(mean(sentiment_by(equations[[i]])$ave_sentiment),
-                                 sd(sentiment_by(equations[[i]])$ave_sentiment))
-    }
-
-    return(sentiment_list)
-}
-
-
-CreateSentimentDataframe <- function(data, n_plots, plot_names) {
-    "
-    Make a dataframe with sentiment scores for every plot, which we will use later to add to e3_dat_final
-    Input: data_long, n_plots, plot_names
-    Output: sentiment_df (will be important later on when we bind it to e3_dat for analysis)
-    "
-
-    sentiment_stats <- Get_sentiment_stats(data, n_plots)
-    sentiment_df <- data.frame(plot_names = plot_names,
-                               mean = unlist(sentiment_stats)[c(TRUE, FALSE)],
-                               sd = unlist(sentiment_stats)[c(FALSE, TRUE)])
-
-    return(sentiment_df)
+CalculateSentiment <- function(rword) {
+    rword <- word(tolower(rword), 1)
+    rword <- gsub("[^a-z]", "", rword) #get rid of numbers and special characters, leaving only letters a-z
+    return( sentiment_by(rword)$ave_sentiment )
 }
 
 
 OrderSentimentDataframe <- function(data, n_plots, plot_names) {
     "
-    Create a new data frame to store the sentiment scores by ascending satisfaction scores
+    Create a new data frame to store the sentiment scores by ascending enjoyment scores
     Input: data_long, n_plots, plot_names
     Output: sentiment_df_sorted (the sentiment_df ordered by levels in the function factor())
     "
 
-    # Get the order of satisfaction scores
+    # Get the order of enjoyment scores
     stats <- Get_stats(data, n_plots)
     data_plot <- data.frame(plot_names = plot_names,
-                            satisfaction_score_avg = unlist(stats)[c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE)],
-                            satisfaction_score_sd = unlist(stats)[c(FALSE, TRUE, FALSE, FALSE, FALSE, FALSE)],
+                            enjoyment_score_avg = unlist(stats)[c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE)],
+                            enjoyment_score_sd = unlist(stats)[c(FALSE, TRUE, FALSE, FALSE, FALSE, FALSE)],
                             pd_score_avg = unlist(stats)[c(FALSE, FALSE, TRUE, FALSE, FALSE, FALSE)],
                             pd_score_sd = unlist(stats)[c(FALSE, FALSE, FALSE, TRUE, FALSE, FALSE)],
                             wtp_score_avg = unlist(stats)[c(FALSE, FALSE, FALSE, FALSE, TRUE, FALSE)],
                             wtp_score_sd = unlist(stats)[c(FALSE, FALSE, FALSE, FALSE, FALSE, TRUE)])
 
-    # Create sentiment data frame ordered by ascending satisfaction scores
+    # Create sentiment data frame ordered by ascending enjoyment scores
     sentiment_stats <- Get_sentiment_stats(data, n_plots)
     sentiment_df <- data.frame(plot_names = plot_names,
                                mean = unlist(sentiment_stats)[c(TRUE, FALSE)],
                                sd = unlist(sentiment_stats)[c(FALSE, TRUE)])
-    sentiment_df_sorted <- sentiment_df[order(data_plot$satisfaction_score_avg),]
+    sentiment_df_sorted <- sentiment_df[order(data_plot$enjoyment_score_avg),]
     sentiment_df_sorted$plot_names <- factor(sentiment_df_sorted$plot_names, levels = data_plot_long$plot_names[1:n_plots])
 
     return(sentiment_df_sorted)
@@ -825,9 +782,9 @@ OrderSentimentDataframe <- function(data, n_plots, plot_names) {
 
 MakeSentimentBarPlot <- function(data, n_plots, plot_names) {
     "
-    Plot the sentiment bar graph in order of ascending satisfaction scores.
+    Plot the sentiment bar graph in order of ascending enjoyment scores.
     Input: data_long, n_plots, plot_names
-    Output: the sentiment bar graph by ascending satisfaction scores
+    Output: the sentiment bar graph by ascending enjoyment scores
     "
 
     sentiment_df <- OrderSentimentDataframe(data, n_plots, plot_names)
@@ -835,7 +792,7 @@ MakeSentimentBarPlot <- function(data, n_plots, plot_names) {
         geom_bar(position = "dodge", stat = "identity", fill = "darkorange") +
         geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), width = .2,
                       position = position_dodge(.9)) +
-        ggtitle("Mean Sentiment Scores by Ascending Satisfaction Scores") +
+        ggtitle("Mean Sentiment Scores by Ascending enjoyment Scores") +
         xlab("Customer Journey Plots") +
         ylab("Mean Sentiment Score") +
         theme(
@@ -1130,7 +1087,7 @@ GetMainEffects <- function(data, data_long, data_plot_long, e1b_data_plot_long, 
     This function gets various correlations and main effects of the participant data.
     Input: This function takes as input a dataframe with rows = num_ss*num_plots*num_questions.
           (e3_dat_final, d_long, data_plot_long, data_plot_long, n_plots, plot_names, my_embeddings)
-    Output: various correlation and linear regression results; also, linear and quadratic plots ordered by satisfaction scores
+    Output: various correlation and linear regression results; also, linear and quadratic plots ordered by enjoyment scores
     "
 
     # 1. Question & Plot Types
@@ -1160,11 +1117,11 @@ GetMainEffects <- function(data, data_long, data_plot_long, e1b_data_plot_long, 
     print(summary(effect_mod))
     print('-----------------------------------------------------')
 
-    print('Do the sentiment scores correlate with satisfaction ratings?')
-    satisfaction_corr <- cor.test(data$sentiment_score[data$question_type == "satisfaction"],
-                                  data$score_n[data$question_type == "satisfaction"])
-    print('sentiment vs. satisfaction:')
-    print(satisfaction_corr)
+    print('Do the sentiment scores correlate with enjoyment ratings?')
+    enjoyment_corr <- cor.test(data$sentiment_score[data$question_type == "enjoyment"],
+                                  data$score_n[data$question_type == "enjoyment"])
+    print('sentiment vs. enjoyment:')
+    print(enjoyment_corr)
     print('-----------------------------------------------------')
 
     print('Do the sentiment scores correlate with personal desirability ratings?')
@@ -1174,12 +1131,12 @@ GetMainEffects <- function(data, data_long, data_plot_long, e1b_data_plot_long, 
     print(pd_corr)
     print('-----------------------------------------------------')
 
-    # 2. Do E3 satisfaction and personal desirability ratings correlate with E1 meaningfulness and personal desirability ratings?
+    # 2. Do E3 enjoyment and personal desirability ratings correlate with E1 meaningfulness and personal desirability ratings?
 
-    print('Does E3 satisfaction correlate with E1 meaningfulness ratings?')
+    print('Does E3 enjoyment correlate with E1 meaningfulness ratings?')
     q1_corr <- cor.test(e1b_data_plot_long$score[e1b_data_plot_long$question_type == "meaning_score_avg"],
-                        data_plot_long$score[data_plot_long$question_type == "satisfaction_score_avg"])
-    print('E3 satisfaction vs E1 meaningfulness:')
+                        data_plot_long$score[data_plot_long$question_type == "enjoyment_score_avg"])
+    print('E3 enjoyment vs E1 meaningfulness:')
     print(q1_corr)
     print('-----------------------------------------------------')
 
@@ -1197,11 +1154,11 @@ GetMainEffects <- function(data, data_long, data_plot_long, e1b_data_plot_long, 
     print(summary(wtp_mod))
     print('-----------------------------------------------------')
 
-    print('Does willingness to pay correlate with satisfaction ratings?')
-    wtp_satisfaction_corr <- cor.test(data$willingness_to_pay[data$question_type == "satisfaction"],
-                                      data$score_n[data$question_type == "satisfaction"])
-    print('willingness to pay vs. satisfaction:')
-    print(wtp_satisfaction_corr)
+    print('Does willingness to pay correlate with enjoyment ratings?')
+    wtp_enjoyment_corr <- cor.test(data$willingness_to_pay[data$question_type == "enjoyment"],
+                                      data$score_n[data$question_type == "enjoyment"])
+    print('willingness to pay vs. enjoyment:')
+    print(wtp_enjoyment_corr)
     print('-----------------------------------------------------')
 
     print('Does willingness to pay correlate with personal desirability ratings?')
@@ -1211,31 +1168,31 @@ GetMainEffects <- function(data, data_long, data_plot_long, e1b_data_plot_long, 
     print(wtp_pd_corr)
     print('-----------------------------------------------------')
 
-    # 4. Difference between linear and quadratic models for satisfaction and personal desirability
+    # 4. Difference between linear and quadratic models for enjoyment and personal desirability
 
-    # Get the order of average satisfaction scores
+    # Get the order of average enjoyment scores
     stats <- Get_stats(data_long, n_plots)
     data_plot <- data.frame(plot_names = plot_names,
-                            satisfaction_score_avg = unlist(stats)[c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE)],
-                            satisfaction_score_sd = unlist(stats)[c(FALSE, TRUE, FALSE, FALSE, FALSE, FALSE)],
+                            enjoyment_score_avg = unlist(stats)[c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE)],
+                            enjoyment_score_sd = unlist(stats)[c(FALSE, TRUE, FALSE, FALSE, FALSE, FALSE)],
                             pd_score_avg = unlist(stats)[c(FALSE, FALSE, TRUE, FALSE, FALSE, FALSE)],
                             pd_score_sd = unlist(stats)[c(FALSE, FALSE, FALSE, TRUE, FALSE, FALSE)],
                             wtp_score_avg = unlist(stats)[c(FALSE, FALSE, FALSE, FALSE, TRUE, FALSE)],
                             wtp_score_sd = unlist(stats)[c(FALSE, FALSE, FALSE, FALSE, FALSE, TRUE)])
-    data_plot <- data_plot[order(data_plot$satisfaction_score_avg),]
+    data_plot <- data_plot[order(data_plot$enjoyment_score_avg),]
     data_plot$order_num <- 1:n_plots
 
-    # Add a column of the difference between the average ratings of satisfaction and personal desirability for each customer journey
-    data_plot["satisfaction_pd_diff"] <- data_plot["satisfaction_score_avg"] - data_plot["pd_score_avg"]
-    satisfaction_score_avg <- data_plot[, "satisfaction_score_avg"]
+    # Add a column of the difference between the average ratings of enjoyment and personal desirability for each customer journey
+    data_plot["enjoyment_pd_diff"] <- data_plot["enjoyment_score_avg"] - data_plot["pd_score_avg"]
+    enjoyment_score_avg <- data_plot[, "enjoyment_score_avg"]
     pd_score_avg <- data_plot[, "pd_score_avg"]
-    satisfaction_pd_diff <- data_plot[, "satisfaction_pd_diff"]
+    enjoyment_pd_diff <- data_plot[, "enjoyment_pd_diff"]
 
-    print('Does a quadratic regression fit the shape of the difference between satisfaction and desirability ratings better than a linear one does?')
+    print('Does a quadratic regression fit the shape of the difference between enjoyment and desirability ratings better than a linear one does?')
     print('First, the linear fit:')
-    satisfaction_pd_diff_lin <- lm(satisfaction_pd_diff ~ data_plot$order_num)
-    print(summary(satisfaction_pd_diff_lin))
-    linear_plot <- ggplot(satisfaction_pd_diff_lin, aes(data_plot$order_num, satisfaction_pd_diff)) +
+    enjoyment_pd_diff_lin <- lm(enjoyment_pd_diff ~ data_plot$order_num)
+    print(summary(enjoyment_pd_diff_lin))
+    linear_plot <- ggplot(enjoyment_pd_diff_lin, aes(data_plot$order_num, enjoyment_pd_diff)) +
         theme_classic() +
         geom_point() +
         stat_smooth(method = lm, formula = y ~ x) +
@@ -1245,9 +1202,9 @@ GetMainEffects <- function(data, data_long, data_plot_long, e1b_data_plot_long, 
     print('-----------------------------------------------------')
 
     print('Second, the quadratic fit:')
-    satisfaction_pd_diff_quadratic <- lm(satisfaction_pd_diff ~ data_plot$order_num + I(data_plot$order_num^2))
-    print(summary(satisfaction_pd_diff_quadratic))
-    quadratic_plot <- ggplot(satisfaction_pd_diff_quadratic, aes(data_plot$order_num, satisfaction_pd_diff)) +
+    enjoyment_pd_diff_quadratic <- lm(enjoyment_pd_diff ~ data_plot$order_num + I(data_plot$order_num^2))
+    print(summary(enjoyment_pd_diff_quadratic))
+    quadratic_plot <- ggplot(enjoyment_pd_diff_quadratic, aes(data_plot$order_num, enjoyment_pd_diff)) +
         theme_classic() +
         geom_point() +
         stat_smooth(method = lm, formula = y ~ poly(x, 2, raw = TRUE)) +
@@ -1257,22 +1214,22 @@ GetMainEffects <- function(data, data_long, data_plot_long, e1b_data_plot_long, 
     print('-----------------------------------------------------')
 
     print('Difference between linear and quadratic models:')
-    satisfaction_pd_diff_lrt <- lrtest(satisfaction_pd_diff_lin, satisfaction_pd_diff_quadratic)
-    print(satisfaction_pd_diff_lrt)
+    enjoyment_pd_diff_lrt <- lrtest(enjoyment_pd_diff_lin, enjoyment_pd_diff_quadratic)
+    print(enjoyment_pd_diff_lrt)
     print('-----------------------------------------------------')
 
     linear_quad <- ggarrange(linear_plot, quadratic_plot, nrow = 1, ncol = 2)
     # theme(plot.margin = margin(0.1,0.1,-0.5,0.1, "cm"))
     linear_quad <- annotate_figure(linear_quad,
-                                   left = text_grob("Difference Between Satisfaction and Desirability", color = "black", face = "bold", size = 20, rot = 90),
-                                   bottom = text_grob("Plot Ordered by Satisfaction Scores", color = "black", face = "bold", size = 20, vjust = 0.4))
+                                   left = text_grob("Difference Between enjoyment and Desirability", color = "black", face = "bold", size = 20, rot = 90),
+                                   bottom = text_grob("Plot Ordered by enjoyment Scores", color = "black", face = "bold", size = 20, vjust = 0.4))
     print(linear_quad)
 
-    print('Regress satisfaction on embeddings: ')
-    satisfaction_embedding_df <- cbind(satisfaction = data_long$satisfaction, my_embeddings[2:513])
-    satisfaction_embedding_lm <- lm(satisfaction ~ ., data = satisfaction_embedding_df)
-    #print('satisfaction vs. embeddings:')
-    #print(summary(satisfaction_embedding_lm))
+    print('Regress enjoyment on embeddings: ')
+    enjoyment_embedding_df <- cbind(enjoyment = data_long$enjoyment, my_embeddings[2:513])
+    enjoyment_embedding_lm <- lm(enjoyment ~ ., data = enjoyment_embedding_df)
+    #print('enjoyment vs. embeddings:')
+    #print(summary(enjoyment_embedding_lm))
     # Error: 486 not defined because of singularities
     # I checked for multicollinearity with cor(my_embeddings[2:513]) but did not find any perfect correlations
     # (except for of course the correlation of a given variable with itself, which had a coefficient of 1).
@@ -1298,16 +1255,9 @@ CreateDataFeaturesDF <- function(data, e3_dat_final, features_df, n_after_exclus
     Output: score_features_df (which contains all of the predictors and participant scores)
     "
 
-    score_features_df <- cbind(data, sentiment_score = e3_dat_final$sentiment_score[1:num_subjects_and_plots],
-                               as.data.frame(do.call("rbind", replicate(n_after_exclusions, standardize(features_df), simplify = FALSE))))
-    score_features_df["satisfaction"] <- as.data.frame(apply(score_features_df["satisfaction"], 2, as.numeric))
-    score_features_df["personal_desirability"] <- as.data.frame(apply(score_features_df["personal_desirability"], 2, as.numeric))
-    score_features_df["willingness_to_pay"] <- as.data.frame(apply(score_features_df["willingness_to_pay"], 2, as.numeric))
+    score_features_df["willing"] <- as.data.frame(apply(score_features_df["willing"], 2, as.numeric))
     score_features_df["subject"] <- as.data.frame(apply(score_features_df["subject"], 2, as.numeric))
-    score_features_df["plot_names"] <- as.data.frame(as.numeric(factor(score_features_df$plot_names)))
-    score_features_df["satisfaction"] <- standardize(score_features_df["satisfaction"])
-    score_features_df["personal_desirability"] <- standardize(score_features_df["personal_desirability"])
-    score_features_df["willingness_to_pay"] <- standardize(score_features_df["willingness_to_pay"])
+    score_features_df["genre"] <- as.data.frame(as.numeric(factor(score_features_df$genre)))
     score_features_df["sentiment_score"] <- standardize(score_features_df["sentiment_score"])
     score_features_df["embeddings"] <- standardize(score_features_df["embeddings"])
     score_features_df["interestingness"] <- standardize(score_features_df["interestingness"])
@@ -1334,19 +1284,17 @@ Get_noise_ceiling <- function(dat_long, question_type, n_ss) {
     "
     Find correlation values between two randomly sample halves of the data,
     correct with the Spearman-Brown Prophecy formula (defined above), and put into a list.
-    Input: data_long, question type ('satisfaction' or 'personal_desirability')
+    Input: data_long, question type ('enjoyment' or 'personal_desirability')
     Output: summary of the correlation results, to be used to plot noise ceiling (25th and 75th percentiles)
     "
 
-    # Convert "satisfaction" and "personal_desirability" columns into numeric
-    dat_long[, c("satisfaction", "personal_desirability")] <- sapply(dat_long[, c("satisfaction", "personal_desirability")], as.numeric)
+    # Convert "willing" into numeric
+    dat_long[, c("willing")] <- sapply(dat_long[, c("willing")], as.numeric)
 
-    # Filter the scores using the "subject" column, and put into a list
+    # Filter the scores using the "genre" column, and put into a list
     list_of_question <- c()
     for (i in plot_names) {
-        list_of_question[i] <- dat_long %>%
-            filter(plot_names == i) %>%
-            select(question_type)
+        list_of_question[i] <- subset(dat_long, dat_long$genre == i)['willing']
     }
 
     # Convert to data frame
@@ -1395,30 +1343,28 @@ Get_noise_ceiling <- function(dat_long, question_type, n_ss) {
 }
 
 
-CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, sum_satisfaction, sum_pd) {
+CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, sum_enjoyment) {
     "
     What this function does: creates a grouped box plot of the cross-validated prediction results
-    Inputs: results_df, x_order, results_order, ques_type, x_labels, sum_satisfaction, sum_pd
+    Inputs: results_df, x_order, results_order, ques_type, x_labels, sum_enjoyment
     Output: a boxplot of participant rating predictions with either principal components or predictors
     "
 
     grouped_box_plot <- ggplot() +
         scale_x_discrete() +
-        geom_rect(aes(xmin = 0.2, xmax = Inf, ymin = sum_satisfaction["1st Qu."], ymax = sum_satisfaction["3rd Qu."]),
-                  alpha = 1, fill = "gray60") + #"dodgerblue3") + # #56B4E9
-        geom_rect(aes(xmin = 0.2, xmax = Inf, ymin = sum_pd["1st Qu."], ymax = sum_pd["3rd Qu."]),
-                  alpha = 1, fill = "gray60") + #"forestgreen") + # #009E73
+        #geom_rect(aes(xmin = 0.2, xmax = Inf, ymin = sum_enjoyment["1st Qu."], ymax = sum_enjoyment["3rd Qu."]),
+        #          alpha = 1, fill = "gray60") + #"dodgerblue3") + # #56B4E9
         geom_hline(yintercept = 0, color = "gray60") +
         geom_boxplot(data = results_df, aes(x = x_order, y = results_order, fill = ques_type), outlier.shape = NA) +
-        ggtitle(paste0("Satisfaction and Desirability Predictions with ", x_labels)) +
+        ggtitle(paste0("enjoyment and Desirability Predictions with ", x_labels)) +
         xlab(x_labels) +
         ylab("Prediction Accuracy\n(Cross-Validated Pearson's r)") +
         scale_y_continuous(breaks = round(seq(-1, 1, by = 0.2), 1)) +
         scale_fill_manual(
             name = "Judgment Type",
-            breaks = c("satisfaction_results", "pd_results"),
-            labels = c("Satisfaction", "Personal Desirability"),
-            values = c("#56B4E9", "#009E73"),
+            breaks = c("enjoyment_results"),
+            labels = c("Enjoyment"),
+            values = c("#56B4E9"),
             guide = guide_legend(title.position = "top")) +
         theme_bw() +
         if (x_labels == "Predictors") {
@@ -1453,7 +1399,7 @@ MakePCAFunction <- function(score_features_df) {
     "
     Perform mixed-effects regression based on PCA-reduced features of our predictors.
     Input: score_features_df
-    Output: the structure of the PCA fit, the PCA correlation values for both satisfaction and pd
+    Output: the structure of the PCA fit, the PCA correlation values for both enjoyment and pd
     scores, and score_features_df (now with the addition of PC1 through PC5 scores)
     "
 
@@ -1480,9 +1426,9 @@ MakePCAFunction <- function(score_features_df) {
     # Bind the PC1 through PC5 scores to the score_features_df data frame
     score_features_df <- cbind(score_features_df, my_PCA$scores)
 
-    # 1. Fit mixed effects regression predicting satisfaction
-    satisfaction_features <- lmer(data = score_features_df,
-                                  satisfaction ~ PC1 +
+    # 1. Fit mixed effects regression predicting enjoyment
+    enjoyment_features <- lmer(data = score_features_df,
+                                  enjoyment ~ PC1 +
                                       PC2 +
                                       PC3 +
                                       PC4 +
@@ -1490,8 +1436,8 @@ MakePCAFunction <- function(score_features_df) {
                                       (1 | subject) +
                                       (1 | plot_names))
 
-    print('satisfaction vs. features:')
-    print(summary(satisfaction_features, correlation = TRUE))
+    print('enjoyment vs. features:')
+    print(summary(enjoyment_features, correlation = TRUE))
 
 
     # 2. Fit mixed effects regression predicting personal desirability
@@ -1529,9 +1475,9 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
 
     #-------------------------------------------------------------------------------------------------------------------
 
-    #1. Satisfaction
-    results_satisfaction <- data.frame(matrix(NA, nrow = length(pcs), ncol = n_folds))
-    rownames(results_satisfaction) <- pcs
+    #1. enjoyment
+    results_enjoyment <- data.frame(matrix(NA, nrow = length(pcs), ncol = n_folds))
+    rownames(results_enjoyment) <- pcs
 
     for (i in 1:length(pcs)) {
         for (j in 1:n_folds) {
@@ -1541,79 +1487,40 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
             for (k in 1:n_plots) {
                 trainIndeces <- indeces[(folds == j) & (folds2 != k)]
                 testIndeces <- indeces[(folds == j) & (folds2 == k)]
-                fitpc <- lm(satisfaction ~ get(pcs[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
+                fitpc <- lm(enjoyment ~ get(pcs[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
                 ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
-                truths <- c(truths, dat$satisfaction[testIndeces])
+                truths <- c(truths, dat$enjoyment[testIndeces])
             }
 
-            results_satisfaction[i, j] <- cor(truths, ss_results)
+            results_enjoyment[i, j] <- cor(truths, ss_results)
         }
 
-        print(paste('satisfaction: mean PC result,', pcs[i], ': ', mean(as.numeric(results_satisfaction[i,]), na.rm = TRUE)))
-        print(paste('satisfaction: median PC result,', pcs[i], ': ', median(as.numeric(results_satisfaction[i,]), na.rm = TRUE)))
+        print(paste('enjoyment: mean PC result,', pcs[i], ': ', mean(as.numeric(results_enjoyment[i,]), na.rm = TRUE)))
+        print(paste('enjoyment: median PC result,', pcs[i], ': ', median(as.numeric(results_enjoyment[i,]), na.rm = TRUE)))
     }
 
     # Reorder pcs according to their significance
-    t_results_satisfaction <- as.data.frame(t(results_satisfaction))
-    colnames(t_results_satisfaction) <- c("PC1\nFirst Derivative\nPredictors and End Value", "PC2\nSecond Derivative\nPredictors",
+    t_results_enjoyment <- as.data.frame(t(results_enjoyment))
+    colnames(t_results_enjoyment) <- c("PC1\nFirst Derivative\nPredictors and End Value", "PC2\nSecond Derivative\nPredictors",
                                           "PC3\nFluctuations, Embeddings,\nand Interestingness", "PC4\nNumber of Peaks\nand Extrema",
                                           "PC5\nIntegral, Sentiment,\nMax, and Min")
-    results_satisfaction_long <- gather(t_results_satisfaction, key = principal_components, value = pcs_results, colnames(t_results_satisfaction)) #length(pcs)*n_folds
-    satisfaction_new_order <- with(results_satisfaction_long, reorder(principal_components, pcs_results, median, na.rm = TRUE))
-    results_satisfaction_long["satisfaction_new_order"] <- satisfaction_new_order
+    results_enjoyment_long <- gather(t_results_enjoyment, key = principal_components, value = pcs_results, colnames(t_results_enjoyment)) #length(pcs)*n_folds
+    enjoyment_new_order <- with(results_enjoyment_long, reorder(principal_components, pcs_results, median, na.rm = TRUE))
+    results_enjoyment_long["enjoyment_new_order"] <- enjoyment_new_order
 
     # Get_noise_ceiling function
-    summary_satisfaction <- Get_noise_ceiling(dat_long, "satisfaction", n_ss)
-
-    #-------------------------------------------------------------------------------------------------------------------
-
-    #2. Personal Desirability
-    results_pd <- data.frame(matrix(NA, nrow = length(pcs), ncol = n_folds))
-    rownames(results_pd) <- pcs
-
-    for (i in 1:length(pcs)) {
-        for (j in 1:n_folds) {
-            ss_results <- c()
-            truths <- c()
-
-            for (k in 1:n_plots) {
-                trainIndeces <- indeces[(folds == j) & (folds2 != k)]
-                testIndeces <- indeces[(folds == j) & (folds2 == k)]
-                fitpc <- lm(personal_desirability ~ get(pcs[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
-                ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
-                truths <- c(truths, dat$personal_desirability[testIndeces])
-            }
-
-            results_pd[i, j] <- cor(truths, ss_results)
-        }
-
-        print(paste('personal desirability: mean PC result,', pcs[i], ': ', mean(as.numeric(results_pd[i,]), na.rm = TRUE)))
-        print(paste('personal desirability: median PC result,', pcs[i], ': ', median(as.numeric(results_pd[i,]), na.rm = TRUE)))
-    }
-
-    # Reorder pcs according to their significance
-    t_results_pd <- as.data.frame(t(results_pd))
-    colnames(t_results_pd) <- c("PC1\nFirst Derivative\nPredictors and End Value", "PC2\nSecond Derivative\nPredictors",
-                                "PC3\nFluctuations, Embeddings,\nand Interestingness", "PC4\nNumber of Peaks\nand Extrema",
-                                "PC5\nIntegral, Sentiment,\nMax, and Min")
-    results_pd_long <- gather(t_results_pd, key = principal_components, value = pcs_results, colnames(t_results_pd)) #length(pcs)*n_folds
-    pd_new_order <- with(results_pd_long, reorder(principal_components, pcs_results, median, na.rm = TRUE))
-    results_pd_long["pd_new_order"] <- pd_new_order
-    results_pd_long <- results_pd_long[order(match(results_pd_long[, "pd_new_order"], results_satisfaction_long[, "satisfaction_new_order"])),] #order by satisfaction scores
-
-    # Get_noise_ceiling function
-    summary_pd <- Get_noise_ceiling(dat_long, "personal_desirability", n_ss)
+    #summary_enjoyment <- Get_noise_ceiling(dat_long, "willing", n_ss)
 
     #-------------------------------------------------------------------------------------------------------------------
 
     #3. Plotting
-    pcs_results_ordered <- data.frame(pcs_order = results_satisfaction_long$satisfaction_new_order,
-                                      satisfaction_results = results_satisfaction_long$pcs_results,
-                                      pd_results = results_pd_long$pcs_results) #combine satisfaction and pd results
-    pcs_results_long <- gather(pcs_results_ordered, key = question_type, value = results, satisfaction_results, pd_results)
+    pcs_results_ordered <- data.frame(pcs_order = results_enjoyment_long$enjoyment_new_order,
+                                      enjoyment_results = results_enjoyment_long$pcs_results,
+                                      pd_results = results_pd_long$pcs_results) #combine enjoyment and pd results
+    pcs_results_long <- gather(pcs_results_ordered, key = question_type, value = results, enjoyment_results, pd_results)
 
     # Make boxplot from CV_plotter function
-    pcs_plot <- CV_plotter(pcs_results_long, pcs_results_long$pcs_order, pcs_results_long$results, pcs_results_long$question_type, "Principal Components", summary_satisfaction, summary_pd)
+    #pcs_plot <- CV_plotter(pcs_results_long, pcs_results_long$pcs_order, pcs_results_long$results, pcs_results_long$question_type, "Principal Components", summary_enjoyment, summary_pd)
 
     # Get the labels
     x_labs <- ggplot_build(pcs_plot)$layout$panel_params[[1]]$
@@ -1622,86 +1529,39 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
 
     # Perform Wilcoxon tests and get stars for significance
     # Define empty lists
-    wilcox_test_1_wt_satisfaction <- c()
-    wilcox_test_2_wt_satisfaction <- c()
-    p_value_stars_1_satisfaction <- c()
-    p_value_stars_2_satisfaction <- c()
+    wilcox_test_1_wt_enjoyment <- c()
+    wilcox_test_2_wt_enjoyment <- c()
+    p_value_stars_1_enjoyment <- c()
+    p_value_stars_2_enjoyment <- c()
     wilcox_test_1_wt_pd <- c()
     wilcox_test_2_wt_pd <- c()
     p_value_stars_1_pd <- c()
     p_value_stars_2_pd <- c()
 
     # Loop through the pcs, comparing each to null, then PC2 vs PC3, PC3 vs PC5, PC5 vs PC1, and PC1 vs PC4
-    # Satisfaction: One-sided Wilcox test
-    print("Satisfaction: --------------------------------------------------------------------------------------")
+    # enjoyment: One-sided Wilcox test
+    print("enjoyment: --------------------------------------------------------------------------------------")
     for (i in 1:length(pcs)) {
         pcs_index <- x_labs[i]
         pcs_index_plus_one <- x_labs[i + 1]
-        wilcox_test_1_wt_satisfaction[[i]] <- wilcox.test(t_results_satisfaction[, pcs_index], y = NULL, alternative = "greater",
-                                                          conf.int = TRUE, data = t_results_satisfaction)
-        p_value_stars_1_satisfaction[i] <- stars.pval(wilcox_test_1_wt_satisfaction[[i]]$"p.value") #get stars
+        wilcox_test_1_wt_enjoyment[[i]] <- wilcox.test(t_results_enjoyment[, pcs_index], y = NULL, alternative = "greater",
+                                                          conf.int = TRUE, data = t_results_enjoyment)
+        p_value_stars_1_enjoyment[i] <- stars.pval(wilcox_test_1_wt_enjoyment[[i]]$"p.value") #get stars
 
         print(paste0(x_labs[i], " --------------------------------------------------------------------------------------"))
-        print(wilcox_test_1_wt_satisfaction[[i]])
-    }
-
-    # Personal Desirability: One-sided Wilcox test
-    print("Personal Desirability: --------------------------------------------------------------------------------------")
-    for (i in 1:length(pcs)) {
-        pcs_index <- x_labs[i]
-        pcs_index_plus_one <- x_labs[i + 1]
-        wilcox_test_1_wt_pd[[i]] <- wilcox.test(t_results_pd[, pcs_index], y = NULL, alternative = "greater",
-                                                conf.int = TRUE, data = t_results_pd)
-        p_value_stars_1_pd[i] <- stars.pval(wilcox_test_1_wt_pd[[i]]$"p.value") #get stars
-
-        print(paste0(x_labs[i], " --------------------------------------------------------------------------------------"))
-        print(wilcox_test_1_wt_pd[[i]])
-    }
-
-    # Satisfaction: Two-sided Wilcox test
-    print("Satisfaction: --------------------------------------------------------------------------------------")
-    for (i in 1:(length(pcs) - 1)) {
-        pcs_index <- x_labs[i]
-        pcs_index_plus_one <- x_labs[i + 1]
-        wilcox_test_2_wt_satisfaction[[i]] <- wilcox.test(t_results_satisfaction[, pcs_index], y = t_results_satisfaction[, pcs_index_plus_one],
-                                                          alternative = "two.sided", conf.int = TRUE, data = t_results_satisfaction)
-        p_value_stars_2_satisfaction[i] <- stars.pval(wilcox_test_2_wt_satisfaction[[i]]$"p.value") #get stars
-        if (p_value_stars_2_satisfaction[i] %in% c("", " ")) {
-            p_value_stars_2_satisfaction[i] <- "ns"
-        }
-
-        print(paste0(sub("\\\n.*", "", pcs_index), " vs ", sub("\\\n.*", "", pcs_index_plus_one), #print PC comparisons vs one another
-                     " --------------------------------------------------------------------------------------"))
-        print(wilcox_test_2_wt_satisfaction[[i]])
-    }
-
-    # Personal Desirability: Two-sided Wilcox test
-    print("Personal Desirability: --------------------------------------------------------------------------------------")
-    for (i in 1:(length(pcs) - 1)) {
-        pcs_index <- x_labs[i]
-        pcs_index_plus_one <- x_labs[i + 1]
-        wilcox_test_2_wt_pd[[i]] <- wilcox.test(t_results_pd[, pcs_index], y = t_results_pd[, pcs_index_plus_one],
-                                                alternative = "two.sided", conf.int = TRUE, data = t_results_pd)
-        p_value_stars_2_pd[i] <- stars.pval(wilcox_test_2_wt_pd[[i]]$"p.value") #get stars
-        if (p_value_stars_2_pd[i] %in% c("", " ")) {
-            p_value_stars_2_pd[i] <- "ns"
-        }
-
-        print(paste0(sub("\\\n.*", "", pcs_index), " vs ", sub("\\\n.*", "", pcs_index_plus_one), #print PC comparisons vs one another
-                     " --------------------------------------------------------------------------------------"))
-        print(wilcox_test_2_wt_pd[[i]])
+        print(wilcox_test_1_wt_enjoyment[[i]])
     }
 
     # Define heights of annotations
     bottom_y <- -1.05 #y value for all bottom stars
 
-    satisfaction_color <- "#56B4E9"
-    satisfaction_bottom_x <- 1.19 #x value for bottom stars
-    satisfaction_top_x <- satisfaction_bottom_x + 0.5 #x value for top stars
-    satisfaction_top_y <- 1.17 #y value for top stars
-    satisfaction_bracket_y <- 1.07 #y value for top bracket
-    satisfaction_bracket_start <- 1.24 #x starting point for top bracket
-    satisfaction_bracket_end <- 2.15 #x ending point for top bracket
+    enjoyment_color <- "#56B4E9"
+    enjoyment_bottom_x <- 1.19 #x value for bottom stars
+    enjoyment_top_x <- enjoyment_bottom_x + 0.5 #x value for top stars
+    enjoyment_top_y <- 1.17 #y value for top stars
+    enjoyment_bracket_y <- 1.07 #y value for top bracket
+    enjoyment_bracket_start <- 1.24 #x starting point for top bracket
+    enjoyment_bracket_end <- 2.15 #x ending point for top bracket
 
     pd_color <- "#009E73"
     pd_bottom_x <- 0.813 #x value for bottom stars
@@ -1715,34 +1575,21 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
     pcs_plot <- pcs_plot +
 
         # One-sided Wilcox test
-        ggplot2::annotate("text", x = satisfaction_bottom_x, y = bottom_y, size = 8, label = p_value_stars_1_satisfaction[[1]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 1, y = bottom_y, size = 8, label = p_value_stars_1_satisfaction[[2]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 2, y = bottom_y, size = 8, label = p_value_stars_1_satisfaction[[3]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 3, y = bottom_y, size = 8, label = p_value_stars_1_satisfaction[[4]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 4, y = bottom_y, size = 8, label = p_value_stars_1_satisfaction[[5]]) +
-        ggplot2::annotate("text", x = pd_bottom_x, y = bottom_y, size = 8, label = p_value_stars_1_pd[[1]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 1, y = bottom_y, size = 8, label = p_value_stars_1_pd[[2]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 2, y = bottom_y, size = 8, label = p_value_stars_1_pd[[3]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 3, y = bottom_y, size = 8, label = p_value_stars_1_pd[[4]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 4, y = bottom_y, size = 8, label = p_value_stars_1_pd[[5]]) +
+        ggplot2::annotate("text", x = enjoyment_bottom_x, y = bottom_y, size = 8, label = p_value_stars_1_enjoyment[[1]]) +
+        ggplot2::annotate("text", x = enjoyment_bottom_x + 1, y = bottom_y, size = 8, label = p_value_stars_1_enjoyment[[2]]) +
+        ggplot2::annotate("text", x = enjoyment_bottom_x + 2, y = bottom_y, size = 8, label = p_value_stars_1_enjoyment[[3]]) +
+        ggplot2::annotate("text", x = enjoyment_bottom_x + 3, y = bottom_y, size = 8, label = p_value_stars_1_enjoyment[[4]]) +
+        ggplot2::annotate("text", x = enjoyment_bottom_x + 4, y = bottom_y, size = 8, label = p_value_stars_1_enjoyment[[5]]) +
 
         # Two-sided Wilcox test (with brackets)
-        geom_segment(aes(x = satisfaction_bracket_start, xend = satisfaction_bracket_end, y = satisfaction_bracket_y, yend = satisfaction_bracket_y, colour = satisfaction_color)) +
-        ggplot2::annotate("text", x = satisfaction_top_x, y = satisfaction_top_y, size = 8, label = p_value_stars_2_satisfaction[[1]]) +
-        geom_segment(aes(x = satisfaction_bracket_start + 1, xend = satisfaction_bracket_end + 1, y = satisfaction_bracket_y, yend = satisfaction_bracket_y, color = satisfaction_color)) +
-        ggplot2::annotate("text", x = satisfaction_top_x + 1, y = satisfaction_top_y, size = 8, label = p_value_stars_2_satisfaction[[2]]) +
-        geom_segment(aes(x = satisfaction_bracket_start + 2, xend = satisfaction_bracket_end + 2, y = satisfaction_bracket_y, yend = satisfaction_bracket_y, color = satisfaction_color)) +
-        ggplot2::annotate("text", x = satisfaction_top_x + 2, y = satisfaction_top_y, size = 8, label = p_value_stars_2_satisfaction[[3]]) +
-        geom_segment(aes(x = satisfaction_bracket_start + 3, xend = satisfaction_bracket_end + 3, y = satisfaction_bracket_y, yend = satisfaction_bracket_y, color = satisfaction_color)) +
-        ggplot2::annotate("text", x = satisfaction_top_x + 3, y = satisfaction_top_y, size = 8, label = p_value_stars_2_satisfaction[[4]]) +
-        geom_segment(aes(x = pd_bracket_start, xend = pd_bracket_end, y = pd_bracket_y, yend = pd_bracket_y, color = pd_color)) +
-        ggplot2::annotate("text", x = pd_top_x, y = pd_top_y, size = 8, label = p_value_stars_2_pd[[1]]) +
-        geom_segment(aes(x = pd_bracket_start + 1, xend = pd_bracket_end + 1, y = pd_bracket_y, yend = pd_bracket_y, color = pd_color)) +
-        ggplot2::annotate("text", x = pd_top_x + 1, y = pd_top_y, size = 8, label = p_value_stars_2_pd[[2]]) +
-        geom_segment(aes(x = pd_bracket_start + 2, xend = pd_bracket_end + 2, y = pd_bracket_y, yend = pd_bracket_y, color = pd_color)) +
-        ggplot2::annotate("text", x = pd_top_x + 2, y = pd_top_y, size = 8, label = p_value_stars_2_pd[[3]]) +
-        geom_segment(aes(x = pd_bracket_start + 3, xend = pd_bracket_end + 3, y = pd_bracket_y, yend = pd_bracket_y, color = pd_color)) +
-        ggplot2::annotate("text", x = pd_top_x + 3, y = pd_top_y, size = 8, label = p_value_stars_2_pd[[4]]) +
+        geom_segment(aes(x = enjoyment_bracket_start, xend = enjoyment_bracket_end, y = enjoyment_bracket_y, yend = enjoyment_bracket_y, colour = enjoyment_color)) +
+        ggplot2::annotate("text", x = enjoyment_top_x, y = enjoyment_top_y, size = 8, label = p_value_stars_2_enjoyment[[1]]) +
+        geom_segment(aes(x = enjoyment_bracket_start + 1, xend = enjoyment_bracket_end + 1, y = enjoyment_bracket_y, yend = enjoyment_bracket_y, color = enjoyment_color)) +
+        ggplot2::annotate("text", x = enjoyment_top_x + 1, y = enjoyment_top_y, size = 8, label = p_value_stars_2_enjoyment[[2]]) +
+        geom_segment(aes(x = enjoyment_bracket_start + 2, xend = enjoyment_bracket_end + 2, y = enjoyment_bracket_y, yend = enjoyment_bracket_y, color = enjoyment_color)) +
+        ggplot2::annotate("text", x = enjoyment_top_x + 2, y = enjoyment_top_y, size = 8, label = p_value_stars_2_enjoyment[[3]]) +
+        geom_segment(aes(x = enjoyment_bracket_start + 3, xend = enjoyment_bracket_end + 3, y = enjoyment_bracket_y, yend = enjoyment_bracket_y, color = enjoyment_color)) +
+        ggplot2::annotate("text", x = enjoyment_top_x + 3, y = enjoyment_top_y, size = 8, label = p_value_stars_2_enjoyment[[4]]) +
         scale_colour_identity()
 
     #-------------------------------------------------------------------------------------------------------------------
@@ -1751,7 +1598,7 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
 }
 
 
-CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
+CrossValidationAnalysisWtPredictors <- function(dat, num_subjects_and_plots, n_plots) {
     "
     Measure the performance of each of our predictors by doing cross-validated regressions, holding out
     one participant for each cross-validation step.
@@ -1773,96 +1620,63 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
     setnames(dat, old = predictors_old, new = predictors)
 
     set.seed(1)
-    n_folds <- n_ss
+    n_folds <- num_subjects_and_plots / n_plots
     folds <- cut(seq(1, nrow(dat)), breaks = n_folds, labels = FALSE)
     folds2 <- rep(seq(1, n_plots), times = n_folds) #plot x subjects folds
     indeces <- seq(1, (n_plots * n_folds))
 
     #-------------------------------------------------------------------------------------------------------------------
 
-    #1. Satisfaction
-    results_satisfaction <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
-    rownames(results_satisfaction) <- predictors
+    #1. Willingness to Pay
+    results_enjoyment <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
+    rownames(results_enjoyment) <- predictors
 
     for (i in 1:length(predictors)) {
         for (j in 1:n_folds) {
             ss_results <- c()
             truths <- c()
 
-            for (k in 1:n_plots) {
-                trainIndeces <- indeces[(folds == j) & (folds2 != k)]
+            for (k in 1: n_plots) {  # Now
+                trainIndeces <- indeces[(folds == j) & (folds2 != k)]  # Select fold j, but exclude test index (k)
                 testIndeces <- indeces[(folds == j) & (folds2 == k)]
 
-                # TODO: Fit
-                fitpc <- lm(satisfaction ~ get(predictors[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
+                # TODO: Predict E4 values, based on their metrics
+                fitpc <- lm(willing ~ get(predictors[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
+
+                # For predicting, select a random participant
                 ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
-                truths <- c(truths, dat$satisfaction[testIndeces])
+                truths <- c(truths, dat$willing[testIndeces])
             }
 
-            results_satisfaction[i, j] <- cor(truths, ss_results)
+            results_enjoyment[i, j] <- cor(truths, ss_results)
         }
 
-        print(paste('satisfaction: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_satisfaction[i,]), na.rm = TRUE)))
-        print(paste('satisfaction: median predictor result,', predictors[i], ': ', median(as.numeric(results_satisfaction[i,]), na.rm = TRUE)))
+        print(paste('enjoyment: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_enjoyment[i,]), na.rm = TRUE)))
+        print(paste('enjoyment: median predictor result,', predictors[i], ': ', median(as.numeric(results_enjoyment[i,]), na.rm = TRUE)))
     }
 
     # Reorder predictors according to their significance
-    t_results_satisfaction <- as.data.frame(t(results_satisfaction))
-    colnames(t_results_satisfaction) <- predictors
-    results_satisfaction_long <- gather(t_results_satisfaction, key = predictors, value = predictors_results, colnames(t_results_satisfaction)) #length(predictors)*n_folds
-    satisfaction_new_order <- with(results_satisfaction_long, reorder(predictors, predictors_results, median, na.rm = TRUE))
-    results_satisfaction_long["satisfaction_new_order"] <- satisfaction_new_order
+    t_results_enjoyment <- as.data.frame(t(results_enjoyment))
+    colnames(t_results_enjoyment) <- predictors
+    results_enjoyment_long <- gather(t_results_enjoyment, key = predictors, value = predictors_results, colnames(t_results_enjoyment)) #length(predictors)*n_folds
+    enjoyment_new_order <- with(results_enjoyment_long, reorder(predictors, predictors_results, median, na.rm = TRUE))
+    results_enjoyment_long["enjoyment_new_order"] <- enjoyment_new_order
 
     # Get_noise_ceiling function
-    summary_satisfaction <- Get_noise_ceiling(dat_long, "satisfaction", n_ss)
+    summary_enjoyment <- Get_noise_ceiling(dat, "willing", n_folds)
 
     #-------------------------------------------------------------------------------------------------------------------
-
-    #2. Personal Desirability
-    results_pd <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
-    rownames(results_pd) <- predictors
-
-    for (i in 1:length(predictors)) {
-        for (j in 1:n_folds) {
-            ss_results <- c()
-            truths <- c()
-
-            for (k in 1:n_plots) {
-                trainIndeces <- indeces[(folds == j) & (folds2 != k)]
-                testIndeces <- indeces[(folds == j) & (folds2 == k)]
-                fitpc <- lm(personal_desirability ~ get(predictors[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
-                ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
-                truths <- c(truths, dat$personal_desirability[testIndeces])
-            }
-
-            results_pd[i, j] <- cor(truths, ss_results)
-        }
-
-        print(paste('personal desirability: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_pd[i,]), na.rm = TRUE)))
-        print(paste('personal desirability: median predictor result,', predictors[i], ': ', median(as.numeric(results_pd[i,]), na.rm = TRUE)))
-    }
-
-    # Reorder predictors according to their significance
-    t_results_pd <- as.data.frame(t(results_pd))
-    colnames(t_results_pd) <- predictors
-    results_pd_long <- gather(t_results_pd, key = predictors, value = predictors_results, colnames(t_results_pd)) #length(predictors)*n_folds
-    pd_new_order <- with(results_pd_long, reorder(predictors, predictors_results, median, na.rm = TRUE))
-    results_pd_long["pd_new_order"] <- pd_new_order
-    results_pd_long <- results_pd_long[order(match(results_pd_long[, "pd_new_order"], results_satisfaction_long[, "satisfaction_new_order"])),] #order by satisfaction scores
-
-    # Get_noise_ceiling function
-    summary_pd <- Get_noise_ceiling(dat_long, "personal_desirability", n_ss)
-
     #-------------------------------------------------------------------------------------------------------------------
-
+# Friendly person on the checkout
+    # Make titles & axes biger
+    # arrow
     #3. Plotting
-    predictors_results_ordered <- data.frame(predictors_order = results_satisfaction_long$satisfaction_new_order,
-                                             satisfaction_results = results_satisfaction_long$predictors_results,
-                                             pd_results = results_pd_long$predictors_results) #combine satisfaction and pd results
-    predictors_results_long <- gather(predictors_results_ordered, key = question_type, value = results, satisfaction_results, pd_results)
+    predictors_results_ordered <- data.frame(predictors_order = results_enjoyment_long$enjoyment_new_order,
+                                             enjoyment_results = results_enjoyment_long$predictors_results)
+    predictors_results_long <- gather(predictors_results_ordered, key = question_type, value = results, enjoyment_results)
 
     # Make boxplot from CV_plotter function
-    predictors_plot <- CV_plotter(predictors_results_long, predictors_results_long$predictors_order, predictors_results_long$results, predictors_results_long$question_type, "Predictors", summary_satisfaction, summary_pd)
+    predictors_plot <- CV_plotter(predictors_results_long, predictors_results_long$predictors_order, predictors_results_long$results, predictors_results_long$question_type, "Predictors", summary_enjoyment)
 
     # Get the labels
     x_labs <- ggplot_build(predictors_plot)$layout$panel_params[[1]]$
@@ -1871,88 +1685,54 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
 
     # Perform Wilcoxon tests and get stars for significance
     # Define empty lists
-    wilcox_test_wt_satisfaction <- c()
-    p_value_stars_satisfaction <- c()
+    wilcox_test_wt_enjoyment <- c()
+    p_value_stars_enjoyment <- c()
     wilcox_test_wt_pd <- c()
     p_value_stars_pd <- c()
 
     # Loop through the predictors, comparing each to a null distribution
-    # Satisfaction: One-sided Wilcox test
-    print("Satisfaction: --------------------------------------------------------------------------------------")
+    # enjoyment: One-sided Wilcox test
+    print("enjoyment: --------------------------------------------------------------------------------------")
     for (i in x_labs) {
         print(paste0(i, " --------------------------------------------------------------------------------------"))
-        wilcox_test_wt_satisfaction[[i]] <- wilcox.test(t_results_satisfaction[, i], y = NULL, alternative = "greater",
-                                                        conf.int = TRUE, data = t_results_satisfaction)
-        p_value_stars_satisfaction[i] <- stars.pval(wilcox_test_wt_satisfaction[[i]]$"p.value") #get stars
+        wilcox_test_wt_enjoyment[[i]] <- wilcox.test(t_results_enjoyment[, i], y = NULL, alternative = "greater",
+                                                        conf.int = TRUE)
+        p_value_stars_enjoyment[i] <- stars.pval(wilcox_test_wt_enjoyment[[i]]$"p.value") #get stars
 
-        print(wilcox_test_wt_satisfaction[[i]])
+        print(wilcox_test_wt_enjoyment[[i]])
     }
 
-    # Personal Desirability: One-sided Wilcox test
-    print("Personal Desirability: --------------------------------------------------------------------------------------")
-    for (i in x_labs) {
-        print(paste0(i, " --------------------------------------------------------------------------------------"))
-        wilcox_test_wt_pd[[i]] <- wilcox.test(t_results_pd[, i], y = NULL, alternative = "greater",
-                                              conf.int = TRUE, data = t_results_pd)
-        p_value_stars_pd[i] <- stars.pval(wilcox_test_wt_pd[[i]]$"p.value") #get stars
-
-        print(wilcox_test_wt_pd[[i]])
-    }
 
     # Define heights of annotations
-    pd_bottom_x <- 0.8 #x value for bottom stars
-    pd_bottom_y <- -1.0 #y value for bottom stars
-    satisfaction_bottom_x <- 1.2 #x value for bottom stars
-    satisfaction_bottom_y <- pd_bottom_y - 0.15 #y value for bottom stars
+    enjoyment_bottom_x <- 1.0 #x value for bottom stars
+    enjoyment_bottom_y <- -1.0 #y value for bottom stars
 
     # Add to the plot: stars indicating significance
     predictors_plot <- predictors_plot +
 
         # One-sided Wilcox test
-        ggplot2::annotate("text", x = satisfaction_bottom_x, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[1]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 1, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[2]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 2, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[3]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 3, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[4]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 4, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[5]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 5, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[6]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 6, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[7]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 7, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[8]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 8, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[9]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 9, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[10]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 10, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[11]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 11, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[12]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 12, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[13]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 13, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[14]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 14, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[15]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 15, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[16]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 16, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[17]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 17, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[18]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 18, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[19]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 19, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[20]]) +
-
-        ggplot2::annotate("text", x = pd_bottom_x, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[1]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 1, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[2]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 2, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[3]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 3, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[4]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 4, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[5]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 5, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[6]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 6, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[7]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 7, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[8]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 8, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[9]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 9, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[10]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 10, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[11]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 11, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[12]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 12, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[13]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 13, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[14]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 14, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[15]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 15, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[16]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 16, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[17]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 17, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[18]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 18, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[19]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 19, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[20]])
+        ggplot2::annotate("text", x = enjoyment_bottom_x, y = enjoyment_bottom_y, size = 8, label = p_value_stars_enjoyment[[1]]) +
+        ggplot2::annotate("text", x = enjoyment_bottom_x + 1, y = enjoyment_bottom_y, size = 8, label = p_value_stars_enjoyment[[2]]) +
+        ggplot2::annotate("text", x = enjoyment_bottom_x + 2, y = enjoyment_bottom_y, size = 8, label = p_value_stars_enjoyment[[3]]) +
+        ggplot2::annotate("text", x = enjoyment_bottom_x + 3, y = enjoyment_bottom_y, size = 8, label = p_value_stars_enjoyment[[4]]) +
+        ggplot2::annotate("text", x = enjoyment_bottom_x + 4, y = enjoyment_bottom_y, size = 8, label = p_value_stars_enjoyment[[5]]) +
+        ggplot2::annotate("text", x = enjoyment_bottom_x + 5, y = enjoyment_bottom_y, size = 8, label = p_value_stars_enjoyment[[6]]) +
+        ggplot2::annotate("text", x = enjoyment_bottom_x + 6, y = enjoyment_bottom_y, size = 8, label = p_value_stars_enjoyment[[7]]) +
+        ggplot2::annotate("text", x = enjoyment_bottom_x + 7, y = enjoyment_bottom_y, size = 8, label = p_value_stars_enjoyment[[8]]) +
+        ggplot2::annotate("text", x = enjoyment_bottom_x + 8, y = enjoyment_bottom_y, size = 8, label = p_value_stars_enjoyment[[9]]) +
+        ggplot2::annotate("text", x = enjoyment_bottom_x + 9, y = enjoyment_bottom_y, size = 8, label = p_value_stars_enjoyment[[10]]) +
+        ggplot2::annotate("text", x = enjoyment_bottom_x + 10, y = enjoyment_bottom_y, size = 8, label = p_value_stars_enjoyment[[11]]) +
+        ggplot2::annotate("text", x = enjoyment_bottom_x + 11, y = enjoyment_bottom_y, size = 8, label = p_value_stars_enjoyment[[12]]) +
+        ggplot2::annotate("text", x = enjoyment_bottom_x + 12, y = enjoyment_bottom_y, size = 8, label = p_value_stars_enjoyment[[13]]) +
+        ggplot2::annotate("text", x = enjoyment_bottom_x + 13, y = enjoyment_bottom_y, size = 8, label = p_value_stars_enjoyment[[14]]) +
+        ggplot2::annotate("text", x = enjoyment_bottom_x + 14, y = enjoyment_bottom_y, size = 8, label = p_value_stars_enjoyment[[15]]) +
+        ggplot2::annotate("text", x = enjoyment_bottom_x + 15, y = enjoyment_bottom_y, size = 8, label = p_value_stars_enjoyment[[16]]) +
+        ggplot2::annotate("text", x = enjoyment_bottom_x + 16, y = enjoyment_bottom_y, size = 8, label = p_value_stars_enjoyment[[17]]) +
+        ggplot2::annotate("text", x = enjoyment_bottom_x + 17, y = enjoyment_bottom_y, size = 8, label = p_value_stars_enjoyment[[18]]) +
+        ggplot2::annotate("text", x = enjoyment_bottom_x + 18, y = enjoyment_bottom_y, size = 8, label = p_value_stars_enjoyment[[19]]) +
+        ggplot2::annotate("text", x = enjoyment_bottom_x + 19, y = enjoyment_bottom_y, size = 8, label = p_value_stars_enjoyment[[20]])
 
     #-------------------------------------------------------------------------------------------------------------------
-
     return(predictors_plot)
 }
 
@@ -1961,63 +1741,63 @@ AnalyzeRidgeRegression <- function(score_features_df) {
     "
     Measure the performance of individual predictors by doing cross-validated (nfold = 10) ridge regression
     Input: score_features_df
-    Output: Ridge regression results for satisfaction and personal desirability scores and their plots
+    Output: Ridge regression results for enjoyment and personal desirability scores and their plots
     "
 
     # Define the columns that we want for the regression: from embeddings to integral and the D1 & D2 predictors.
     score_features_ss <- subset(score_features_df, select = c(embeddings:integral, d1_avg_unweight:d1_avg_weight_end, d2_avg_unweight:d2_avg_weight_end))
     my_predictors <- data.matrix(score_features_ss)
 
-    # 1. Satisfaction
-    satisfaction_scores <- score_features_df$satisfaction
+    # 1. enjoyment
+    enjoyment_scores <- score_features_df$enjoyment
 
     # Create testing and training data
     set.seed(1)
     indeces <- sample(nrow(my_predictors), nrow(my_predictors) * 0.8)
 
     my_predictors_train <- my_predictors[indeces,]
-    satisfaction_scores_train <- satisfaction_scores[indeces]
+    enjoyment_scores_train <- enjoyment_scores[indeces]
 
     my_predictors_test <- my_predictors[-indeces,]
-    satisfaction_scores_test <- satisfaction_scores[-indeces]
+    enjoyment_scores_test <- enjoyment_scores[-indeces]
 
     # Standardize data
     my_predictors_train_stdz <- apply(my_predictors_train, 2, scale)
-    satisfaction_scores_train_stdz <- scale(satisfaction_scores_train)
+    enjoyment_scores_train_stdz <- scale(enjoyment_scores_train)
 
     my_predictors_test_stdz <- apply(my_predictors_test, 2, scale)
-    satisfaction_scores_test_stdz <- scale(satisfaction_scores_test)
+    enjoyment_scores_test_stdz <- scale(enjoyment_scores_test)
 
     # Run regular regression
-    lm_satisfaction_features <- glmnet(my_predictors_train_stdz, satisfaction_scores_train_stdz,
+    lm_enjoyment_features <- glmnet(my_predictors_train_stdz, enjoyment_scores_train_stdz,
                                        alpha = 0, lambda = 0)
 
     # Run ridge regression
     set.seed(123)
     lambdas <- seq(1, 10e-5, length = 100)
-    ridge_satisfaction_features <- cv.glmnet(my_predictors_train_stdz, satisfaction_scores_train_stdz,
+    ridge_enjoyment_features <- cv.glmnet(my_predictors_train_stdz, enjoyment_scores_train_stdz,
                                              nfolds = 10, alpha = 0, lambda = lambdas)
-    plot(ridge_satisfaction_features)
-    lambda_best <- ridge_satisfaction_features$lambda.min
-    ridge_satisfaction_features1 <- glmnet(my_predictors_train_stdz, satisfaction_scores_train_stdz,
+    plot(ridge_enjoyment_features)
+    lambda_best <- ridge_enjoyment_features$lambda.min
+    ridge_enjoyment_features1 <- glmnet(my_predictors_train_stdz, enjoyment_scores_train_stdz,
                                            alpha = 0, lambda = lambda_best)
 
     # Order the regression results from most to least important predictors (rounded to 5 digits)
-    satisfaction_features_rounded <- round(coef(ridge_satisfaction_features1), 5)
-    x_satisfaction_ordered = order(satisfaction_features_rounded@x, decreasing = TRUE)
-    satisfaction_features_rounded@Dimnames[[1]] <- satisfaction_features_rounded@Dimnames[[1]][x_satisfaction_ordered]
-    satisfaction_features_rounded@x <- satisfaction_features_rounded@x[x_satisfaction_ordered]
+    enjoyment_features_rounded <- round(coef(ridge_enjoyment_features1), 5)
+    x_enjoyment_ordered = order(enjoyment_features_rounded@x, decreasing = TRUE)
+    enjoyment_features_rounded@Dimnames[[1]] <- enjoyment_features_rounded@Dimnames[[1]][x_enjoyment_ordered]
+    enjoyment_features_rounded@x <- enjoyment_features_rounded@x[x_enjoyment_ordered]
 
-    print('satisfaction vs. features:')
-    print(satisfaction_features_rounded)
+    print('enjoyment vs. features:')
+    print(enjoyment_features_rounded)
 
     # Compare standard regression to ridge regression
-    predict_satisfaction_lm <- predict(lm_satisfaction_features, my_predictors_test_stdz)
-    mse_satisfaction_lm <- mean((satisfaction_scores_test_stdz - predict_satisfaction_lm)^2)
-    mse_satisfaction_lm
-    predict_satisfaction_ridge <- predict(ridge_satisfaction_features1, my_predictors_test_stdz)
-    mse_satisfaction_ridge <- mean((satisfaction_scores_test_stdz - predict_satisfaction_ridge)^2)
-    mse_satisfaction_ridge
+    predict_enjoyment_lm <- predict(lm_enjoyment_features, my_predictors_test_stdz)
+    mse_enjoyment_lm <- mean((enjoyment_scores_test_stdz - predict_enjoyment_lm)^2)
+    mse_enjoyment_lm
+    predict_enjoyment_ridge <- predict(ridge_enjoyment_features1, my_predictors_test_stdz)
+    mse_enjoyment_ridge <- mean((enjoyment_scores_test_stdz - predict_enjoyment_ridge)^2)
+    mse_enjoyment_ridge
     #Hmm, linear regression seems to perform a bit better than ridge regression
 
     # Plot functions
@@ -2061,8 +1841,8 @@ AnalyzeRidgeRegression <- function(score_features_df) {
 
     }
 
-    plot_Fit(satisfaction_scores_test_stdz, predict_satisfaction_lm, my_title = "LM: Satisfaction")
-    plot_Fit(satisfaction_scores_test_stdz, predict_satisfaction_ridge, my_title = "RIDGE: Satisfaction")
+    plot_Fit(enjoyment_scores_test_stdz, predict_enjoyment_lm, my_title = "LM: enjoyment")
+    plot_Fit(enjoyment_scores_test_stdz, predict_enjoyment_ridge, my_title = "RIDGE: enjoyment")
 
     #------------------------------------------------------------------------------------------------
 
@@ -2129,22 +1909,11 @@ AnalyzeRidgeRegression <- function(score_features_df) {
 ##================================================================================================================
 
 # Define global variables
-n_plots <- 27
-satisfaction_scores <- 1:n_plots
-plot_names <- c("linear_rise", "linear_fall",
-                "linear_low", "linear_middle", "linear_high",
-                "exp_rise_convex", "exp_fall_convex", "exp_rise_concave", "exp_fall_concave",
-                "sin_fr_full", "sin_fr_partial", "sin_rf_full", "sin_rf_partial",
-                "sin_rfr_full", "sin_rfr_partial",
-                "sin_frf_full", "sin_frf_partial",
-                "sin_frfr", "sin_rfrf",
-                "logistic_rise", "logistic_fall",
-                "positive_change_full", "positive_change_partial",
-                "negative_change_full", "negative_change_partial",
-                "linear_rise_sharp_fall", "linear_rise_sharp_fall_exp_rise")
+genres = c('Horror', 'Adventure', 'Drama', 'Biography', 'Action', 'Fantasy', 'SciFi', 'Animation')
+n_plots <- length(genres)
 
 # Read Data and Create Folder for Saving Files
-d_raw <- read.csv('./data/data_e1.csv')
+d_long <- read.csv('./data/data_e4.csv')
 dir.create("plots/analysis_plots")
 
 ## ================================= (1) Perform Exclusions and Process Data =====================================
@@ -2158,27 +1927,18 @@ dir.create("plots/analysis_plots")
 - Create data_plot_long (nrows = num_plots*num_questions, i.e averages for plotting)
 "
 
-d <- PerformExclusions(d_raw) #num_rows = num_ss
-n_after_exclusions <- d$n_after_exclusions[1]
-num_subjects_and_plots <- n_after_exclusions * n_plots
-
-d_long <- Preprocess(d, n_plots, plot_names) #num_rows = num_ss*num_plots [to see e3_data without exclusions, replace e3_data_clean with e3_data]
-d_long[, c("satisfaction", "personal_desirability")] <- sapply(d_long[, c("satisfaction", "personal_desirability")], as.numeric) #turn ratings to numeric
-d_long <- TransformWTP(d_long)
-# Warning message: In TransformWTP(d_long) : NAs introduced by coercion
-# (Some people gave non-numerical answers, hence the warning message)
-
+num_subjects_and_plots <- dim(d_long)[1]
 
 ### (i) CREATE CSV FOR SEMANTIC ANALYSIS
 analyze_words <- GetWordAnalysis(d_long, n_plots)
 words_df <- as.data.frame(matrix(unlist(analyze_words), ncol = length(unlist(analyze_words[1]))))
 analyze_words_df <- cbind(plot_names = plot_names, words = words_df$V1)
-write.csv(analyze_words_df, "word_analysis_e3.csv", row.names = FALSE) #create word analysis csv for google colab code
+write.csv(analyze_words_df, "word_analysis_e4.csv", row.names = FALSE) #create word analysis csv for google colab code
 
 
-### (ii) CREATE SEMANTIC EMBEDDINGS DATAFRAME [**NB: YOU NEED TO HAVE ALREADY EXTRACTED EMBEDDINGS FOR word_analysis_e3.csv]
-my_embeddings <- read.csv("data/embeddings_e1b.csv", header = TRUE)
-embeddings_avg <- data.frame(embeddings = rowMeans(my_embeddings[2:28])) #create a dataframe
+### (ii) CREATE SEMANTIC EMBEDDINGS DATAFRAME [**NB: YOU NEED TO HAVE ALREADY EXTRACTED EMBEDDINGS FOR word_analysis_e4.csv]
+my_embeddings <- read.csv("data/embeddings_long_e4.csv", header = TRUE)
+embeddings_avg <- data.frame(embeddings = rowMeans(my_embeddings)) #create a dataframe
 
 
 ### (iii) CREATE INTERESTINGNESS DATAFRAME
@@ -2186,10 +1946,10 @@ interestingness <- GetInterestingness(d_long, n_plots)
 
 
 ### (iv) PROCESS FOR PLOTS
-d_long <- cbind(d_long, embeddings_avg, interestingness)
+d_long <- cbind(d_long, embeddings_avg)
+d_long <- cbind(d_long, interestingness)
 data_plot_long = NULL
-data_plot_long <- ProcessForPlots(d_long, n_plots, plot_names) #num_rows = num_plots*num_questions
-
+#data_plot_long <- ProcessForPlots(d_long, n_plots, plot_names) #num_rows = num_plots*num_questions
 
 ## ========================================== (2) Plot Data and Save ==================================================
 if (FALSE) {
@@ -2197,7 +1957,7 @@ if (FALSE) {
     Create bar plot, word clouds, and sentiment plot
     "
 
-    #### (2.1) MAKE BAR PLOT OF SATISFACTION SCORES
+    #### (2.1) MAKE BAR PLOT OF enjoyment SCORES
     grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)
     plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot, plot_names) #the little customer journey icons
 
@@ -2215,7 +1975,7 @@ if (FALSE) {
     dev.off()
 
 
-    #### (2.3) MAKE PLOT OF SENTIMENT SCORES, ORDERED BY SATISFACTION SCORES
+    #### (2.3) MAKE PLOT OF SENTIMENT SCORES, ORDERED BY enjoyment SCORES
     sentiment_bar_plot <- MakeSentimentBarPlot(d_long, n_plots, plot_names)
     sentiment_plot_images <- MakeGroupedBarPlotImages(sentiment_bar_plot, plot_names) #the little customer journey icons
 
@@ -2228,24 +1988,30 @@ if (FALSE) {
 
 }
 
-
 ## ============================================== (3) Analysis =====================================================
+
 "
 Get main statistical effects, and run descriptive and predictive analyses
 "
 
 #### (3.1) GET MAIN EFFECTS
 
-# Get dataframe for analysis (e3_dat_final), with nrows = num_ss*num_plots*num_questions
-e3_dat <- gather(d_long, key = question_type, value = score, satisfaction, personal_desirability)
-e3_dat <- dplyr::select(e3_dat, subject, plot_names, question_type, score, willingness_to_pay) #rows = num_ss*num_plots*num_questions
-e3_sentiment_scores <- CreateSentimentDataframe(d_long, n_plots, plot_names)
-e3_dat_final <- cbind(e3_dat, sentiment_score = e3_sentiment_scores[rep(seq_len(nrow(e3_sentiment_scores)), n_after_exclusions),]$mean)
+# Get dataframe for analysis (e4_dat_final), with nrows = num_ss*num_plots*num_questions
+#e4_dat <- gather(d_long, key = question_type, value = score, enjoyment, personal_desirability)
+#e4_dat <- dplyr::select(e4_dat, subject, plot_names, question_type, score, willingness_to_pay) #rows = num_ss*num_plots*num_questions
+
+n_after_exclusions <- 55;
+
+d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment)
+e4_dat_final <- d_long
+
+write.csv(d_long, "d_long_e4.csv", row.names = FALSE) #create word analysis csv for google colab code
+
 
 # TODO: Need to fix this part
 if (FALSE) {
     # Get main statistical effects
-    main_effects <- GetMainEffects(e3_dat_final, d_long, data_plot_long, data_plot_long, n_plots, plot_names, my_embeddings)
+    main_effects <- GetMainEffects(e4_dat_final, d_long, data_plot_long, data_plot_long, n_plots, plot_names, my_embeddings)
     #See error: 486 not defined because of singularities; checked for perfect correlation but did not find any
 
     pdf(file = "linear_vs_quadratic_fit.pdf", width = 13, height = 6.5)
@@ -2257,27 +2023,27 @@ if (FALSE) {
 #### (3.2) RUN DESCRIPTIVE ANALYSES
 
 # Create a dataframe of features and subject scores
-score_features_df <- CreateDataFeaturesDF(d_long, e3_dat_final, features, n_after_exclusions, num_subjects_and_plots)
+#score_features_df <- CreateDataFeaturesDF(d_long, e4_dat_final, features, n_after_exclusions, num_subjects_and_plots)
 
 # Run regularized regression on all predictors
-ridge_regression_wt_predictors <- AnalyzeRidgeRegression(score_features_df)
+#ridge_regression_wt_predictors <- AnalyzeRidgeRegression(score_features_df)
 
 # Run mixed-effects regression on PCA-reduced features
-e3_data_wt_PCs <- MakePCAFunction(score_features_df)
+#e4_data_wt_PCs <- MakePCAFunction(score_features_df)
 
 
 ##### (3.3) RUN PREDICTIVE ANALYSES
 
 # Get performance of each predictor and PCA-reduced feature using cross-validation.
-cross_validation_analysis_wt_pcs <- CrossValidationAnalysisWtPCs(e3_data_wt_PCs, d_long, n_after_exclusions, n_plots)
-pdf(file = "predictions_wt_pcs_cv_plot.pdf", width = 17, height = 9)
-cross_validation_analysis_wt_pcs
-dev.off()
+#cross_validation_analysis_wt_pcs <- CrossValidationAnalysisWtPCs(e4_data_wt_PCs, d_long, n_after_exclusions, n_plots)
+#pdf(file = "predictions_wt_pcs_cv_plot.pdf", width = 17, height = 9)
+#cross_validation_analysis_wt_pcs
+#dev.off()
 # errors pop up because I removed outliers
 
-
 # TODO: Do cross validation using E4 Data, using the model trained on E1 Data
-cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(e3_data_wt_PCs, d_long, n_after_exclusions, n_plots)
+
+cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(e4_dat_final, num_subjects_and_plots, n_plots)
 pdf(file = "predictions_wt_predictors_cv_plot.pdf", width = 17, height = 9)
 cross_validation_analysis_wt_predictors
 dev.off()
@@ -2287,7 +2053,7 @@ dev.off()
 
 plot_files <- list.files(pattern = c("(.pdf|.png)"))
 file.move(plot_files, "analysis_plots", overwrite = TRUE)
-analysis_files <- list.files(pattern = c("word_analysis_e3.csv|embeddings_e3.csv|correlations_e3.csv"))
+analysis_files <- list.files(pattern = c("word_analysis_e4.csv|embeddings_e4.csv|correlations_e4.csv"))
 file.move(analysis_files, "data", overwrite = TRUE)
 
 ##================================================================================================================

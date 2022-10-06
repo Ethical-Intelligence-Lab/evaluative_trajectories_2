@@ -903,8 +903,8 @@ d_raw <- read.csv("data.csv")
 
 # Process Data  
 d <- PerformExclusions(d_raw) #num_rows = num_ss
-e4_n_after_exclusions <- e4_data_clean$n_after_exclusions[1] 
-e4_n_subjects_and_plots <- e4_n_after_exclusions*n_plots 
+n_after_exclusions <- d$n_after_exclusions[1]
+e4_n_subjects_and_plots <- n_after_exclusions * n_plots
 e4_data_long <- Preprocess(e4_data_clean, n_plots, plot_names) #num_rows = num_ss*num_plots [to see data without exclusions, replace e4_data_clean with data]
 
 
@@ -963,28 +963,4 @@ file.move(plot_files, "analysis_plots", overwrite = TRUE)
                                                     ##END##
 ##================================================================================================================
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-##================================================================================================================
-## CODE GRAVEYARD ## 
 
