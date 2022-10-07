@@ -994,7 +994,7 @@ Get main statistical effects, and run descriptive and predictive analyses
 
 n_after_exclusions <- 55;
 
-d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment)
+d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment, model_type='vader')
 e4_dat_final <- d_long
 
 write.csv(d_long, "d_long_e4.csv", row.names = FALSE) #create word analysis csv for google colab code
@@ -1044,7 +1044,7 @@ dev.off()
 ## =========================================== (4) Move Files ====================================================
 
 plot_files <- list.files(pattern = c("(.pdf|.png)"))
-file.move(plot_files, "analysis_plots", overwrite = TRUE)
+file.move(plot_files, "./plots/analysis_plots", overwrite = TRUE)
 analysis_files <- list.files(pattern = c("word_analysis_e4.csv|embeddings_e4.csv|correlations_e4.csv"))
 file.move(analysis_files, "data", overwrite = TRUE)
 

@@ -38,7 +38,8 @@ pacman::p_load('data.table', #rename data frame columns
                'tidyr', #for gather(), which takes multiple columns and collapses them into key-value pairs
                'tidyverse', #used in conjunction with tidyr; contains dplyr, used for select(); load last because of conflict!
                'slam', #utility functions for sparse matrices 
-               'broom' #install separately if does not work 
+               'broom', #install separately if does not work
+               'vader' # Sentiment
 )
 
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #set working directory to current directory
@@ -621,7 +622,7 @@ GetMainEffects <- function(data, data_long, data_plot_long, e1b_data_plot_long, 
 }
 
 
-CreateDataFeaturesDF <- function(data, dat_final, features_df, n_after_exclusions, num_subjects_and_plots) {
+CreateDataFeaturesDF <- function(data, features_df, n_after_exclusions) {
     "
     Bind the three dataframes: data, sentiment score, and standardize(features), i.e., the standardized plot features.
     Input: data_long, dat_final, features, n_after_exclusions, num_subjects_and_plots
@@ -785,7 +786,7 @@ MakePCAFunction <- function(score_features_df) {
     # Print, then save the features corrplot
     corrplot(my_PCA$Structure, method = "circle", mar = c(0, 0, 2, 0))
     mtext("Features Correlation Matrix \nover PCs", at = 1, line = 1, cex = 1.5)
-    pdf(file = "./analysis_plots/features_corrplot.pdf")
+    pdf(file = "./plots/analysis_plots/features_corrplot.pdf")
     corrplot(my_PCA$Structure, method = "circle", mar = c(0, 0, 4, 0))
     mtext("Features Correlation Matrix \nover PCs", at = 1, line = 1, cex = 1.5)
     dev.off()
@@ -1075,11 +1076,6 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
     Output: relative importance of individual predictors and its graph
     "
 
-    # dat <- data_wt_PCs
-    # dat_long <- d_long
-
-    # n_ss <- n_after_exclusions
-
     predictors_old <- c("embeddings", "interestingness", "sentiment_score", "max", "min", "end_value", "number_peaks", "number_valleys", "number_extrema", "integral",
                         "d1_avg_unweight", "d1_avg_weight_prime", "d1_avg_weight_asc", "d1_avg_weight_des", "d1_avg_weight_end",
                         "d2_avg_unweight", "d2_avg_weight_prime", "d2_avg_weight_asc", "d2_avg_weight_des", "d2_avg_weight_end")
@@ -1330,7 +1326,7 @@ if (FALSE) {
     #topic_modeling <- TopicModeling(d_long, n_plots, plot_names)
 
     plot_files <- list.files(pattern = c("(.pdf|.png)"))
-    file.move(plot_files, "analysis_plots", overwrite = TRUE)
+    file.move(plot_files, "./plots/analysis_plots", overwrite = TRUE)
     analysis_files <- list.files(pattern = c("word_analysis.csv|embeddings.csv|correlations.csv"))
     file.move(analysis_files, "data", overwrite = TRUE)
 
@@ -1342,7 +1338,7 @@ Get main statistical effects, and run descriptive and predictive analyses
 "
 
 #### (3.1) GET MAIN EFFECTS
-d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment)
+d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment, model_type='vader')
 
 # Get dataframe for analysis (dat_final), with nrows = num_ss*num_plots*num_questions
 dat <- gather(d_long, key = question_type, value = score, satisfaction, personal_desirability)
@@ -1363,10 +1359,10 @@ if (FALSE) {
 #### (3.2) RUN DESCRIPTIVE ANALYSES
 
 # Create a dataframe of features and subject scores
-score_features_df <- CreateDataFeaturesDF(d_long, dat, features, n_after_exclusions, num_subjects_and_plots)
+score_features_df <- CreateDataFeaturesDF(d_long, features, n_after_exclusions)
 
 # Run regularized regression on all predictors
-ridge_regression_wt_predictors <- AnalyzeRidgeRegression(score_features_df)
+#ridge_regression_wt_predictors <- AnalyzeRidgeRegression(score_features_df)
 
 # Run mixed-effects regression on PCA-reduced features
 data_wt_PCs <- MakePCAFunction(score_features_df)
@@ -1375,10 +1371,10 @@ data_wt_PCs <- MakePCAFunction(score_features_df)
 ##### (3.3) RUN PREDICTIVE ANALYSES
 
 # Get performance of each predictor and PCA-reduced feature using cross-validation.
-cross_validation_analysis_wt_pcs <- CrossValidationAnalysisWtPCs(data_wt_PCs, d_long, n_after_exclusions, n_plots)
-pdf(file = "predictions_wt_pcs_cv_plot.pdf", width = 17, height = 9)
-cross_validation_analysis_wt_pcs
-dev.off()
+#cross_validation_analysis_wt_pcs <- CrossValidationAnalysisWtPCs(data_wt_PCs, d_long, n_after_exclusions, n_plots)
+#pdf(file = "predictions_wt_pcs_cv_plot.pdf", width = 17, height = 9)
+#cross_validation_analysis_wt_pcs
+#dev.off()
 # errors pop up because I removed outliers
 
 cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(data_wt_PCs, d_long, n_after_exclusions, n_plots)
@@ -1390,7 +1386,7 @@ dev.off()
 ## =========================================== (4) Move Files ====================================================
 
 plot_files <- list.files(pattern = c("(.pdf|.png)"))
-file.move(plot_files, "analysis_plots", overwrite = TRUE)
+file.move(plot_files, "./plots/analysis_plots", overwrite = TRUE)
 analysis_files <- list.files(pattern = c("word_analysis.csv|embeddings.csv|correlations.csv"))
 file.move(analysis_files, "data", overwrite = TRUE)
 

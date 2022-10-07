@@ -308,10 +308,17 @@ ArrangeWordClouds <- function() {
     return(wc_plot)
 }
 
-CalculateSentiment <- function(rword) {
-    rword <- word(tolower(rword), 1)
-    rword <- gsub("[^a-z]", "", rword) #get rid of numbers and special characters, leaving only letters a-z
-    return( sentiment_by(rword)$ave_sentiment )
+CalculateSentiment <- function(rword, model_type='sentimentr') {
+    if (model_type == 'sentimentr') {
+        rword <- word(tolower(rword), 1)
+        rword <- gsub("[^a-z]", "", rword) #get rid of numbers and special characters, leaving only letters a-z
+        return( sentiment_by(rword)$ave_sentiment )
+    } else if (model_type == 'vader') {
+        sent_vals <- vector(mode="integer", length=length(rword))
+        for(i in (1:length(rword))) {sent_vals[i] <- (as.numeric(get_vader(rword[[i]])[['compound']]))}
+        return(sent_vals)
+    }
+
 }
 
 AnalyzeRidgeRegression <- function(score_features_df, metric='satisfaction') {
@@ -423,7 +430,8 @@ AnalyzeRidgeRegression <- function(score_features_df, metric='satisfaction') {
 
     #------------------------------------------------------------------------------------------------
 
-    # 2. Personal Desirability
+    if(metric == 'satisfaction') {
+        # 2. Personal Desirability
     pd_scores <- score_features_df$personal_desirability
 
     # Create testing and training data
@@ -478,6 +486,8 @@ AnalyzeRidgeRegression <- function(score_features_df, metric='satisfaction') {
     # Plot functions
     plot_Fit(pd_scores_test_stdz, predict_pd_lm, my_title = "LM: Personal Desirability")
     plot_Fit(pd_scores_test_stdz, predict_pd_ridge, my_title = "RIDGE: Personal Desirability")
+    }
+
 }
 
 Get_spearman_brown_correction <- function(cor_value) {

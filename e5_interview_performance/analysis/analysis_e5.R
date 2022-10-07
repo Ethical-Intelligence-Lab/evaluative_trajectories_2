@@ -237,9 +237,6 @@ MakeGroupedBarPlot <- function(data_plot_long) {
     return(grouped_bar_plot)
 }
 
-MakeGroupedBarPlotImages
-source('../e1_customer_journeys/')
-
 MakeGroupedBarPlotImages <- function(LifelinesPlot, plot_names) {
     "
     Make a plotter function that produces 'clean' (no labels) version of individual images 
@@ -917,7 +914,6 @@ plot_names <- c("linear_rise", "linear_fall",
 
 # Read Data and Create Folder for Saving Files
 d_raw <- read.csv('./data/data.csv')
-dir.create("plots/analysis_plots")
 
 ## ================================= (1) Perform Exclusions and Process Data =====================================
 "
@@ -1002,7 +998,7 @@ Get main statistical effects, and run descriptive and predictive analyses
 "
 
 #### (3.1) GET MAIN EFFECTS
-d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment)
+d_long[, "sentiment_score"] <- sapply(d_long["word_gen"], CalculateSentiment, model_type = "vader")
 
 # Get dataframe for analysis (e5_dat_final), with nrows = num_ss*num_plots*num_questions
 dat <- gather(d_long, key = question_type, value = score, hiring_likelihood)
@@ -1026,7 +1022,7 @@ if (FALSE) {
 score_features_df <- CreateDataFeaturesDF(d_long, dat, features, n_after_exclusions, num_subjects_and_plots)
 
 # Run regularized regression on all predictors
-ridge_regression_wt_predictors <- AnalyzeRidgeRegression(score_features_df)
+ridge_regression_wt_predictors <- AnalyzeRidgeRegression(score_features_df, metric='hiring_likelihood')
 
 # Run mixed-effects regression on PCA-reduced features
 data_wt_PCs <- MakePCAFunction(score_features_df)
@@ -1050,7 +1046,7 @@ dev.off()
 ## =========================================== (4) Move Files ====================================================
 
 plot_files <- list.files(pattern = c("(.pdf|.png)"))
-file.move(plot_files, "analysis_plots", overwrite = TRUE)
+file.move(plot_files, "./plots/analysis_plots", overwrite = TRUE)
 analysis_files <- list.files(pattern = c("word_analysis.csv|embeddings.csv|correlations.csv"))
 file.move(analysis_files, "data", overwrite = TRUE)
 
