@@ -780,7 +780,7 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
 }
 
 
-CrossValidationAnalysisWtPredictors <- function(dat, num_subjects_and_plots, n_plots) {
+CrossValidationAnalysisWtPredictors <- function(dat, n_plots) {
     "
     Measure the performance of each of our predictors by doing cross-validated regressions, holding out
     one participant for each cross-validation step.
@@ -792,6 +792,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, num_subjects_and_plots, n_p
     # dat_long <- d_long
 
     # n_ss <- n_after_exclusions
+    dat <- subset(dat, dat$is_word == TRUE)
 
     predictors_old <- c("embeddings", "interestingness", "sentiment_score", "max", "min", "end_value", "number_peaks", "number_valleys", "number_extrema", "integral",
                         "d1_avg_unweight", "d1_avg_weight_prime", "d1_avg_weight_asc", "d1_avg_weight_des", "d1_avg_weight_end",
@@ -801,15 +802,18 @@ CrossValidationAnalysisWtPredictors <- function(dat, num_subjects_and_plots, n_p
                     "2nd Derivative", "2nd Derivative\nPrime", "2nd Derivative\nAscending", "2nd Derivative\nDescending", "2nd Derivative\nEnd")
     setnames(dat, old = predictors_old, new = predictors)
 
+    # Take only ones that are actually words, while predicting from sentiment
+
+
     set.seed(1)
-    n_folds <- num_subjects_and_plots / n_plots
+    n_folds <- dim(dat)[1] / n_plots
     folds <- cut(seq(1, nrow(dat)), breaks = n_folds, labels = FALSE)
     folds2 <- rep(seq(1, n_plots), times = n_folds) #plot x subjects folds
     indeces <- seq(1, (n_plots * n_folds))
 
     #-------------------------------------------------------------------------------------------------------------------
 
-    #1. Willingness to Pay
+    # Train for and Predict Enjoyment
     results_enjoyment <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
     rownames(results_enjoyment) <- predictors
 
@@ -822,12 +826,17 @@ CrossValidationAnalysisWtPredictors <- function(dat, num_subjects_and_plots, n_p
                 trainIndeces <- indeces[(folds == j) & (folds2 != k)]  # Select fold j, but exclude test index (k)
                 testIndeces <- indeces[(folds == j) & (folds2 == k)]
 
-                # TODO: Predict E4 values, based on their metrics
-                fitpc <- lm(willing ~ get(predictors[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
+                if( predictors[i] == "Sentiment Score" ) { # Exclude train indexes that is not a word
+                    trainIndeces <- subset(trainIndeces, dat$is_word[trainIndeces])
+                }
 
-                # For predicting, select a random participant
-                ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
-                truths <- c(truths, dat$willing[testIndeces])
+                if( predictors[i] == "Sentiment Score" && !dat$is_word[testIndeces] ) { # Do not fit if not a word
+                    next
+                } else {
+                    fitpc <- lm(willing ~ get(predictors[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
+                    ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
+                    truths <- c(truths, dat$willing[testIndeces])
+                }
             }
 
             results_enjoyment[i, j] <- cor(truths, ss_results)
@@ -849,9 +858,6 @@ CrossValidationAnalysisWtPredictors <- function(dat, num_subjects_and_plots, n_p
 
     #-------------------------------------------------------------------------------------------------------------------
     #-------------------------------------------------------------------------------------------------------------------
-    # Friendly person on the checkout
-    # Make titles & axes biger
-    # arrow
     #3. Plotting
     predictors_results_ordered <- data.frame(predictors_order = results_enjoyment_long$enjoyment_new_order,
                                              enjoyment_results = results_enjoyment_long$predictors_results)
@@ -924,12 +930,12 @@ num_subjects_and_plots <- dim(d_long)[1]
 ### (i) CREATE CSV FOR SEMANTIC ANALYSIS
 analyze_words <- GetWordAnalysis(d_long, n_plots)
 words_df <- as.data.frame(matrix(unlist(analyze_words), ncol = length(unlist(analyze_words[1]))))
-analyze_words_df <- cbind(plot_names = plot_names, words = words_df$V1)
+analyze_words_df <- cbind(genres = genres, words = words_df$V1)
 write.csv(analyze_words_df, "word_analysis_e4.csv", row.names = FALSE) #create word analysis csv for google colab code
 
 
 ### (ii) CREATE SEMANTIC EMBEDDINGS DATAFRAME [**NB: YOU NEED TO HAVE ALREADY EXTRACTED EMBEDDINGS FOR word_analysis_e4.csv]
-my_embeddings <- read.csv("data/embeddings_long_e4.csv", header = TRUE)
+my_embeddings <- read.csv("data/embeddings_long.csv", header = TRUE)
 embeddings_avg <- data.frame(embeddings = rowMeans(my_embeddings)) #create a dataframe
 
 
@@ -994,13 +1000,13 @@ Get main statistical effects, and run descriptive and predictive analyses
 
 n_after_exclusions <- 55;
 
-d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment, model_type='vader')
-e4_dat_final <- d_long
+d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment, model_type='ai')
+d_long$sentiment_score[is.na(d_long$sentiment_score)] <- 0
 
+d_long[, "is_word"] <- lapply(d_long["word"], is.word)
+e4_dat_final <- d_long
 write.csv(d_long, "d_long_e4.csv", row.names = FALSE) #create word analysis csv for google colab code
 
-
-# TODO: Need to fix this part
 if (FALSE) {
     # Get main statistical effects
     main_effects <- GetMainEffects(e4_dat_final, d_long, data_plot_long, data_plot_long, n_plots, plot_names, my_embeddings)
@@ -1033,9 +1039,7 @@ if (FALSE) {
 #dev.off()
 # errors pop up because I removed outliers
 
-# TODO: Do cross validation using E4 Data, using the model trained on E1 Data
-
-cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(e4_dat_final, num_subjects_and_plots, n_plots)
+cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(e4_dat_final, n_plots)
 pdf(file = "predictions_wt_predictors_cv_plot.pdf", width = 17, height = 9)
 cross_validation_analysis_wt_predictors
 dev.off()

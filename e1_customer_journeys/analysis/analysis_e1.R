@@ -453,9 +453,9 @@ MakeSentimentBarPlot <- function(data, n_plots, plot_names, title="Satisfaction"
 }
 
 
-##================================================================================================================
-##FUNCTIONS FOR ANALYSIS##
-##================================================================================================================
+##========================##
+## FUNCTIONS FOR ANALYSIS ##
+##========================##
 GetMainEffects <- function(data, data_long, data_plot_long, e1b_data_plot_long, n_plots, plot_names, my_embeddings) {
     "
     This function gets various correlations and main effects of the participant data.
@@ -631,7 +631,7 @@ CreateDataFeaturesDF <- function(data, features_df, n_after_exclusions) {
 
     score_features_df <- cbind(data, sentiment_score = data$sentiment_score,
                                as.data.frame(do.call("rbind", replicate(n_after_exclusions, standardize(features_df), simplify = FALSE))))
-    score_features_df["satisfaction"] <- as.data.frame(apply(score_features_df["satisfaction"], 2, as.numeric))
+    score_features_df["satisfaction"] <- as.data.frame(standardize(apply(score_features_df["satisfaction"], 2, as.numeric)))
     score_features_df["personal_desirability"] <- as.data.frame(apply(score_features_df["personal_desirability"], 2, as.numeric))
     score_features_df["willingness_to_pay"] <- as.data.frame(apply(score_features_df["willingness_to_pay"], 2, as.numeric))
     score_features_df["subject"] <- as.data.frame(apply(score_features_df["subject"], 2, as.numeric))
@@ -1076,6 +1076,8 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
     Output: relative importance of individual predictors and its graph
     "
 
+    is_word <- subset(dat, dat['is_word'] == TRUE)['is_word']
+
     predictors_old <- c("embeddings", "interestingness", "sentiment_score", "max", "min", "end_value", "number_peaks", "number_valleys", "number_extrema", "integral",
                         "d1_avg_unweight", "d1_avg_weight_prime", "d1_avg_weight_asc", "d1_avg_weight_des", "d1_avg_weight_end",
                         "d2_avg_unweight", "d2_avg_weight_prime", "d2_avg_weight_asc", "d2_avg_weight_des", "d2_avg_weight_end")
@@ -1104,11 +1106,19 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
             for (k in 1:n_plots) {
                 trainIndeces <- indeces[(folds == j) & (folds2 != k)]
                 testIndeces <- indeces[(folds == j) & (folds2 == k)]
-                fitpc <- lm(satisfaction ~ get(predictors[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
-                ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
-                truths <- c(truths, dat$satisfaction[testIndeces])
-            }
 
+                if( predictors[i] == "Sentiment Score" ) { # Exclude train indexes that is not a word
+                    trainIndeces <- subset(trainIndeces, dat$is_word[trainIndeces])
+                }
+
+                if( predictors[i] == "Sentiment Score" && !dat$is_word[testIndeces] ) { # Do not fit if not a word
+                    next
+                } else {
+                    fitpc <- lm(satisfaction ~ get(predictors[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
+                    ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
+                    truths <- c(truths, dat$satisfaction[testIndeces])
+                }
+            }
             results_satisfaction[i, j] <- cor(truths, ss_results)
         }
 
@@ -1140,9 +1150,18 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
             for (k in 1:n_plots) {
                 trainIndeces <- indeces[(folds == j) & (folds2 != k)]
                 testIndeces <- indeces[(folds == j) & (folds2 == k)]
-                fitpc <- lm(personal_desirability ~ get(predictors[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
-                ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
-                truths <- c(truths, dat$personal_desirability[testIndeces])
+
+                if( predictors[i] == "Sentiment Score" ) { # Exclude train indexes that is not a word
+                    trainIndeces <- subset(trainIndeces, dat$is_word[trainIndeces])
+                }
+
+                if( predictors[i] == "Sentiment Score" && !dat$is_word[testIndeces] ) { # Do not fit if not a word
+                    next
+                } else {
+                    fitpc <- lm(personal_desirability ~ get(predictors[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
+                    ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
+                    truths <- c(truths, dat$personal_desirability[testIndeces])
+                }
             }
 
             results_pd[i, j] <- cor(truths, ss_results)
@@ -1289,20 +1308,19 @@ d_long <- cbind(d_long, interestingness)
 data_plot_long = NULL
 data_plot_long <- ProcessForPlots(d_long, n_plots, plot_names) #num_rows = num_plots*num_questions
 
+#### (2.1) MAKE BAR PLOT OF SATISFACTION SCORES
+grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)
+plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot, plot_names) #the little customer journey icons
+
+pdf(file = "customer_journeys_bar_plot.pdf", width = 17, height = 8)
+ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
+dev.off()
 
 ## ========================================== (2) Plot Data and Save ==================================================
 if (FALSE) {
     "
     Create bar plot, word clouds, and sentiment plot
     "
-
-    #### (2.1) MAKE BAR PLOT OF SATISFACTION SCORES
-    grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)
-    plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot, plot_names) #the little customer journey icons
-
-    pdf(file = "customer_journeys_bar_plot.pdf", width = 17, height = 8)
-    ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
-    dev.off()
 
 
     #### (2.2) MAKE WORD CLOUDS (WARNING: takes ~5 minutes; feel free to skip)
@@ -1338,7 +1356,11 @@ Get main statistical effects, and run descriptive and predictive analyses
 "
 
 #### (3.1) GET MAIN EFFECTS
-d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment, model_type='vader')
+d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment, model_type='ai')
+d_long$sentiment_score[is.na(d_long$sentiment_score)] <- 0
+
+d_long[, "is_word"] <- lapply(d_long["word"], is.word)
+
 
 # Get dataframe for analysis (dat_final), with nrows = num_ss*num_plots*num_questions
 dat <- gather(d_long, key = question_type, value = score, satisfaction, personal_desirability)
@@ -1365,7 +1387,7 @@ score_features_df <- CreateDataFeaturesDF(d_long, features, n_after_exclusions)
 #ridge_regression_wt_predictors <- AnalyzeRidgeRegression(score_features_df)
 
 # Run mixed-effects regression on PCA-reduced features
-data_wt_PCs <- MakePCAFunction(score_features_df)
+#data_wt_PCs <- MakePCAFunction(score_features_df)
 
 
 ##### (3.3) RUN PREDICTIVE ANALYSES
@@ -1377,7 +1399,7 @@ data_wt_PCs <- MakePCAFunction(score_features_df)
 #dev.off()
 # errors pop up because I removed outliers
 
-cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(data_wt_PCs, d_long, n_after_exclusions, n_plots)
+cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(score_features_df, d_long, n_after_exclusions, n_plots)
 pdf(file = "predictions_wt_predictors_cv_plot.pdf", width = 17, height = 9)
 cross_validation_analysis_wt_predictors
 dev.off()

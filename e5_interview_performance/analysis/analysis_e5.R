@@ -447,7 +447,7 @@ CreateDataFeaturesDF <- function(data, dat_final, features_df, n_after_exclusion
     Output: score_features_df (which contains all of the predictors and participant scores)
     "
 
-    score_features_df <- cbind(data, sentiment_score = dat_final$sentiment_score[1:num_subjects_and_plots],
+    score_features_df <- cbind(data, sentiment_score = data$sentiment_score,
                                as.data.frame(do.call("rbind", replicate(n_after_exclusions, standardize(features_df), simplify = FALSE))))
     score_features_df["hiring_likelihood"] <- as.data.frame(apply(score_features_df["hiring_likelihood"], 2, as.numeric))
     score_features_df["subject"] <- as.data.frame(apply(score_features_df["subject"], 2, as.numeric))
@@ -806,9 +806,18 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
             for (k in 1:n_plots) {
                 trainIndeces <- indeces[(folds == j) & (folds2 != k)]
                 testIndeces <- indeces[(folds == j) & (folds2 == k)]
-                fitpc <- lm(hiring_likelihood ~ get(predictors[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
-                ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
-                truths <- c(truths, dat$hiring_likelihood[testIndeces])
+
+                if( predictors[i] == "Sentiment Score" ) { # Exclude train indexes that is not a word
+                    trainIndeces <- subset(trainIndeces, dat$is_word[trainIndeces])
+                }
+
+                if( predictors[i] == "Sentiment Score" && !dat$is_word[testIndeces] ) { # Do not fit if not a word
+                    next
+                } else {
+                    fitpc <- lm(hiring_likelihood ~ get(predictors[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
+                    ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
+                    truths <- c(truths, dat$hiring_likelihood[testIndeces])
+                }
             }
 
             results_hiring_likelihood[i, j] <- cor(truths, ss_results)
@@ -998,7 +1007,10 @@ Get main statistical effects, and run descriptive and predictive analyses
 "
 
 #### (3.1) GET MAIN EFFECTS
-d_long[, "sentiment_score"] <- sapply(d_long["word_gen"], CalculateSentiment, model_type = "vader")
+d_long[, "sentiment_score"] <- sapply(d_long["word_gen"], CalculateSentiment, model_type = "ai")
+d_long$sentiment_score[is.na(d_long$sentiment_score)] <- 0
+
+d_long[, "is_word"] <- lapply(d_long["word_gen"], is.word)
 
 # Get dataframe for analysis (e5_dat_final), with nrows = num_ss*num_plots*num_questions
 dat <- gather(d_long, key = question_type, value = score, hiring_likelihood)

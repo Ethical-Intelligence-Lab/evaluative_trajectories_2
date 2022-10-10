@@ -1,3 +1,38 @@
+pacman::p_load('qdapDictionaries')
+pacman::p_load('sentiment.ai')
+
+# Run only first time if you are using this package::
+# install_sentiment.ai()
+#init_sentiment.ai()
+
+CleanWord <- function(word) {
+    word <- word(tolower(word), 1)
+    word <- gsub("[^a-z]", "", word) #get rid of numbers and special characters, leaving only letters a-z
+    return(word)
+}
+
+# Check if input is actually an English word
+is.word  <- function(word) {
+    word <- CleanWord(word)
+    return(word %in% GradyAugmented)
+}
+
+
+CalculateSentiment <- function(rword, model_type='sentimentr') {
+    rword <- CleanWord(rword)
+
+    if (model_type == 'sentimentr') {
+        return( sentiment_by(rword)$ave_sentiment )
+    } else if (model_type == 'vader') {
+        sent_vals <- vector(mode="integer", length=length(rword))
+        for(i in (1:length(rword))) {sent_vals[i] <- (as.numeric(get_vader(rword[[i]])[['compound']]))}
+        return(sent_vals)
+    } else if (model_type == 'ai') {
+        return(sentiment_score(rword))
+    }
+
+}
+
 MakeWordClouds <- function(data, n_plots, plot_names) {
     "
     Make word clouds and save them as individual images to be read in as files later.
@@ -306,19 +341,6 @@ ArrangeWordClouds <- function() {
         annotation_custom(bbb, xmin = 7.75, xmax = 8.25, ymin = -1, ymax = 0)
 
     return(wc_plot)
-}
-
-CalculateSentiment <- function(rword, model_type='sentimentr') {
-    if (model_type == 'sentimentr') {
-        rword <- word(tolower(rword), 1)
-        rword <- gsub("[^a-z]", "", rword) #get rid of numbers and special characters, leaving only letters a-z
-        return( sentiment_by(rword)$ave_sentiment )
-    } else if (model_type == 'vader') {
-        sent_vals <- vector(mode="integer", length=length(rword))
-        for(i in (1:length(rword))) {sent_vals[i] <- (as.numeric(get_vader(rword[[i]])[['compound']]))}
-        return(sent_vals)
-    }
-
 }
 
 AnalyzeRidgeRegression <- function(score_features_df, metric='satisfaction') {
