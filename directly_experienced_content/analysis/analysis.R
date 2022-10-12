@@ -954,7 +954,7 @@ plot_names <- genres
 n_plots <- length(genres)
 
 # Read Data and Create Folder for Saving Files
-d_long <- read.csv('./data/data_e4.csv')
+d_long <- read.csv('./data/data.csv')
 dir.create("plots/analysis_plots")
 
 ## ================================= (1) Perform Exclusions and Process Data =====================================
@@ -974,11 +974,11 @@ num_subjects_and_plots <- dim(d_long)[1]
 analyze_words <- GetWordAnalysis(d_long, n_plots)
 words_df <- as.data.frame(matrix(unlist(analyze_words), ncol = length(unlist(analyze_words[1]))))
 analyze_words_df <- cbind(genres = genres, words = words_df$V1)
-write.csv(analyze_words_df, "word_analysis_e4.csv", row.names = FALSE) #create word analysis csv for google colab code
+write.csv(analyze_words_df, "word_analysis.csv", row.names = FALSE) #create word analysis csv for google colab code
 
-write.csv(d_long, "d_long_e4.csv", row.names = FALSE) #create word analysis csv for google colab code
+write.csv(d_long, "d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
 
-### (ii) CREATE SEMANTIC EMBEDDINGS DATAFRAME [**NB: YOU NEED TO HAVE ALREADY EXTRACTED EMBEDDINGS FOR word_analysis_e4.csv]
+### (ii) CREATE SEMANTIC EMBEDDINGS DATAFRAME [**NB: YOU NEED TO HAVE ALREADY EXTRACTED EMBEDDINGS FOR word_analysis.csv]
 my_embeddings <- read.csv("data/embeddings_long.csv", header = TRUE)
 embeddings_avg <- data.frame(embeddings = rowMeans(my_embeddings)) #create a dataframe
 
@@ -1038,9 +1038,9 @@ Get main statistical effects, and run descriptive and predictive analyses
 
 #### (3.1) GET MAIN EFFECTS
 
-# Get dataframe for analysis (e4_dat_final), with nrows = num_ss*num_plots*num_questions
-#e4_dat <- gather(d_long, key = question_type, value = score, enjoyment, personal_desirability)
-#e4_dat <- dplyr::select(e4_dat, subject, plot_names, question_type, score, willingness_to_pay) #rows = num_ss*num_plots*num_questions
+# Get dataframe for analysis (dat_final), with nrows = num_ss*num_plots*num_questions
+#dat <- gather(d_long, key = question_type, value = score, enjoyment, personal_desirability)
+#dat <- dplyr::select(dat, subject, plot_names, question_type, score, willingness_to_pay) #rows = num_ss*num_plots*num_questions
 
 n_after_exclusions <- 233;
 
@@ -1048,11 +1048,11 @@ d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment, model_
 d_long$sentiment_score[is.na(d_long$sentiment_score)] <- 0
 
 d_long[, "is_word"] <- lapply(d_long["word"], is.word)
-e4_dat_final <- d_long
+dat_final <- d_long
 
 if (FALSE) {
     # Get main statistical effects
-    main_effects <- GetMainEffects(e4_dat_final, d_long, data_plot_long, data_plot_long, n_plots, plot_names, my_embeddings)
+    main_effects <- GetMainEffects(dat_final, d_long, data_plot_long, data_plot_long, n_plots, plot_names, my_embeddings)
     #See error: 486 not defined because of singularities; checked for perfect correlation but did not find any
 
     pdf(file = "linear_vs_quadratic_fit.pdf", width = 13, height = 6.5)
@@ -1070,27 +1070,27 @@ d_long <- CreateDataFeaturesDF(d_long)
 #ridge_regression_wt_predictors <- AnalyzeRidgeRegression(score_features_df, metric='enjoyment')
 
 # Run mixed-effects regression on PCA-reduced features
-#e4_data_wt_PCs <- MakePCAFunction(score_features_df)
+#data_wt_PCs <- MakePCAFunction(score_features_df)
 
 
 ##### (3.3) RUN PREDICTIVE ANALYSES
 
 # Get performance of each predictor and PCA-reduced feature using cross-validation.
-#cross_validation_analysis_wt_pcs <- CrossValidationAnalysisWtPCs(e4_data_wt_PCs, d_long, n_after_exclusions, n_plots)
+#cross_validation_analysis_wt_pcs <- CrossValidationAnalysisWtPCs(data_wt_PCs, d_long, n_after_exclusions, n_plots)
 #pdf(file = "predictions_wt_pcs_cv_plot.pdf", width = 17, height = 9)
 #cross_validation_analysis_wt_pcs
 #dev.off()
 # errors pop up because I removed outliers
 
 # Cross Validation on Whole dataset
-#cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(e4_dat_final, n_plots)
+#cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(dat_final, n_plots)
 #pdf(file = "predictions_wt_predictors_cv_plot.pdf", width = 17, height = 9)
 #cross_validation_analysis_wt_predictors
 #dev.off()
 
 # Cross Validation on Each Genre:::
 for(genre in genres) {
-    cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(e4_dat_final[e4_dat_final$genre == genre,], 1, TRUE)
+    cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(dat_final[dat_final$genre == genre,], 1, TRUE)
     fname <- paste0("predictions_wt_predictors_cv_plot_", genre, ".pdf")
     pdf(file = fname, width = 17, height = 9)
     plot(cross_validation_analysis_wt_predictors)
@@ -1102,7 +1102,7 @@ for(genre in genres) {
 
 plot_files <- list.files(pattern = c("(.pdf|.png)"))
 file.move(plot_files, "./plots/analysis_plots", overwrite = TRUE)
-analysis_files <- list.files(pattern = c("word_analysis_e4.csv|embeddings_e4.csv|correlations_e4.csv"))
+analysis_files <- list.files(pattern = c("word_analysis.csv|embeddings.csv|correlations.csv"))
 file.move(analysis_files, "data", overwrite = TRUE)
 
 ##================================================================================================================

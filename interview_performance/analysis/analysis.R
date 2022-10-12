@@ -949,7 +949,7 @@ analyze_words_df <- cbind(plot_names = plot_names, words = words_df$V1)
 write.csv(analyze_words_df, "./data/word_analysis.csv", row.names = FALSE) #create word analysis csv for google colab code
 write.csv(data.frame(word = d_long), "./data/d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
 
-### (ii) CREATE SEMANTIC EMBEDDINGS DATAFRAME [**NB: YOU NEED TO HAVE ALREADY EXTRACTED EMBEDDINGS FOR word_analysis_e5.csv]
+### (ii) CREATE SEMANTIC EMBEDDINGS DATAFRAME [**NB: YOU NEED TO HAVE ALREADY EXTRACTED EMBEDDINGS FOR word_analysis.csv]
 my_embeddings <- read.csv("data/embeddings_long.csv", header = TRUE)
 my_embeddings$X = NULL
 embeddings_avg <- data.frame(embeddings = rowMeans(my_embeddings)) #create a dataframe

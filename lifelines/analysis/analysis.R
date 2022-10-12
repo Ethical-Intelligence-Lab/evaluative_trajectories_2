@@ -2098,11 +2098,11 @@ data_long[, c("meaningfulness", "personal_desirability")] <- sapply(data_long[, 
 analyze_words <- GetWordAnalysis(data_long, n_plots)
 words_df <- as.data.frame(matrix(unlist(analyze_words), ncol = length(unlist(analyze_words[1]))))
 analyze_words_df <- cbind(plot_names = plot_names, words = words_df$V1)
-write.csv(analyze_words_df, "word_analysis_e1b.csv", row.names = FALSE) #create word analysis csv for google colab code
+write.csv(analyze_words_df, "word_analysis.csv", row.names = FALSE) #create word analysis csv for google colab code
 
 
-### (ii) CREATE SEMANTIC EMBEDDINGS DATAFRAME [**NB: YOU NEED TO HAVE ALREADY EXTRACTED EMBEDDINGS FOR word_analysis_e1b.csv]
-my_embeddings <- read.csv("data/embeddings_e1b.csv", header = TRUE) 
+### (ii) CREATE SEMANTIC EMBEDDINGS DATAFRAME [**NB: YOU NEED TO HAVE ALREADY EXTRACTED EMBEDDINGS FOR word_analysis.csv]
+my_embeddings <- read.csv("data/embeddings.csv", header = TRUE)
 embeddings_avg <- data.frame(embeddings = rowMeans(my_embeddings[2:28])) #create a dataframe 
 
 
