@@ -185,7 +185,7 @@ GetRankings <- function(data, old_labs, new_labs) {
 
 ## =================== (1) Read in Data & Create Folder for Saving Files ======================
 
-d_raw <- read.csv('data.csv') 
+d_raw <- read.csv('./data/data.csv')
 for(i in 1:dim(d_raw)[1]) {
     d_raw$understand_check[i] <- sum(d_raw[i,65:76], na.rm=TRUE)
 }

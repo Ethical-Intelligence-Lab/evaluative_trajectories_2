@@ -1016,6 +1016,10 @@ d_long[, "is_word"] <- lapply(d_long["word_gen"], is.word)
 dat <- gather(d_long, key = question_type, value = score, hiring_likelihood)
 dat <- dplyr::select(dat, subject, plot_names, question_type, score, sentiment_score) #rows = num_ss*num_plots*num_questions
 
+write.csv(data.frame(word = d_long), "./data/d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
+write.csv(data.frame(word = dat), "./data/dat.csv", row.names = FALSE) #create word analysis csv for google colab code
+
+
 # Get main statistical effects
 if (FALSE) {
     main_effects <- GetMainEffects(dat, d_long, data_plot_long, data_plot_long, n_plots, plot_names, my_embeddings)

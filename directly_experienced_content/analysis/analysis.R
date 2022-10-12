@@ -278,11 +278,11 @@ MakeSentimentBarPlot <- function(data, n_plots, plot_names) {
 ##================================================================================================================
 ##FUNCTIONS FOR ANALYSIS##
 ##================================================================================================================
-GetMainEffects <- function(data, data_long, data_plot_long, e1b_data_plot_long, n_plots, plot_names, my_embeddings) {
+GetMainEffects <- function(data, data_long, data_plot_long, n_plots, plot_names, my_embeddings) {
     "
     This function gets various correlations and main effects of the participant data.
     Input: This function takes as input a dataframe with rows = num_ss*num_plots*num_questions.
-          (e3_dat_final, d_long, data_plot_long, data_plot_long, n_plots, plot_names, my_embeddings)
+          (e3_dat, d_long, data_plot_long, data_plot_long, n_plots, plot_names, my_embeddings)
     Output: various correlation and linear regression results; also, linear and quadratic plots ordered by enjoyment scores
     "
 
@@ -325,22 +325,6 @@ GetMainEffects <- function(data, data_long, data_plot_long, e1b_data_plot_long, 
                         data$score_n[data$question_type == "personal_desirability"])
     print('sentiment vs. personal desirability:')
     print(pd_corr)
-    print('-----------------------------------------------------')
-
-    # 2. Do E3 enjoyment and personal desirability ratings correlate with E1 meaningfulness and personal desirability ratings?
-
-    print('Does E3 enjoyment correlate with E1 meaningfulness ratings?')
-    q1_corr <- cor.test(e1b_data_plot_long$score[e1b_data_plot_long$question_type == "meaning_score_avg"],
-                        data_plot_long$score[data_plot_long$question_type == "enjoyment_score_avg"])
-    print('E3 enjoyment vs E1 meaningfulness:')
-    print(q1_corr)
-    print('-----------------------------------------------------')
-
-    print('Does E3 personal desirability correlate with E1 personal desirability ratings?')
-    q2_corr <- cor.test(e1b_data_plot_long$score[e1b_data_plot_long$question_type == "pd_score_avg"],
-                        data_plot_long$score[data_plot_long$question_type == "pd_score_avg"])
-    print('E3 personal desirability vs E1 personal desirability:')
-    print(q2_corr)
     print('-----------------------------------------------------')
 
     # 3. Willingness to Pay
@@ -447,7 +431,7 @@ GetMainEffects <- function(data, data_long, data_plot_long, e1b_data_plot_long, 
 CreateDataFeaturesDF <- function(data) {
     "
     Bind the three dataframes: data, sentiment score, and standardize(features), i.e., the standardized plot features.
-    Input: data_long, e3_dat_final, features, n_after_exclusions, num_subjects_and_plots
+    Input: data_long, e3_dat, features, n_after_exclusions, num_subjects_and_plots
     Output: score_features_df (which contains all of the predictors and participant scores)
     "
 
@@ -1038,7 +1022,7 @@ Get main statistical effects, and run descriptive and predictive analyses
 
 #### (3.1) GET MAIN EFFECTS
 
-# Get dataframe for analysis (dat_final), with nrows = num_ss*num_plots*num_questions
+# Get dataframe for analysis (dat), with nrows = num_ss*num_plots*num_questions
 #dat <- gather(d_long, key = question_type, value = score, enjoyment, personal_desirability)
 #dat <- dplyr::select(dat, subject, plot_names, question_type, score, willingness_to_pay) #rows = num_ss*num_plots*num_questions
 
@@ -1048,11 +1032,13 @@ d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment, model_
 d_long$sentiment_score[is.na(d_long$sentiment_score)] <- 0
 
 d_long[, "is_word"] <- lapply(d_long["word"], is.word)
-dat_final <- d_long
+dat <- d_long
+
+write.csv(data.frame(word = d_long), "./data/d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
 
 if (FALSE) {
     # Get main statistical effects
-    main_effects <- GetMainEffects(dat_final, d_long, data_plot_long, data_plot_long, n_plots, plot_names, my_embeddings)
+    main_effects <- GetMainEffects(dat, d_long, data_plot_long, n_plots, plot_names, my_embeddings)
     #See error: 486 not defined because of singularities; checked for perfect correlation but did not find any
 
     pdf(file = "linear_vs_quadratic_fit.pdf", width = 13, height = 6.5)
@@ -1083,14 +1069,14 @@ d_long <- CreateDataFeaturesDF(d_long)
 # errors pop up because I removed outliers
 
 # Cross Validation on Whole dataset
-#cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(dat_final, n_plots)
+#cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(dat, n_plots)
 #pdf(file = "predictions_wt_predictors_cv_plot.pdf", width = 17, height = 9)
 #cross_validation_analysis_wt_predictors
 #dev.off()
 
 # Cross Validation on Each Genre:::
 for(genre in genres) {
-    cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(dat_final[dat_final$genre == genre,], 1, TRUE)
+    cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(dat[dat$genre == genre,], 1, TRUE)
     fname <- paste0("predictions_wt_predictors_cv_plot_", genre, ".pdf")
     pdf(file = fname, width = 17, height = 9)
     plot(cross_validation_analysis_wt_predictors)

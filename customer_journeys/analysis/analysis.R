@@ -456,7 +456,7 @@ MakeSentimentBarPlot <- function(data, n_plots, plot_names, title="Satisfaction"
 ##========================##
 ## FUNCTIONS FOR ANALYSIS ##
 ##========================##
-GetMainEffects <- function(data, data_long, data_plot_long, e1b_data_plot_long, n_plots, plot_names, my_embeddings) {
+GetMainEffects <- function(data, data_long, n_plots, plot_names, my_embeddings) {
     "
     This function gets various correlations and main effects of the participant data.
     Input: This function takes as input a dataframe with rows = num_ss*num_plots*num_questions.
@@ -503,22 +503,6 @@ GetMainEffects <- function(data, data_long, data_plot_long, e1b_data_plot_long, 
                         data$score_n[data$question_type == "personal_desirability"])
     print('sentiment vs. personal desirability:')
     print(pd_corr)
-    print('-----------------------------------------------------')
-
-    # 2. Do E3 satisfaction and personal desirability ratings correlate with E1 meaningfulness and personal desirability ratings?
-
-    print('Does E3 satisfaction correlate with E1 meaningfulness ratings?')
-    q1_corr <- cor.test(e1b_data_plot_long$score[e1b_data_plot_long$question_type == "meaning_score_avg"],
-                        data_plot_long$score[data_plot_long$question_type == "satisfaction_score_avg"])
-    print('E3 satisfaction vs E1 meaningfulness:')
-    print(q1_corr)
-    print('-----------------------------------------------------')
-
-    print('Does E3 personal desirability correlate with E1 personal desirability ratings?')
-    q2_corr <- cor.test(e1b_data_plot_long$score[e1b_data_plot_long$question_type == "pd_score_avg"],
-                        data_plot_long$score[data_plot_long$question_type == "pd_score_avg"])
-    print('E3 personal desirability vs E1 personal desirability:')
-    print(q2_corr)
     print('-----------------------------------------------------')
 
     # 3. Willingness to Pay
@@ -1292,7 +1276,6 @@ analyze_words <- GetWordAnalysis(d_long, n_plots)
 words_df <- as.data.frame(matrix(unlist(analyze_words), ncol = length(unlist(analyze_words[1]))))
 analyze_words_df <- cbind(plot_names = plot_names, words = words_df$V1)
 write.csv(analyze_words_df, "./data/word_analysis.csv", row.names = FALSE) #create word analysis csv for google colab code
-write.csv(data.frame(word = d_long['word']), "./data/d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
 
 ### (ii) CREATE SEMANTIC EMBEDDINGS DATAFRAME [**NB: YOU NEED TO HAVE ALREADY EXTRACTED EMBEDDINGS FOR word_analysis.csv]
 my_embeddings <- read.csv("data/embeddings_long.csv", header = TRUE)
@@ -1366,10 +1349,15 @@ d_long[, "is_word"] <- lapply(d_long["word"], is.word)
 dat <- gather(d_long, key = question_type, value = score, satisfaction, personal_desirability)
 dat <- dplyr::select(dat, subject, plot_names, question_type, score, willingness_to_pay, sentiment_score) #rows = num_ss*num_plots*num_questions
 
+
+write.csv(data.frame(word = d_long), "./data/d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
+write.csv(data.frame(word = dat), "./data/dat.csv", row.names = FALSE) #create word analysis csv for google colab code
+
+
 # TODO: Need to fix this part
 if (FALSE) {
     # Get main statistical effects
-    main_effects <- GetMainEffects(dat, d_long, data_plot_long, data_plot_long, n_plots, plot_names, my_embeddings)
+    main_effects <- GetMainEffects(dat, d_long, n_plots, plot_names, my_embeddings)
     #See error: 486 not defined because of singularities; checked for perfect correlation but did not find any
 
     pdf(file = "linear_vs_quadratic_fit.pdf", width = 13, height = 6.5)

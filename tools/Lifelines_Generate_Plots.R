@@ -6,7 +6,7 @@
 # Skip to 'main script' section for the flow of calls.  
 
 # Set working directory
-# setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #set working directory to current directory
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #set working directory to current directory
 
 #import libraries
 if (!require(pacman)) {install.packages("pacman")}
