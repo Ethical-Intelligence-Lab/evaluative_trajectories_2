@@ -1,10 +1,4 @@
-## Analysis script for 'Evaluative Summaries'
-## Study 1: Customer Journeys
-
-## Needed for semantic analysis: https://colab.research.google.com/drive/19cwz29yei-RwLnQ8HuEbjy74HRx94A6b?usp=sharing
-
-## Clear workspace
-# rm(list = ls())
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #set working directory to current directory
 
 ## Import libraries
 if (!require(pacman)) { install.packages("pacman") }
@@ -44,7 +38,6 @@ pacman::p_load('data.table', #rename data frame columns
                'broom' #install separately if does not work
 )
 
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #set working directory to current directory
 source('../../tools/common_functions.R')
 
 ProcessForPlots <- function(data, n_plots, plot_names) {
@@ -1069,10 +1062,10 @@ d_long <- CreateDataFeaturesDF(d_long)
 # errors pop up because I removed outliers
 
 # Cross Validation on Whole dataset
-#cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(dat, n_plots)
-#pdf(file = "predictions_wt_predictors_cv_plot.pdf", width = 17, height = 9)
-#cross_validation_analysis_wt_predictors
-#dev.off()
+cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(dat, n_plots)
+pdf(file = "predictions_wt_predictors_cv_plot.pdf", width = 17, height = 9)
+cross_validation_analysis_wt_predictors
+dev.off()
 
 # Cross Validation on Each Genre:::
 for(genre in genres) {
