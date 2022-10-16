@@ -499,7 +499,7 @@ end_y_axis <- 10
 cutoff_age <- 45
 
 ### ----- Create equations
-data <- read.csv('./data/lifelines_cleaned.csv')
+data <- read.csv('./data/lifelines_cleaned_sentence.csv')
 
 # Create R equations of participant enjoyments
 create_equation <- function(eqn) {
@@ -561,7 +561,7 @@ for( title in titles ) {
   data[, paste(title, "_d2_avg_weight_end", sep="")] <- data[paste(title, "_d2_sum_weight_end", sep="")] / end_age
 }
 
-write.csv(data, './data/lifelines_w_features.csv')
+write.csv(data, './data/lifelines_w_features_sentence.csv')
 
 ### --- Standardize their features_participants
 #df <- z_scorer(features_participants)

@@ -18,8 +18,9 @@ is.word  <- function(word) {
 }
 
 
-CalculateSentiment <- function(rword, model_type='sentimentr') {
-    rword <- CleanWord(rword)
+CalculateSentiment <- function(rword, model_type='sentimentr', is_sentence=FALSE) {
+    if(!is_sentence) { rword <- CleanWord(rword) }
+    #print(paste0("Cleaned word: ", rword))
 
     if (model_type == 'sentimentr') {
         return( sentiment_by(rword)$ave_sentiment )

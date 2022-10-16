@@ -35,7 +35,9 @@ pacman::p_load('data.table', #rename data frame columns
                'tidyr', #for gather(), which takes multiple columns and collapses them into key-value pairs
                'tidyverse', #used in conjunction with tidyr; contains dplyr, used for select(); load last because of conflict!
                'slam', #utility functions for sparse matrices
-               'broom' #install separately if does not work
+               'broom',
+               'rcompanion',
+               'pscl'
 )
 
 source('../../tools/common_functions.R')
@@ -503,13 +505,14 @@ Get_noise_ceiling <- function(dat_long, question_type, n_ss) {
 }
 
 
-CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, sum_enjoyment) {
+CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, sum_enjoyment, y_axis = "Pearson's r") {
     "
     What this function does: creates a grouped box plot of the cross-validated prediction results
     Inputs: results_df, x_order, results_order, ques_type, x_labels, sum_enjoyment
     Output: a boxplot of participant rating predictions with either principal components or predictors
     "
 
+    y_label <- paste0("Prediction Accuracy\n(Cross-Validated ", y_axis, ")")
     grouped_box_plot <- ggplot() +
         scale_x_discrete() +
         #geom_rect(aes(xmin = 0.2, xmax = Inf, ymin = sum_enjoyment["1st Qu."], ymax = sum_enjoyment["3rd Qu."]),
@@ -518,7 +521,7 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
         geom_boxplot(data = results_df, aes(x = x_order, y = results_order, fill = ques_type), outlier.shape = NA) +
         ggtitle(paste0("enjoyment and Desirability Predictions with ", x_labels)) +
         xlab(x_labels) +
-        ylab("Prediction Accuracy\n(Cross-Validated Pearson's r)") +
+        ylab(y_label) +
         scale_y_continuous(breaks = round(seq(-1, 1, by = 0.2), 1)) +
         scale_fill_manual(
             name = "Judgment Type",
@@ -758,7 +761,7 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
 }
 
 
-CrossValidationAnalysisWtPredictors <- function(dat, n_plots, genres_separate=FALSE) {
+CrossValidationAnalysisWtPredictors <- function(dat, n_plots, genres_separate = FALSE, consider_tags = FALSE) {
     "
     Measure the performance of each of our predictors by doing cross-validated regressions, holding out
     one participant for each cross-validation step.
@@ -770,20 +773,23 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, genres_separate=FA
     # dat_long <- d_long
 
     # n_ss <- n_after_exclusions
-    fold_size <- 9
+    fold_size <- 8
+
 
     predictors_old <- c("embeddings", "interestingness", "sentiment_score", "max", "min", "end_value", "number_peaks", "number_valleys", "number_extrema", "integral",
                         "d1_avg_unweight", "d1_avg_weight_prime", "d1_avg_weight_asc", "d1_avg_weight_des", "d1_avg_weight_end",
                         "d2_avg_unweight", "d2_avg_weight_prime", "d2_avg_weight_asc", "d2_avg_weight_des", "d2_avg_weight_end")
+
+    if (sentence_data) { predictors_old <- append(predictors_old, "sentiment_score_sentence", after = 3) }
     predictors <- c("Embeddings", "Interestingness", "Sentiment Score", "Maximum", "Minimum", "End Value", "Number of\nPeaks", "Number of\nValleys", "Number of\nExtrema", "Integral",
                     "1st Derivative", "1st Derivative\nPrime", "1st Derivative\nAscending", "1st Derivative\nDescending", "1st Derivative\nEnd",
                     "2nd Derivative", "2nd Derivative\nPrime", "2nd Derivative\nAscending", "2nd Derivative\nDescending", "2nd Derivative\nEnd")
-    if(colnames(dat)[10] != "End Value") {
+
+    if (sentence_data) { predictors <- append(predictors, "Sentiment Score\n(Sentence)", after = 3) }
+
+    if (colnames(dat)[10] != "End Value") {
         setnames(dat, old = predictors_old, new = predictors)
     }
-
-    # Take only ones that are actually words, while predicting from sentiment
-
 
     set.seed(1)
     n_folds <- dim(dat)[1] / n_plots
@@ -797,7 +803,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, genres_separate=FA
     results_enjoyment <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
     rownames(results_enjoyment) <- predictors
 
-    if(!genres_separate) {
+    if (!genres_separate) {
         for (i in 1:length(predictors)) {
             for (j in 1:n_folds) {
                 ss_results <- c()
@@ -807,11 +813,20 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, genres_separate=FA
                     trainIndeces <- indeces[(folds == j) & (folds2 != k)]  # Select fold j, but exclude test index (k)
                     testIndeces <- indeces[(folds == j) & (folds2 == k)]
 
-                    if( predictors[i] == "Sentiment Score" ) { # Exclude train indexes that is not a word
+                    if (predictors[i] == "Sentiment Score") { # Exclude train indexes that is not a word
                         trainIndeces <- subset(trainIndeces, dat$is_word[trainIndeces])
+
+                        if (consider_tags) {
+                            trainIndeces <- subset(trainIndeces, dat$word_tag[trainIndeces] == "ADJ")
+                        }
+
                     }
 
-                    if( predictors[i] == "Sentiment Score" && !dat$is_word[testIndeces] ) { # Do not fit if not a word
+                    if (predictors[i] == "Sentiment Score" && !dat$is_word[testIndeces]) { # Do not fit if not a word
+                        next
+                    } else if (consider_tags &&
+                        predictors[i] == "Sentiment Score" &&
+                        dat$word_tag[testIndeces] != "ADJ") {
                         next
                     } else {
                         fitpc <- lm(willing ~ get(predictors[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
@@ -827,28 +842,29 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, genres_separate=FA
             print(paste('enjoyment: median predictor result,', predictors[i], ': ', median(as.numeric(results_enjoyment[i,]), na.rm = TRUE)))
         }
     } else {
-        s <- sample(1: dim(dat)[1])
+        s <- sample(1:dim(dat)[1])
         random_train_splits <- split(s, ceiling(seq_along(s) / fold_size))
         results_enjoyment <- data.frame(matrix(NA, nrow = length(predictors), ncol = length(random_train_splits)))
         rownames(results_enjoyment) <- predictors
 
         for (i in 1:length(predictors)) {
-            ss_results <- c()
-            truths <- c()
-
-            for (j in 1: length(random_train_splits)) {  # Number of folds
-                for (k in 1: length(random_train_splits[[j]])) {  # Try each one in fold
+            for (j in 1:length(random_train_splits)) {  # Number of folds
+                ss_results <- c()
+                truths <- c()
+                for (k in 1:length(random_train_splits[[j]])) {  # Try each one in fold
                     trainIndeces <- random_train_splits[[j]]
                     testIndeces <- random_train_splits[[j]][k]
                     trainIndeces <- trainIndeces[trainIndeces != testIndeces]
 
-                    if( predictors[i] == "Sentiment Score" ) { # Exclude train indexes that is not a word
+                    if (predictors[i] == "Sentiment Score") { # Exclude train indexes that is not a word
                         trainIndeces <- subset(trainIndeces, dat$is_word[trainIndeces])
                     }
 
-                    if( predictors[i] == "Sentiment Score" && !dat$is_word[testIndeces] ) { # Do not fit if not a word
+                    if (predictors[i] == "Sentiment Score" && !dat$is_word[testIndeces]) { # Do not fit if not a word
                         next
                     } else {
+                        print(trainIndeces)
+                        print(testIndeces)
                         fitpc <- lm(willing ~ get(predictors[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
                         ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
                         truths <- c(truths, dat$willing[testIndeces])
@@ -921,18 +937,225 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, genres_separate=FA
     return(predictors_plot)
 }
 
+CrossValidationAnalysisForRaffle <- function(dat, n_plots, genres_separate = FALSE, no_kfold = FALSE, random = TRUE, fold_amount = 100) {
+    ## Check if willingness to buy values indicate with raffle choice
+    choices <- data.frame()
+
+    dat$picked_movie <- as.numeric(dat$genre == genres[match(dat$movie_choice, movies)])
+
+    # For each participant, find highest wtp value
+    for (i in 1:n_subjects) {
+        curr <- dat[dat$subject == i,]
+        max <- curr[which.max(curr$willing),]
+        selected_genre <- genres[match(max$movie_choice, movies)]
+
+        # To calculate percentage
+        choices[i, 'correct'] <- selected_genre == max$genre
+
+        # To calculate willingness average
+        choices[i, 'willing'] <- curr[curr$genre == selected_genre,]$willing
+    }
+
+    counts <- choices %>% count(correct)
+    print(paste0('Percentage of subjects that picked the movie with the highest willingness that they scored: ',
+                 counts[counts$correct == TRUE,]$n / sum(counts$n)))
+
+    print(paste0('Average willingness of the picked movie: ',
+                 mean(choices$willing), ', SD: ', sd(choices$willing)))
+
+    predictors_old <- c("embeddings", "interestingness", "sentiment_score", "max", "min", "end_value", "number_peaks", "number_valleys", "number_extrema", "integral",
+                        "d1_avg_unweight", "d1_avg_weight_prime", "d1_avg_weight_asc", "d1_avg_weight_des", "d1_avg_weight_end",
+                        "d2_avg_unweight", "d2_avg_weight_prime", "d2_avg_weight_asc", "d2_avg_weight_des", "d2_avg_weight_end")
+    predictors <- c("Embeddings", "Interestingness", "Sentiment Score", "Maximum", "Minimum", "End Value", "Number of\nPeaks", "Number of\nValleys", "Number of\nExtrema", "Integral",
+                    "1st Derivative", "1st Derivative\nPrime", "1st Derivative\nAscending", "1st Derivative\nDescending", "1st Derivative\nEnd",
+                    "2nd Derivative", "2nd Derivative\nPrime", "2nd Derivative\nAscending", "2nd Derivative\nDescending", "2nd Derivative\nEnd")
+    if (colnames(dat)[10] != "End Value") {
+        setnames(dat, old = predictors_old, new = predictors)
+    }
+
+    set.seed(1)
+    n_folds <- dim(dat)[1] / n_plots
+    folds <- cut(seq(1, nrow(dat)), breaks = n_folds, labels = FALSE)
+    folds2 <- rep(seq(1, n_plots), times = n_folds) #plot x subjects folds
+    indeces <- seq(1, (n_plots * n_folds))
+
+    #-------------------------------------------------------------------------------------------------------------------
+    p_value_stars_enjoyment <- c()
+    if (no_kfold) {
+        results_raffle <- data.frame(matrix(NA, nrow = length(predictors), ncol = 1))
+
+        for (i in 1:length(predictors)) {
+            # Just fit logistic regression model on all data
+            fitpc <- glm(picked_movie ~ get(predictors[i]), data = dat, family = binomial) #fit model on subset of train data
+            probabilities <- fitpc %>% predict(dat, type = "response")
+            predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+
+            ss_results <- predicted.classes
+            truths <- dat$picked_movie
+
+            cm <- confusionMatrix(as.factor(c(matrix(ss_results))), as.factor(c(truths)), mode = "everything", positive = "1")
+            score <- cm$byClass["F1"]
+            if (is.na(score)) { score <- 0 }
+
+            results_raffle[i, 1] <- score
+
+            # Save p-value!
+            p_value_stars_enjoyment[i] <- stars.pval(coef(summary(fitpc))[2, 4]) #get stars
+        }
+    } else if (random) {
+        # Create fold_amount random partitions with equal class distribution
+        random_train_splits <- createDataPartition(dat$picked_movie, list=FALSE, p=1/fold_amount, times = fold_amount)
+
+        s <- sample(1:dim(dat)[1])
+        results_raffle <- data.frame(matrix(NA, nrow = length(predictors), ncol = fold_amount))
+        rownames(results_raffle) <- predictors
+
+        for (i in 1:length(predictors)) {
+            for (j in 1:length(fold_amount)) {  # Number of folds
+                ss_results <- c()
+                truths <- c()
+                for (k in 1:length(random_train_splits[,j])) {  # Try each one in fold
+                    trainIndeces <- random_train_splits[,j]
+                    testIndeces <- random_train_splits[,j][k]
+                    trainIndeces <- trainIndeces[trainIndeces != testIndeces]
+
+                    fitpc <- glm(picked_movie ~ get(predictors[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
+
+                    probabilities <- fitpc %>% predict(dat[testIndeces,], type = "response")
+                    predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+
+                    print(paste0("Probability: ", probabilities))
+                    print(paste0("Predicted class: ", predicted.classes))
+                    print(paste0("Actual Class: ", dat[testIndeces, 'picked_movie']))
+
+                    ss_results <- c(ss_results, predicted.classes)
+                    truths <- c(truths, dat$picked_movie[testIndeces])
+                }
+
+                cm <- confusionMatrix(as.factor(c(matrix(ss_results))), as.factor(c(truths)), mode = "everything", positive = "1")
+
+                score <- cm$byClass["F1"]
+                if (is.na(score)) { score <- 0 }
+
+                results_raffle[i, j] <- score
+            }
+
+            print(paste('enjoyment: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_raffle[i,]), na.rm = TRUE)))
+            print(paste('enjoyment: median predictor result,', predictors[i], ': ', median(as.numeric(results_raffle[i,]), na.rm = TRUE)))
+        }
+    } else { # Train on each participant separately
+        results_raffle <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
+        rownames(results_raffle) <- predictors
+
+        for (i in 1:length(predictors)) {
+            for (j in 1:n_folds) {
+                ss_results <- c()
+                truths <- c()
+
+                for (k in 1:n_plots) {  # Now
+                    trainIndeces <- indeces[(folds == j) & (folds2 != k)]  # Select fold j, but exclude test index (k)
+                    testIndeces <- indeces[(folds == j) & (folds2 == k)]
+
+
+                    fitpc <- glm(picked_movie ~ get(predictors[i]), data = dat, subset = trainIndeces, family = binomial) #fit model on subset of train data
+
+                    probabilities <- fitpc %>% predict(dat[testIndeces,], type = "response")
+                    predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+
+                    print(paste0("Probability: ", probabilities))
+                    print(paste0("Predicted class: ", predicted.classes))
+                    print(paste0("Actual Class: ", dat[testIndeces, 'picked_movie']))
+
+                    ss_results <- c(ss_results, predicted.classes)
+                    truths <- c(truths, dat$picked_movie[testIndeces])
+
+                }
+
+                cm <- confusionMatrix(as.factor(c(matrix(ss_results))), as.factor(c(truths)), mode = "everything", positive = "1")
+                score <- cm$byClass["Balanced Accuracy"]
+                results_enjoyment[i, j] <- score
+            }
+
+            print(paste('enjoyment: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_enjoyment[i,]), na.rm = TRUE)))
+            print(paste('enjoyment: median predictor result,', predictors[i], ': ', median(as.numeric(results_enjoyment[i,]), na.rm = TRUE)))
+        }
+    }
+
+    # Reorder predictors according to their significance
+    t_results_raffle <- as.data.frame(t(results_raffle))
+    colnames(t_results_raffle) <- predictors
+    results_raffle_long <- gather(t_results_raffle, key = predictors, value = predictors_results, colnames(t_results_raffle)) #length(predictors)*n_folds
+    enjoyment_new_order <- with(results_raffle_long, reorder(predictors, predictors_results, median, na.rm = TRUE))
+    results_raffle_long["enjoyment_new_order"] <- enjoyment_new_order
+
+    # Get_noise_ceiling function
+    #summary_enjoyment <- Get_noise_ceiling(dat, "willing", n_folds)
+
+    #-------------------------------------------------------------------------------------------------------------------
+    #-------------------------------------------------------------------------------------------------------------------
+    #3. Plotting
+    predictors_results_ordered <- data.frame(predictors_order = results_raffle_long$enjoyment_new_order,
+                                             enjoyment_results = results_raffle_long$predictors_results)
+    predictors_results_long <- gather(predictors_results_ordered, key = question_type, value = results, enjoyment_results)
+
+    # Make boxplot from CV_plotter function
+    predictors_plot <- CV_plotter(predictors_results_long, predictors_results_long$predictors_order, predictors_results_long$results, predictors_results_long$question_type, "Predictors", summary_enjoyment, y_axis = "F1 Score")
+
+    # Get the labels
+    x_labs <- ggplot_build(predictors_plot)$layout$panel_params[[1]]$
+        x$
+        get_labels()
+
+    # Perform Wilcoxon tests and get stars for significance
+    # Define empty lists
+    wilcox_test_wt_enjoyment <- c()
+    p_value_stars_enjoyment <- c()
+    wilcox_test_wt_pd <- c()
+    p_value_stars_pd <- c()
+
+    # Loop through the predictors, comparing each to a null distribution
+    # enjoyment: One-sided Wilcox test
+    print("enjoyment: --------------------------------------------------------------------------------------")
+    for (i in x_labs) {
+        print(paste0(i, " --------------------------------------------------------------------------------------"))
+        wilcox_test_wt_enjoyment[[i]] <- wilcox.test(t_results_raffle[, i], y = NULL, alternative = "greater",
+                                                     conf.int = TRUE)
+        p_value_stars_enjoyment[i] <- stars.pval(wilcox_test_wt_enjoyment[[i]]$"p.value") #get stars
+
+        print(wilcox_test_wt_enjoyment[[i]])
+    }
+
+
+    # Define heights of annotations
+    enjoyment_bottom_x <- 1.0 #x value for bottom stars
+    enjoyment_bottom_y <- -1.0 #y value for bottom stars
+
+    for (i in 1:20) {
+        predictors_plot <- predictors_plot + ggplot2::annotate("text", x = enjoyment_bottom_x + i - 1, y = enjoyment_bottom_y, size = 8, label = p_value_stars_enjoyment[[i]])
+    }
+
+    return(predictors_plot)
+}
+
 ##======##
 ## MAIN ##
 ##======##
 
 # Define global variables
 genres <- c('Horror', 'Adventure', 'Drama', 'Biography', 'Action', 'Fantasy', 'SciFi', 'Animation')
+movies <- c('Knock at the Cabin', 'Dungeons and Dragons', 'She Said', 'I Wanna Dance With Somebody',
+            'Mission: Impossible -- Dead Reckoning', 'Shazam! Fury of the Gods', 'Avatar: The Way of Water',
+            'Puss in Boots')
 plot_names <- genres
 n_plots <- length(genres)
+sentence_data = FALSE
 
 # Read Data and Create Folder for Saving Files
-d_long <- read.csv('./data/data.csv')
+if (sentence_data) { fname <- './data/data_sentence.csv' } else { fname <- './data/data.csv' }
+
+d_long <- read.csv(fname)
 dir.create("plots/analysis_plots")
+dir.create("plots/analysis_plots_sentence")
 
 ## ================================= (1) Perform Exclusions and Process Data =====================================
 "
@@ -946,17 +1169,22 @@ dir.create("plots/analysis_plots")
 "
 
 num_subjects_and_plots <- dim(d_long)[1]
+n_subjects <- num_subjects_and_plots / length(genres);
 
 ### (i) CREATE CSV FOR SEMANTIC ANALYSIS
 analyze_words <- GetWordAnalysis(d_long, n_plots)
 words_df <- as.data.frame(matrix(unlist(analyze_words), ncol = length(unlist(analyze_words[1]))))
 analyze_words_df <- cbind(genres = genres, words = words_df$V1)
-write.csv(analyze_words_df, "word_analysis.csv", row.names = FALSE) #create word analysis csv for google colab code
 
-write.csv(d_long, "d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
+if (sentence_data) { fname <- "word_analysis_sentence.csv" } else { fname <- "word_analysis.csv" }
+write.csv(analyze_words_df, , row.names = FALSE) #create word analysis csv for google colab code
+
+if (sentence_data) { fname <- "d_long_sentence.csv" } else { fname <- "d_long.csv" }
+write.csv(d_long, fname, row.names = FALSE) #create word analysis csv for google colab code
 
 ### (ii) CREATE SEMANTIC EMBEDDINGS DATAFRAME [**NB: YOU NEED TO HAVE ALREADY EXTRACTED EMBEDDINGS FOR word_analysis.csv]
-my_embeddings <- read.csv("data/embeddings_long.csv", header = TRUE)
+if (sentence_data) { fname <- "data/embeddings_long_sentence.csv" } else { fname <- "data/embeddings_long.csv" }
+my_embeddings <- read.csv(fname, header = TRUE)
 embeddings_avg <- data.frame(embeddings = rowMeans(my_embeddings)) #create a dataframe
 
 
@@ -1019,23 +1247,25 @@ Get main statistical effects, and run descriptive and predictive analyses
 #dat <- gather(d_long, key = question_type, value = score, enjoyment, personal_desirability)
 #dat <- dplyr::select(dat, subject, plot_names, question_type, score, willingness_to_pay) #rows = num_ss*num_plots*num_questions
 
-n_after_exclusions <- 233;
-
-d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment, model_type='ai')
+d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment, model_type = 'ai')
 d_long$sentiment_score[is.na(d_long$sentiment_score)] <- 0
 
-d_long[, "is_word"] <- lapply(d_long["word"], is.word)
-dat <- d_long
+if (sentence_data) {
+    d_long[, "sentiment_score_sentence"] <- sapply(d_long["sentence"], CalculateSentiment, model_type = 'ai', is_sentence = TRUE)
+}
 
-write.csv(data.frame(word = d_long), "./data/d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
+d_long[, "is_word"] <- lapply(d_long["word"], is.word)
+
+if (sentence_data) { fname <- "./data/d_long_sentence.csv" } else { fname <- "./data/d_long.csv" }
+write.csv(data.frame(word = d_long), fname, row.names = FALSE) #create word analysis csv for google colab code
 
 if (FALSE) {
     # Get main statistical effects
-    main_effects <- GetMainEffects(dat, d_long, data_plot_long, n_plots, plot_names, my_embeddings)
+    main_effects <- GetMainEffects(d_long, d_long, data_plot_long, n_plots, plot_names, my_embeddings)
     #See error: 486 not defined because of singularities; checked for perfect correlation but did not find any
 
     pdf(file = "linear_vs_quadratic_fit.pdf", width = 13, height = 6.5)
-    main_effects
+    plot(main_effects)
     dev.off()
 }
 
@@ -1043,6 +1273,7 @@ if (FALSE) {
 #### (3.2) RUN DESCRIPTIVE ANALYSES
 
 # Create a dataframe of features and subject scores
+dat <- d_long
 d_long <- CreateDataFeaturesDF(d_long)
 
 # Run regularized regression on all predictors
@@ -1059,30 +1290,63 @@ d_long <- CreateDataFeaturesDF(d_long)
 #pdf(file = "predictions_wt_pcs_cv_plot.pdf", width = 17, height = 9)
 #cross_validation_analysis_wt_pcs
 #dev.off()
-# errors pop up because I removed outliers
 
-# Cross Validation on Whole dataset
-cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(dat, n_plots)
-pdf(file = "predictions_wt_predictors_cv_plot.pdf", width = 17, height = 9)
-cross_validation_analysis_wt_predictors
+
+# Cross Validation for Raffle
+cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots)
+pdf(file = "./plots/analysis_plots/raffle.pdf", width = 17, height = 9)
+plot(cross_validation_analysis_wt_predictors_raffle)
 dev.off()
 
-# Cross Validation on Each Genre:::
-for(genre in genres) {
-    cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(dat[dat$genre == genre,], 1, TRUE)
-    fname <- paste0("predictions_wt_predictors_cv_plot_", genre, ".pdf")
+
+# Cross Validation on Whole dataset
+if (FALSE) {
+    if (sentence_data) { fname <- "./plots/analysis_plots_sentence/predictions_wt_predictors_cv_plot_sentence.pdf" } else { fname <- "./plots/analysis_plots/predictions_wt_predictors_cv_plot.pdf" }
+    cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(d_long, n_plots)
+    pdf(file = fname, width = 17, height = 9)
+    plot(cross_validation_analysis_wt_predictors)
+    dev.off()
+}
+
+# Cross Validation on Whole dataset, with randomized folds
+if (FALSE) {
+    d_long <- d_long[d_long$word_tag == "ADJ",]
+    if (sentence_data) { fname <- "./plots/analysis_plots_sentence/predictions_wt_predictors_cv_plot_sentence_random.pdf" } else { fname <- "./plots/analysis_plots/predictions_wt_predictors_cv_plot_random.pdf" }
+    cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(d_long, n_plots, n_plots = 1, genres_separate = TRUE)
     pdf(file = fname, width = 17, height = 9)
     plot(cross_validation_analysis_wt_predictors)
     dev.off()
 }
 
 
-## =========================================== (4) Move Files ====================================================
+if(FALSE) {
+    # Cross Validation on Whole dataset, random & ONLY WITH ADJ
+    if (sentence_data) { fname <- "./plots/analysis_plots_sentence/predictions_wt_predictors_cv_plot_sentence_random_adj_nohorror.pdf" } else { fname <- "./plots/analysis_plots/predictions_wt_predictors_cv_plot_random_adj_nohorror.pdf" }
+    p <- d_long[d_long$word_tag == "ADJ",]
+    p <- p[p$genre != 1,]
+    cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(p, n_plots, n_plots = 1, genres_separate = TRUE)
+    pdf(file = fname, width = 17, height = 9)
+    plot(cross_validation_analysis_wt_predictors)
+    dev.off()
+}
 
-plot_files <- list.files(pattern = c("(.pdf|.png)"))
-file.move(plot_files, "./plots/analysis_plots", overwrite = TRUE)
-analysis_files <- list.files(pattern = c("word_analysis.csv|embeddings.csv|correlations.csv"))
-file.move(analysis_files, "data", overwrite = TRUE)
+
+# Cross Validation on each genre separately
+if (FALSE) {
+    for (genre in genres) {
+        cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(d_long[d_long$genre == genre,], 1, TRUE)
+        if (sentence_data) {
+            fname <- paste0("predictions_wt_predictors_cv_plot_", genre, '_sentence', ".pdf")
+        } else {
+            fname <- paste0("predictions_wt_predictors_cv_plot_", genre, ".pdf")
+        }
+
+        pdf(file = fname, width = 17, height = 9)
+        plot(cross_validation_analysis_wt_predictors)
+        dev.off()
+    }
+}
+
 
 ##================================================================================================================
 ##END##
