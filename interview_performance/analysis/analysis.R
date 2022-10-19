@@ -220,7 +220,7 @@ MakeGroupedBarPlot <- function(data_plot_long) {
                       position = position_dodge(.9)) +
         ggtitle("Summarizing the Hiring Likelihood of Different Interview Trajectories") +
         xlab("Interview Performance Plots") +
-        ylab("Scaled Rating") +
+        ylab("Hiring Likelihood") +
         scale_y_continuous(breaks = seq(0, 100, 40)) +
         theme(
             plot.title = element_blank(), #element_text(color = "black", size=31, face="bold", hjust = 0.5),
@@ -398,6 +398,12 @@ GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
     print(summary(effect_mod))
     print('-----------------------------------------------------')
 
+     print('Did hiring likelihood scores vary depending on plot type?')
+    effect_mod <- lm(data = data[data['question_type'] == "hiring_likelihood",], score ~ plot_type_n + (1 | subject_n))
+    print(summary(effect_mod))
+    print('-----------------------------------------------------')
+
+
     print('Did sentiment scores vary depending on plot type?')
     effect_mod <- lm(data = data, sentiment_score ~ plot_type_n + (1 | subject_n))
     print(summary(effect_mod))
@@ -526,7 +532,7 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
         geom_boxplot(data = results_df, aes(x = x_order, y = results_order), fill = "#56B4E9", outlier.shape = NA) +
         ggtitle(paste0("Hiring Likelihood Predictions with ", x_labels)) +
         xlab(x_labels) +
-        ylab("Prediction Accuracy\n(Cross-Validated Pearson's r)") +
+        ylab("Prediction Performance\n(Cross-Validated Pearson's r)") +
         scale_y_continuous(breaks = round(seq(-1.20, 1.19, by = 0.2), 1)) +
         theme_bw() +
     { if (x_labels == "Predictors")
@@ -948,19 +954,22 @@ data_plot_long = NULL
 data_plot_long <- ProcessForPlots(d_long, n_plots, plot_names) #num_rows = num_plots*num_questions
 
 ## ========================================== (2) Plot Data and Save ==================================================
+
+
+#### (2.1) MAKE BAR PLOT OF HIRING LIKELIHOOD SCORES
+grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)
+plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot, plot_names) #the little interview performance icons
+
+pdf(file = "interview_performance_bar_plot.pdf", width = 17, height = 8)
+ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
+dev.off()
+
+
 "
 Create bar plot, word clouds, and sentiment plot
 "
 
 if (FALSE) {
-    #### (2.1) MAKE BAR PLOT OF HIRING LIKELIHOOD SCORES
-    grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)
-    plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot, plot_names) #the little interview performance icons
-
-    pdf(file = "interview_performance_bar_plot.pdf", width = 17, height = 8)
-    ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
-    dev.off()
-
 
     #### (2.2) MAKE WORD CLOUDS (WARNING: takes ~5 minutes; feel free to skip)
     MakeWordClouds(d_long, n_plots, plot_names) #make word cloud images

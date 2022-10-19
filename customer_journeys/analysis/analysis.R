@@ -237,7 +237,7 @@ TransformWTP <- function(data_long) {
     shapiro.test(wtp) #significantly different from a normal distribution, p < .001 
 
     wtp_new <- log(wtp) + 1 #transform wtp 
-    hist(wtp_new) #see distribution; now normal 
+#    hist(wtp_new) #see distribution; now normal
 
     # Insert back into data frame, then turn all non-numerical values into NAs 
     data_long["willingness_to_pay"] <- wtp_new
@@ -317,6 +317,7 @@ MakeGroupedBarPlot <- function(data_plot_long, wtp=FALSE) {
         return(grouped_bar_plot)
     }
 
+    data_plot_long <- data_plot_long[data_plot_long['question_type'] != 'wtp_score_avg',]
     grouped_bar_plot <- ggplot(data_plot_long, aes(x = plot_names, y = score, fill = question_type)) +
         geom_bar(position = "dodge", stat = "identity") +
         geom_errorbar(aes(ymin = score - sd, ymax = score + sd), width = .2,
@@ -339,9 +340,9 @@ MakeGroupedBarPlot <- function(data_plot_long, wtp=FALSE) {
         ) +
         scale_fill_manual(
             name = "Judgment Type",
-            breaks = c("satisfaction_score_avg", "pd_score_avg", "wtp_score_avg"),
-            labels = c("Satisfaction", "Personal Desirability", "WTP"),
-            values = c("#56B4E9", "#009E73", "#22009e"),
+            breaks = c("satisfaction_score_avg", "pd_score_avg"),
+            labels = c("Satisfaction", "Personal Desirability"),
+            values = c("#56B4E9", "#009E73"),
             guide = guide_legend(title.position = "top")
         )
     return(grouped_bar_plot)
@@ -366,9 +367,9 @@ MakeGroupedBarPlotImages <- function(LifelinesPlot, plot_names) {
     }
 
     # Print the images that will comprise the x-axis
-    for (i in 1:27) { #print individual plots
+    for (i in 1:length(my_equations)) { #print individual plots
         png(file = paste0(plot_names[i], "_plot.png", ""))
-        sapply(equations[i], Plotter_2)
+        sapply(my_equations[i], Plotter_2)
         dev.off()
     }
 
@@ -633,25 +634,6 @@ GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
                                    left = text_grob("Difference Between Satisfaction and Desirability", color = "black", face = "bold", size = 20, rot = 90),
                                    bottom = text_grob("Plot Ordered by Satisfaction Scores", color = "black", face = "bold", size = 20, vjust = 0.4))
     print(linear_quad)
-
-    print('Regress satisfaction on embeddings: ')
-    satisfaction_embedding_df <- cbind(satisfaction = d_long$satisfaction, my_embeddings[2:513])
-    satisfaction_embedding_lm <- lm(satisfaction ~ ., data = satisfaction_embedding_df)
-    #print('satisfaction vs. embeddings:')
-    #print(summary(satisfaction_embedding_lm))
-    # Error: 486 not defined because of singularities
-    # I checked for multicollinearity with cor(my_embeddings[2:513]) but did not find any perfect correlations
-    # (except for of course the correlation of a given variable with itself, which had a coefficient of 1).
-
-    # print('Regress personal desirability on embeddings: ')
-    # pd_embedding_df <- cbind(personal_desirability = data_long$personal_desirability, my_embeddings[2:513])
-    # pd_embedding_lm <- lm(personal_desirability ~ ., data = pd_embedding_df)
-    #print('personal desirability vs. embeddings:')
-    #print(summary(pd_embedding_lm))
-    # Same error as above
-
-    # Return plots
-    # plot_list <- list(linear_plot, quadratic_plot)
     return(linear_quad)
 
 }
@@ -764,7 +746,7 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
         geom_boxplot(data = results_df, aes(x = x_order, y = results_order, fill = ques_type), outlier.shape = NA) +
         ggtitle(paste0("Satisfaction and Desirability Predictions with ", x_labels)) +
         xlab(x_labels) +
-        ylab("Prediction Accuracy\n(Cross-Validated Pearson's r)") +
+        ylab("Prediction Performance\n(Cross-Validated Pearson's r)") +
         scale_y_continuous(breaks = round(seq(-1, 1, by = 0.2), 1)) +
         scale_fill_manual(
             name = "Judgment Type",
@@ -1345,6 +1327,12 @@ data_plot_long = NULL
 data_plot_long <- ProcessForPlots(d_long, n_plots, plot_names) #num_rows = num_plots*num_questions
 
 #### (2.1) MAKE BAR PLOT OF SATISFACTION SCORES
+grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)
+plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot, plot_names) #the little customer journey icons
+
+pdf(file = "customer_journeys_bar_plot.pdf", width = 17, height = 8)
+ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
+dev.off()
 
 
 grouped_bar_plot_wtp <- MakeGroupedBarPlot(data_plot_long, wtp=TRUE)
@@ -1353,15 +1341,6 @@ plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot_wtp, plot_names) #the l
 pdf(file = "customer_journeys_bar_plot_wtp.pdf", width = 17, height = 8)
 ggdraw(insert_xaxis_grob(grouped_bar_plot_wtp, plot_images, position = "bottom"))
 dev.off()
-
-
-grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)
-plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot, plot_names) #the little customer journey icons
-
-pdf(file = "customer_journeys_bar_plot.pdf", width = 17, height = 8)
-ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
-dev.off()
-
 
 
 
@@ -1418,22 +1397,13 @@ dat <- gather(d_long, key = question_type, value = score, satisfaction, personal
 dat <- dplyr::select(dat, subject, plot_names, question_type, score, willingness_to_pay, sentiment_score, wtp_original) #rows = num_ss*num_plots*num_questions
 
 main_effects <- GetMainEffects(dat, n_plots, plot_names, my_embeddings)
-
+pdf(file = "linear_vs_quadratic_fit.pdf", width = 13, height = 6.5)
+    main_effects
+    dev.off()
 
 write.csv(data.frame(word = d_long), "./data/d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
 write.csv(data.frame(word = dat), "./data/dat.csv", row.names = FALSE) #create word analysis csv for google colab code
 
-
-# TODO: Need to fix this part
-if (FALSE) {
-    # Get main statistical effects
-    main_effects <- GetMainEffects(dat, n_plots, plot_names, my_embeddings)
-    #See error: 486 not defined because of singularities; checked for perfect correlation but did not find any
-
-    pdf(file = "linear_vs_quadratic_fit.pdf", width = 13, height = 6.5)
-    main_effects
-    dev.off()
-}
 
 
 #### (3.2) RUN DESCRIPTIVE ANALYSES

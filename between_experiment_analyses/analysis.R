@@ -6,6 +6,8 @@ d_customer_journeys <- read.csv('../customer_journeys/analysis/data/dat.csv')
 d_interview_performance <- read.csv('../interview_performance/analysis/data/dat.csv')
 d_lifelines <- read.csv('../lifelines/analysis/data/d_long.csv')
 
+#correlation between WTP and satisfaction, and WTP and desirability
+
 ### Start Analysis ###
 print('Do "Customer Journeys" Satisfaction and Personal Desirability Correlate?')
 cor.test(d_customer_journeys$word.score[d_customer_journeys$word.question_type == "satisfaction"],
