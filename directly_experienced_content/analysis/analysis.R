@@ -1027,7 +1027,7 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
             for (j in 1:fold_amount) {  # Number of folds
                 ss_results <- c()
                 truths <- c()
-                for (k in 1:length(folds[[j]])) {  # Try each one in fold
+                for (k in 1:length(folds[[j]])) {  # Predict each participant in fold
                     trainIndeces <- folds[[j]]
                     testIndeces <- folds[[j]][k]
                     trainIndeces <- trainIndeces[trainIndeces != testIndeces]

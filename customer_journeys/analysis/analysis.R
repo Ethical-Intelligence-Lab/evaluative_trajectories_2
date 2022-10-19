@@ -213,11 +213,11 @@ ProcessForPlots <- function(data, n_plots, plot_names) {
                             wtp_score_sd = unlist(stats)[c(FALSE, FALSE, FALSE, FALSE, FALSE, TRUE)])
     data_plot_sorted <- data_plot[order(data_plot$satisfaction_score_avg),] #order by satisfaction
     data_plot_long <- gather(data_plot_sorted, key = question_type, #create separate entries for each question type, i.e., num_plots*num_questions 
-                             value = score, satisfaction_score_avg, pd_score_avg)
+                             value = score, satisfaction_score_avg, pd_score_avg, wtp_score_avg)
 
     # Compile all standard deviation values
     stan_dev <- gather(data_plot_sorted, key = question_type,
-                       value = sd, satisfaction_score_sd, pd_score_sd)
+                       value = sd, satisfaction_score_sd, pd_score_sd, wtp_score_sd)
 
     # Bind the SE column to the rest of the dataframe
     data_plot_long <- cbind(dplyr::select(data_plot_long, plot_names, question_type, score), sd = stan_dev$sd)
@@ -256,7 +256,9 @@ Get_stats <- function(data, n_plots) {
     Output: equations (a list of means and standard deviations of satisfaction and pd scores for every plot)
     "
 
-    # Transform all measures 
+    # Transform all measures
+    data <- data %>% replace(is.na(.), 0)
+
     satisfaction_score <- as.numeric(data$satisfaction)
     pd_score <- as.numeric(data$personal_desirability)
     wtp_score <- as.numeric(data$willingness_to_pay)
@@ -276,12 +278,44 @@ Get_stats <- function(data, n_plots) {
 ## FUNCTIONS FOR PLOTTING BAR CHARTS ##
 ##=====================================
 
-MakeGroupedBarPlot <- function(data_plot_long) {
+MakeGroupedBarPlot <- function(data_plot_long, wtp=FALSE) {
     "
     Plot the grouped bar graph in order of ascending satisfaction scores 
     Input: data_plot_long
     Output: grouped_bar_plot (the grouped bar graph)
     "
+
+    if(wtp) {
+        data_plot_long <- data_plot_long[data_plot_long$question_type == "wtp_score_avg",]
+        grouped_bar_plot <- ggplot(data_plot_long, aes(x = plot_names, y = score, fill = question_type)) +
+        geom_bar(position = "dodge", stat = "identity") +
+        geom_errorbar(aes(ymin = score - sd, ymax = score + sd), width = .2,
+                      position = position_dodge(.9)) +
+        ggtitle("Summarizing the Satisfaction and Desirability of Different Customer Journeys") +
+        xlab("Customer Journey Plots") +
+        ylab("Scaled Rating") +
+        theme(
+            plot.title = element_blank(),
+            legend.title = element_blank(),
+            legend.text = element_text(color = "black", size = 28),
+            legend.position = "top",
+            legend.title.align = 0.5,
+            text = element_text(color = "black", size = 25),
+            axis.title.y = element_text(color = "black", size = 30, face = "bold"),
+            axis.title.x = element_text(color = "black", size = 30, face = "bold"),
+            axis.text.x = element_blank(),
+            axis.ticks.x = element_blank()
+        ) +
+        scale_fill_manual(
+            name = "Judgment Type",
+            breaks = c("wtp_score_avg"),
+            labels = c("Willingness to Pay"),
+            values = c("#5660e9"),
+            guide = guide_legend(title.position = "top")
+        )
+
+        return(grouped_bar_plot)
+    }
 
     grouped_bar_plot <- ggplot(data_plot_long, aes(x = plot_names, y = score, fill = question_type)) +
         geom_bar(position = "dodge", stat = "identity") +
@@ -305,9 +339,9 @@ MakeGroupedBarPlot <- function(data_plot_long) {
         ) +
         scale_fill_manual(
             name = "Judgment Type",
-            breaks = c("satisfaction_score_avg", "pd_score_avg"),
-            labels = c("Satisfaction", "Personal Desirability"),
-            values = c("#56B4E9", "#009E73"),
+            breaks = c("satisfaction_score_avg", "pd_score_avg", "wtp_score_avg"),
+            labels = c("Satisfaction", "Personal Desirability", "WTP"),
+            values = c("#56B4E9", "#009E73", "#22009e"),
             guide = guide_legend(title.position = "top")
         )
     return(grouped_bar_plot)
@@ -456,7 +490,7 @@ MakeSentimentBarPlot <- function(data, n_plots, plot_names, title="Satisfaction"
 ##========================##
 ## FUNCTIONS FOR ANALYSIS ##
 ##========================##
-GetMainEffects <- function(data, data_long, n_plots, plot_names, my_embeddings) {
+GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
     "
     This function gets various correlations and main effects of the participant data.
     Input: This function takes as input a dataframe with rows = num_ss*num_plots*num_questions.
@@ -490,6 +524,23 @@ GetMainEffects <- function(data, data_long, n_plots, plot_names, my_embeddings) 
     effect_mod <- lm(data = data, sentiment_score ~ plot_type_n + (1 | subject_n))
     print(summary(effect_mod))
     print('-----------------------------------------------------')
+
+    print('Did satisfaction scores vary depending on plot type?')
+    effect_mod <- lm(data = data[data['question_type'] == "satisfaction",], score ~ plot_type_n + (1 | subject_n))
+    print(summary(effect_mod))
+    print('-----------------------------------------------------')
+
+    print('Did pd scores vary depending on plot type?')
+    effect_mod <- lm(data = data[data['question_type'] == "personal_desirability",], score ~ plot_type_n + (1 | subject_n))
+    print(summary(effect_mod))
+    print('-----------------------------------------------------')
+
+    print('Did all scores vary depending on plot type?')
+    effect_mod <- lm(data = data, score ~ plot_type_n + (1 | subject_n))
+    print(summary(effect_mod))
+    print('-----------------------------------------------------')
+
+
 
     print('Do the sentiment scores correlate with satisfaction ratings?')
     satisfaction_corr <- cor.test(data$sentiment_score[data$question_type == "satisfaction"],
@@ -529,7 +580,7 @@ GetMainEffects <- function(data, data_long, n_plots, plot_names, my_embeddings) 
     # 4. Difference between linear and quadratic models for satisfaction and personal desirability
 
     # Get the order of average satisfaction scores
-    stats <- Get_stats(data_long, n_plots)
+    stats <- Get_stats(d_long, n_plots)
     data_plot <- data.frame(plot_names = plot_names,
                             satisfaction_score_avg = unlist(stats)[c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE)],
                             satisfaction_score_sd = unlist(stats)[c(FALSE, TRUE, FALSE, FALSE, FALSE, FALSE)],
@@ -584,7 +635,7 @@ GetMainEffects <- function(data, data_long, n_plots, plot_names, my_embeddings) 
     print(linear_quad)
 
     print('Regress satisfaction on embeddings: ')
-    satisfaction_embedding_df <- cbind(satisfaction = data_long$satisfaction, my_embeddings[2:513])
+    satisfaction_embedding_df <- cbind(satisfaction = d_long$satisfaction, my_embeddings[2:513])
     satisfaction_embedding_lm <- lm(satisfaction ~ ., data = satisfaction_embedding_df)
     #print('satisfaction vs. embeddings:')
     #print(summary(satisfaction_embedding_lm))
@@ -1267,6 +1318,8 @@ num_subjects_and_plots <- n_after_exclusions * n_plots
 
 d_long <- Preprocess(d, n_plots, plot_names) #num_rows = num_ss*num_plots [to see data without exclusions, replace data_clean with data]
 d_long[, c("satisfaction", "personal_desirability")] <- sapply(d_long[, c("satisfaction", "personal_desirability")], as.numeric) #turn ratings to numeric
+
+d_long$wtp_original <- as.numeric(d_long$`willingness to pay`)
 d_long <- TransformWTP(d_long)
 # Warning message: In TransformWTP(d_long) : NAs introduced by coercion
 # (Some people gave non-numerical answers, hence the warning message)
@@ -1292,12 +1345,27 @@ data_plot_long = NULL
 data_plot_long <- ProcessForPlots(d_long, n_plots, plot_names) #num_rows = num_plots*num_questions
 
 #### (2.1) MAKE BAR PLOT OF SATISFACTION SCORES
+
+
+grouped_bar_plot_wtp <- MakeGroupedBarPlot(data_plot_long, wtp=TRUE)
+plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot_wtp, plot_names) #the little customer journey icons
+
+pdf(file = "customer_journeys_bar_plot_wtp.pdf", width = 17, height = 8)
+ggdraw(insert_xaxis_grob(grouped_bar_plot_wtp, plot_images, position = "bottom"))
+dev.off()
+
+
 grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)
 plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot, plot_names) #the little customer journey icons
 
 pdf(file = "customer_journeys_bar_plot.pdf", width = 17, height = 8)
 ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
 dev.off()
+
+
+
+
+
 
 ## ========================================== (2) Plot Data and Save ==================================================
 if (FALSE) {
@@ -1347,7 +1415,9 @@ d_long[, "is_word"] <- lapply(d_long["word"], is.word)
 
 # Get dataframe for analysis (dat_final), with nrows = num_ss*num_plots*num_questions
 dat <- gather(d_long, key = question_type, value = score, satisfaction, personal_desirability)
-dat <- dplyr::select(dat, subject, plot_names, question_type, score, willingness_to_pay, sentiment_score) #rows = num_ss*num_plots*num_questions
+dat <- dplyr::select(dat, subject, plot_names, question_type, score, willingness_to_pay, sentiment_score, wtp_original) #rows = num_ss*num_plots*num_questions
+
+main_effects <- GetMainEffects(dat, n_plots, plot_names, my_embeddings)
 
 
 write.csv(data.frame(word = d_long), "./data/d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
@@ -1357,7 +1427,7 @@ write.csv(data.frame(word = dat), "./data/dat.csv", row.names = FALSE) #create w
 # TODO: Need to fix this part
 if (FALSE) {
     # Get main statistical effects
-    main_effects <- GetMainEffects(dat, d_long, n_plots, plot_names, my_embeddings)
+    main_effects <- GetMainEffects(dat, n_plots, plot_names, my_embeddings)
     #See error: 486 not defined because of singularities; checked for perfect correlation but did not find any
 
     pdf(file = "linear_vs_quadratic_fit.pdf", width = 13, height = 6.5)

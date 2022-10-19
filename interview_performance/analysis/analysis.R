@@ -378,7 +378,7 @@ OrderSentimentDataframe <- function(data, n_plots, plot_names) {
 ##================================================================================================================
 ##FUNCTIONS FOR ANALYSIS##
 ##================================================================================================================
-GetMainEffects <- function(data, data_long, data_plot_long, e1b_data_plot_long, n_plots, plot_names, my_embeddings) {
+GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
     "
     This function gets various correlations and main effects of the participant data.
     Input: This function takes as input a dataframe with rows = num_ss*num_plots*num_questions.
@@ -408,22 +408,6 @@ GetMainEffects <- function(data, data_long, data_plot_long, e1b_data_plot_long, 
                                        data$score_n[data$question_type == "hiring_likelihood"])
     print('sentiment vs. hiring likelihood:')
     print(hiring_likelihood_corr)
-    print('-----------------------------------------------------')
-
-    # 2. Do E5 hiring likelihood ratings correlate with E1 meaningfulness and personal desirability ratings?
-
-    print('Does E5 hiring likelihood correlate with E1 meaningfulness ratings?')
-    q1_corr <- cor.test(e1b_data_plot_long$score[e1b_data_plot_long$question_type == "meaning_score_avg"],
-                        data_plot_long$score[data_plot_long$question_type == "hiring_likelihood_score_avg"])
-    print('E5 hiring likelihood vs E1 meaningfulness:')
-    print(q1_corr)
-    print('-----------------------------------------------------')
-
-    print('Does E5 hiring likelihood correlate with E1 personal desirability ratings?')
-    q2_corr <- cor.test(e1b_data_plot_long$score[e1b_data_plot_long$question_type == "pd_score_avg"],
-                        data_plot_long$score[data_plot_long$question_type == "hiring_likelihood_score_avg"])
-    print('E5 hiring likelihood vs E1 personal desirability:')
-    print(q2_corr)
     print('-----------------------------------------------------')
 
     # print('Regress hiring likelihood on embeddings: ')
@@ -1019,10 +1003,11 @@ dat <- dplyr::select(dat, subject, plot_names, question_type, score, sentiment_s
 write.csv(data.frame(word = d_long), "./data/d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
 write.csv(data.frame(word = dat), "./data/dat.csv", row.names = FALSE) #create word analysis csv for google colab code
 
+main_effects <- GetMainEffects(dat, n_plots, plot_names, my_embeddings)
 
 # Get main statistical effects
 if (FALSE) {
-    main_effects <- GetMainEffects(dat, d_long, data_plot_long, data_plot_long, n_plots, plot_names, my_embeddings)
+
     #See possible error: 486 not defined because of singularities; checked for perfect correlation but did not find any
 
     pdf(file = "linear_vs_quadratic_fit.pdf", width = 13, height = 6.5)
