@@ -47,3 +47,5 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+directly_experienced_content/analysis/plots/individual/
+directly_experienced_content/analysis/plots/individual_noaxes/
