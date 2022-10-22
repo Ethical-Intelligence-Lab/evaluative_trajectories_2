@@ -52,35 +52,20 @@ ProcessForPlots <- function(data, n_plots, plot_names) {
 
     # Get mean scores for all questions, then reshape data from wide to long format
     stats <- Get_stats(data, n_plots)
-    data_plot <- data.frame(plot_names = plot_names,
-                            enjoyment_score_avg = unlist(stats)[c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE)],
-                            enjoyment_score_sd = unlist(stats)[c(FALSE, TRUE, FALSE, FALSE, FALSE, FALSE)],
-                            pd_score_avg = unlist(stats)[c(FALSE, FALSE, TRUE, FALSE, FALSE, FALSE)],
-                            pd_score_sd = unlist(stats)[c(FALSE, FALSE, FALSE, TRUE, FALSE, FALSE)],
-                            wtp_score_avg = unlist(stats)[c(FALSE, FALSE, FALSE, FALSE, TRUE, FALSE)],
-                            wtp_score_sd = unlist(stats)[c(FALSE, FALSE, FALSE, FALSE, FALSE, TRUE)])
+    data_plot <- data.frame(cluster_names = cluster_names,
+                            enjoyment_score_avg = unlist(stats)[c(TRUE, FALSE)],
+                            enjoyment_score_sd = unlist(stats)[c(FALSE, TRUE)])
     data_plot_sorted <- data_plot[order(data_plot$enjoyment_score_avg),] #order by enjoyment
     data_plot_long <- gather(data_plot_sorted, key = question_type, #create separate entries for each question type, i.e., num_plots*num_questions
-                             value = score, enjoyment_score_avg, pd_score_avg)
+                             value = score, enjoyment_score_avg)
 
     # Compile all standard deviation values
     stan_dev <- gather(data_plot_sorted, key = question_type,
-                       value = sd, enjoyment_score_sd, pd_score_sd)
+                       value = sd, enjoyment_score_sd)
 
     # Bind the SE column to the rest of the dataframe
-    data_plot_long <- cbind(dplyr::select(data_plot_long, plot_names, question_type, score), sd = stan_dev$sd)
-
-    # data_plot_long$plot_names <- factor(data_plot_long$plot_names, levels = c("linear_low", "linear_rise_sharp_fall", "linear_fall",
-    #                                                                           "exp_fall_convex", "logistic_fall", "sin_rf_partial",
-    #                                                                           "positive_change_partial", "linear_middle", "positive_change_full",
-    #                                                                           "exp_fall_concave", "sin_rf_full", "sin_frf_partial",
-    #                                                                           "sin_frf_full", "sin_rfrf", "negative_change_full",
-    #                                                                           "sin_rfr_partial", "sin_fr_full", "sin_frfr",
-    #                                                                           "sin_rfr_full", "linear_rise_sharp_fall_exp_rise", "exp_rise_convex",
-    #                                                                           "logistic_rise", "negative_change_partial", "sin_fr_partial",
-    #                                                                           "linear_rise", "exp_rise_concave", "linear_high"))
-
-    data_plot_long$plot_names <- factor(data_plot_long$plot_names, levels = data_plot_long$plot_names[1:n_plots])
+    data_plot_long <- cbind(dplyr::select(data_plot_long, cluster_names, question_type, score), sd = stan_dev$sd)
+    data_plot_long$cluster_names <- factor(data_plot_long$cluster_names, levels = data_plot_long$cluster_names[1:n_clusters])
 
     return(data_plot_long)
 }
@@ -121,13 +106,10 @@ Get_stats <- function(data, n_plots) {
     Output: equations (a list of means and standard deviations of enjoyment and pd scores for every plot)
     "
 
-    # Transform all measures
-    wtp_score <- as.numeric(data$willing)
-
     # Get means and standard deviations
     equations <- c()
-    for (i in 1:n_plots) {
-        equations[[i]] <- c(mean(wtp_score[seq(i, length(wtp_score), n_plots)]), sd(wtp_score[seq(i, length(wtp_score), n_plots)]))
+    for (i in 0:(n_clusters - 1)) {
+        equations[[i + 1]] <- c(mean(data[data$cluster_labels == i, 'willing']), sd(data[data$cluster_labels == i, 'willing']))
     }
 
     return(equations)
@@ -144,17 +126,16 @@ MakeGroupedBarPlot <- function(data_plot_long) {
     Output: grouped_bar_plot (the grouped bar graph)
     "
 
-    grouped_bar_plot <- ggplot(data_plot_long, aes(x = plot_names, y = score, fill = question_type)) +
+    grouped_bar_plot <- ggplot(data_plot_long, aes(x = cluster_names, y = score, fill = question_type)) +
         geom_bar(position = "dodge", stat = "identity") +
         geom_errorbar(aes(ymin = score - sd, ymax = score + sd), width = .2,
                       position = position_dodge(.9)) +
-        ggtitle("Summarizing the enjoyment and Desirability of Different Customer Journeys") +
+        ggtitle("Summarizing the Enjoyment of Different Customer Journeys") +
         xlab("Customer Journey Plots") +
         ylab("Scaled Rating") +
-        scale_y_continuous(breaks = seq(0, 80, 40)) +
         theme(
-            plot.title = element_blank(), #element_text(color = "black", size=30, face="bold", hjust = 0.5),
-            legend.title = element_blank(), #element_text(color = "black", size=30),
+            plot.title = element_blank(),
+            legend.title = element_blank(),
             legend.text = element_text(color = "black", size = 28),
             legend.position = "top",
             legend.title.align = 0.5,
@@ -166,16 +147,16 @@ MakeGroupedBarPlot <- function(data_plot_long) {
         ) +
         scale_fill_manual(
             name = "Judgment Type",
-            breaks = c("enjoyment_score_avg", "pd_score_avg"),
-            labels = c("enjoyment", "Personal Desirability"),
-            values = c("#56B4E9", "#009E73"),
+            breaks = c("enjoyment_score_avg"),
+            labels = c("Enjoyment"),
+            values = c("#56B4E9"),
             guide = guide_legend(title.position = "top")
         )
     return(grouped_bar_plot)
 }
 
 
-MakeGroupedBarPlotImages <- function(LifelinesPlot, plot_names) {
+MakeGroupedBarPlotImages <- function(LifelinesPlot, data_plot_long) {
     "
     Make a plotter function that produces 'clean' (no labels) version of individual images
     for the x-axis. Then, plot the images in order of ascending satisfaction scores,
@@ -184,26 +165,13 @@ MakeGroupedBarPlotImages <- function(LifelinesPlot, plot_names) {
     Output: the plot labels for the grouped bar graph and the sentiment bar graph
     "
 
-    # Make "clean" (no labels) version of individual images for x-axis
-    Plotter_2 <- function(equation, x_range, y_range) {
-        plot(equation, lwd = 30, xlim = c(start_age, end_age), ylim = c(0, end_y_axis), main = "",
-             xlab = "", ylab = "", axes = FALSE, col = "firebrick3")
-
-        return(Plotter_2)
-    }
-
-    # Print the images that will comprise the x-axis
-    for (i in 1:27) { #print individual plots
-        png(file = paste0(plot_names[i], "_plot.png", ""))
-        sapply(equations[i], Plotter_2)
-        dev.off()
-    }
-
     # Assemble images in the order of data_plot_long$plot_names[1:27]
     plot_images <- axis_canvas(LifelinesPlot, axis = 'x')
 
-    for (i in 27) {
-        plot_images <- plot_images + draw_image(paste0(data_plot_long$plot_names[i], "_plot.png"), x = i - 0.5)
+    sorted_cluster_names <- c(data_plot_long[, 'cluster_names'])
+
+    for (i in 1: 27) {
+        plot_images <- plot_images + draw_image(paste0("./plots/cluster/", sorted_cluster_names[i], ".png"), x = i - 0.5)
     }
 
     return(plot_images)
@@ -1081,7 +1049,7 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
 
                 cm <- confusionMatrix(as.factor(c(matrix(ss_results))), as.factor(c(truths)), mode = "everything", positive = "1")
 
-                if(perf_metric == "Accuracy") {
+                if (perf_metric == "Accuracy") {
                     score <- cm$overall[perf_metric]
                 } else {
                     score <- cm$byClass[perf_metric]
@@ -1168,9 +1136,11 @@ movies <- c('Knock at the Cabin', 'Dungeons and Dragons', 'She Said', 'I Wanna D
 plot_names <- genres
 n_plots <- length(genres)
 sentence_data = FALSE
+n_clusters <- 27
+cluster_names_sorted <- c()
 
 # Read Data and Create Folder for Saving Files
-if (sentence_data) { fname <- './data/data_sentence.csv' } else { fname <- './data/data.csv' }
+if (sentence_data) { fname <- './data/data_sentence.csv' } else { fname <- './data/data_long_cluster.csv' }
 
 d_long <- read.csv(fname)
 dir.create("plots/analysis_plots")
@@ -1215,21 +1185,29 @@ interestingness <- GetInterestingness(d_long, n_plots)
 d_long <- cbind(d_long, embeddings_avg)
 d_long <- cbind(d_long, interestingness)
 data_plot_long = NULL
-#data_plot_long <- ProcessForPlots(d_long, n_plots, plot_names) #num_rows = num_plots*num_questions
+
+cluster_names <- c()
+for (i in 0:(n_clusters - 1)) {
+    cluster_names[i + 1] <- paste0('cluster_', i)
+}
+
+data_plot_long <- ProcessForPlots(d_long, n_plots, plot_names)
+
+
+#### (2.1) MAKE BAR PLOT OF enjoyment SCORES
+grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)
+plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot, data_plot_long) #the little customer journey icons
+
+pdf(file = "customer_journeys_bar_plot.pdf", width = 17, height = 8)
+ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
+dev.off()
+
 
 ## ========================================== (2) Plot Data and Save ==================================================
 if (FALSE) {
     "
     Create bar plot, word clouds, and sentiment plot
     "
-
-    #### (2.1) MAKE BAR PLOT OF enjoyment SCORES
-    grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)
-    plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot, plot_names) #the little customer journey icons
-
-    pdf(file = "customer_journeys_bar_plot.pdf", width = 17, height = 8)
-    ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
-    dev.off()
 
 
     #### (2.2) MAKE WORD CLOUDS (WARNING: takes ~5 minutes; feel free to skip)
