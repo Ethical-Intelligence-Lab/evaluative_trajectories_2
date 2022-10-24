@@ -170,7 +170,7 @@ MakeGroupedBarPlotImages <- function(LifelinesPlot, data_plot_long) {
 
     sorted_cluster_names <- c(data_plot_long[, 'cluster_names'])
 
-    for (i in 1: 27) {
+    for (i in 1:27) {
         plot_images <- plot_images + draw_image(paste0("./plots/cluster/", sorted_cluster_names[i], ".png"), x = i - 0.5)
     }
 
@@ -736,7 +736,7 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
 }
 
 
-CrossValidationAnalysisWtPredictors <- function(dat, n_plots, genres_separate = FALSE, consider_tags = FALSE) {
+CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, consider_tags = FALSE, genres_separate = FALSE) {
     "
     Measure the performance of each of our predictors by doing cross-validated regressions, holding out
     one participant for each cross-validation step.
@@ -762,7 +762,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, genres_separate = 
 
     if (sentence_data) { predictors <- append(predictors, "Sentiment Score\n(Sentence)", after = 3) }
 
-    if (colnames(dat)[10] != "End Value") {
+    if (colnames(dat)[10] != "Integral") {
         setnames(dat, old = predictors_old, new = predictors)
     }
 
@@ -775,18 +775,30 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, genres_separate = 
     #-------------------------------------------------------------------------------------------------------------------
 
     # Train for and Predict Enjoyment
-    results_enjoyment <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
+    if (genres_separate) {
+        results_enjoyment <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_plots))
+    } else {
+        results_enjoyment <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
+    }
     rownames(results_enjoyment) <- predictors
 
-    if (!genres_separate) {
+    if (!random) {
         for (i in 1:length(predictors)) {
-            for (j in 1:n_folds) {
+            if (genres_separate) { nn_folds <- n_plots } else { nn_folds <- n_folds }
+            for (j in 1:nn_folds) {
                 ss_results <- c()
                 truths <- c()
 
-                for (k in 1:n_plots) {  # Now
-                    trainIndeces <- indeces[(folds == j) & (folds2 != k)]  # Select fold j, but exclude test index (k)
-                    testIndeces <- indeces[(folds == j) & (folds2 == k)]
+                if (genres_separate) { nn_ss <- n_folds } else { nn_ss <- n_plots }
+                for (k in 1:nn_ss) {  # Now
+                    if (genres_separate) {
+                        trainIndeces <- indeces[(folds2 == j) & (folds != k)]
+                        testIndeces <- indeces[(folds2 == j) & (folds == k)]
+                    } else {
+                        trainIndeces <- indeces[(folds == j) & (folds2 != k)]
+                        testIndeces <- indeces[(folds == j) & (folds2 == k)]
+                    }
+
 
                     if (predictors[i] == "Sentiment Score") { # Exclude train indexes that is not a word
                         trainIndeces <- subset(trainIndeces, dat$is_word[trainIndeces])
@@ -1318,13 +1330,12 @@ if (FALSE) {
     pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_f1_10.pdf"), width = 17, height = 9)
     plot(cross_validation_analysis_wt_predictors_raffle)
     dev.off()
+
+    cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE, random = TRUE, fold_amount = 10, perf_metric = "Accuracy")
+    pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_accuracy_10.pdf"), width = 17, height = 9)
+    plot(cross_validation_analysis_wt_predictors_raffle)
+    dev.off()
 }
-
-
-cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE, random = TRUE, fold_amount = 10, perf_metric = "Accuracy")
-pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_accuracy_10.pdf"), width = 17, height = 9)
-plot(cross_validation_analysis_wt_predictors_raffle)
-dev.off()
 
 if (FALSE) {
     # Cross Validation on Whole dataset
@@ -1337,9 +1348,19 @@ if (FALSE) {
 
 # Cross Validation on Whole dataset, with randomized folds
 if (FALSE) {
-    d_long <- d_long[d_long$word_tag == "ADJ",]
+    #d_long <- d_long[d_long$word_tag == "ADJ",]
     if (sentence_data) { fname <- "./plots/analysis_plots_sentence/predictions_wt_predictors_cv_plot_sentence_random.pdf" } else { fname <- "./plots/analysis_plots/predictions_wt_predictors_cv_plot_random.pdf" }
-    cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(d_long, n_plots, n_plots = 1, genres_separate = TRUE)
+    cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(d_long, n_plots, n_plots = 1, random = TRUE)
+    pdf(file = fname, width = 17, height = 9)
+    plot(cross_validation_analysis_wt_predictors)
+    dev.off()
+}
+
+# Cross Validation on Whole dataset, with training on each genre separately
+if (TRUE) {
+    #d_long <- d_long[d_long$word_tag == "ADJ",]
+    if (sentence_data) { fname <- "./plots/analysis_plots_sentence/predictions_wt_predictors_cv_plot_sentence_genres_separate.pdf" } else { fname <- "./plots/analysis_plots/predictions_wt_predictors_cv_plot_genres_separate.pdf" }
+    cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(d_long, n_plots, random = FALSE, genres_separate = TRUE)
     pdf(file = fname, width = 17, height = 9)
     plot(cross_validation_analysis_wt_predictors)
     dev.off()
@@ -1351,7 +1372,7 @@ if (FALSE) {
     if (sentence_data) { fname <- "./plots/analysis_plots_sentence/predictions_wt_predictors_cv_plot_sentence_random_adj_nohorror.pdf" } else { fname <- "./plots/analysis_plots/predictions_wt_predictors_cv_plot_random_adj_nohorror.pdf" }
     p <- d_long[d_long$word_tag == "ADJ",]
     p <- p[p$genre != 1,]
-    cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(p, n_plots, n_plots = 1, genres_separate = TRUE)
+    cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(p, n_plots = 1, random = TRUE)
     pdf(file = fname, width = 17, height = 9)
     plot(cross_validation_analysis_wt_predictors)
     dev.off()

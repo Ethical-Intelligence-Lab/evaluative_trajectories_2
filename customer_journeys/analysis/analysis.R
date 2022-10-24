@@ -237,7 +237,7 @@ TransformWTP <- function(data_long) {
     shapiro.test(wtp) #significantly different from a normal distribution, p < .001 
 
     wtp_new <- log(wtp) + 1 #transform wtp 
-#    hist(wtp_new) #see distribution; now normal
+    #    hist(wtp_new) #see distribution; now normal
 
     # Insert back into data frame, then turn all non-numerical values into NAs 
     data_long["willingness_to_pay"] <- wtp_new
@@ -278,41 +278,41 @@ Get_stats <- function(data, n_plots) {
 ## FUNCTIONS FOR PLOTTING BAR CHARTS ##
 ##=====================================
 
-MakeGroupedBarPlot <- function(data_plot_long, wtp=FALSE) {
+MakeGroupedBarPlot <- function(data_plot_long, wtp = FALSE) {
     "
     Plot the grouped bar graph in order of ascending satisfaction scores 
     Input: data_plot_long
     Output: grouped_bar_plot (the grouped bar graph)
     "
 
-    if(wtp) {
+    if (wtp) {
         data_plot_long <- data_plot_long[data_plot_long$question_type == "wtp_score_avg",]
         grouped_bar_plot <- ggplot(data_plot_long, aes(x = plot_names, y = score, fill = question_type)) +
-        geom_bar(position = "dodge", stat = "identity") +
-        geom_errorbar(aes(ymin = score - sd, ymax = score + sd), width = .2,
-                      position = position_dodge(.9)) +
-        ggtitle("Summarizing the Satisfaction and Desirability of Different Customer Journeys") +
-        xlab("Customer Journey Plots") +
-        ylab("Scaled Rating") +
-        theme(
-            plot.title = element_blank(),
-            legend.title = element_blank(),
-            legend.text = element_text(color = "black", size = 28),
-            legend.position = "top",
-            legend.title.align = 0.5,
-            text = element_text(color = "black", size = 25),
-            axis.title.y = element_text(color = "black", size = 30, face = "bold"),
-            axis.title.x = element_text(color = "black", size = 30, face = "bold"),
-            axis.text.x = element_blank(),
-            axis.ticks.x = element_blank()
-        ) +
-        scale_fill_manual(
-            name = "Judgment Type",
-            breaks = c("wtp_score_avg"),
-            labels = c("Willingness to Pay"),
-            values = c("#5660e9"),
-            guide = guide_legend(title.position = "top")
-        )
+            geom_bar(position = "dodge", stat = "identity") +
+            geom_errorbar(aes(ymin = score - sd, ymax = score + sd), width = .2,
+                          position = position_dodge(.9)) +
+            ggtitle("Summarizing the Satisfaction and Desirability of Different Customer Journeys") +
+            xlab("Customer Journey Plots") +
+            ylab("Scaled Rating") +
+            theme(
+                plot.title = element_blank(),
+                legend.title = element_blank(),
+                legend.text = element_text(color = "black", size = 28),
+                legend.position = "top",
+                legend.title.align = 0.5,
+                text = element_text(color = "black", size = 25),
+                axis.title.y = element_text(color = "black", size = 30, face = "bold"),
+                axis.title.x = element_text(color = "black", size = 30, face = "bold"),
+                axis.text.x = element_blank(),
+                axis.ticks.x = element_blank()
+            ) +
+            scale_fill_manual(
+                name = "Judgment Type",
+                breaks = c("wtp_score_avg"),
+                labels = c("Willingness to Pay"),
+                values = c("#5660e9"),
+                guide = guide_legend(title.position = "top")
+            )
 
         return(grouped_bar_plot)
     }
@@ -460,7 +460,7 @@ OrderSentimentDataframe <- function(data, n_plots, plot_names) {
 }
 
 
-MakeSentimentBarPlot <- function(data, n_plots, plot_names, title="Satisfaction") {
+MakeSentimentBarPlot <- function(data, n_plots, plot_names, title = "Satisfaction") {
     "
     Plot the sentiment bar graph in order of ascending satisfaction scores.
     Input: data_long, n_plots, plot_names
@@ -540,7 +540,6 @@ GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
     effect_mod <- lm(data = data, score ~ plot_type_n + (1 | subject_n))
     print(summary(effect_mod))
     print('-----------------------------------------------------')
-
 
 
     print('Do the sentiment scores correlate with satisfaction ratings?')
@@ -1085,7 +1084,7 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
 }
 
 
-CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
+CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots, trajectories_separate = FALSE) {
     "
     Measure the performance of each of our predictors by doing cross-validated regressions, holding out
     one participant for each cross-validation step.
@@ -1101,7 +1100,9 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
     predictors <- c("Embeddings", "Interestingness", "Sentiment Score", "Maximum", "Minimum", "End Value", "Number of\nPeaks", "Number of\nValleys", "Number of\nExtrema", "Integral",
                     "1st Derivative", "1st Derivative\nPrime", "1st Derivative\nAscending", "1st Derivative\nDescending", "1st Derivative\nEnd",
                     "2nd Derivative", "2nd Derivative\nPrime", "2nd Derivative\nAscending", "2nd Derivative\nDescending", "2nd Derivative\nEnd")
-    setnames(dat, old = predictors_old, new = predictors)
+
+    if (colnames(dat)[45] != "End Value") { setnames(dat, old = predictors_old, new = predictors) }
+
 
     set.seed(1)
     n_folds <- n_ss
@@ -1111,93 +1112,80 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
 
     #-------------------------------------------------------------------------------------------------------------------
 
-    #1. Satisfaction
-    results_satisfaction <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
-    rownames(results_satisfaction) <- predictors
-
-    for (i in 1:length(predictors)) {
-        for (j in 1:n_folds) {
-            ss_results <- c()
-            truths <- c()
-
-            for (k in 1:n_plots) {
-                trainIndeces <- indeces[(folds == j) & (folds2 != k)]
-                testIndeces <- indeces[(folds == j) & (folds2 == k)]
-
-                if( predictors[i] == "Sentiment Score" ) { # Exclude train indexes that is not a word
-                    trainIndeces <- subset(trainIndeces, dat$is_word[trainIndeces])
-                }
-
-                if( predictors[i] == "Sentiment Score" && !dat$is_word[testIndeces] ) { # Do not fit if not a word
-                    next
-                } else {
-                    fitpc <- lm(satisfaction ~ get(predictors[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
-                    ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
-                    truths <- c(truths, dat$satisfaction[testIndeces])
-                }
-            }
-            results_satisfaction[i, j] <- cor(truths, ss_results)
+    #1. Satisfaction, #2 Personal Desirability
+    for (ptype in c('satisfaction', 'personal_desirability')) {
+        if (trajectories_separate) {
+            results <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_plots))
+        } else {
+            results <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
         }
+        rownames(results) <- predictors
 
-        print(paste('satisfaction: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_satisfaction[i,]), na.rm = TRUE)))
-        print(paste('satisfaction: median predictor result,', predictors[i], ': ', median(as.numeric(results_satisfaction[i,]), na.rm = TRUE)))
-    }
+        for (i in 1:length(predictors)) {
+            if (trajectories_separate) { nn_folds <- n_plots } else { nn_folds <- n_folds }
+            for (j in 1:nn_folds) {
+                ss_results <- c()
+                truths <- c()
 
-    # Reorder predictors according to their significance
-    t_results_satisfaction <- as.data.frame(t(results_satisfaction))
-    colnames(t_results_satisfaction) <- predictors
-    results_satisfaction_long <- gather(t_results_satisfaction, key = predictors, value = predictors_results, colnames(t_results_satisfaction)) #length(predictors)*n_folds
-    satisfaction_new_order <- with(results_satisfaction_long, reorder(predictors, predictors_results, median, na.rm = TRUE))
-    results_satisfaction_long["satisfaction_new_order"] <- satisfaction_new_order
+                if (trajectories_separate) { nn_ss <- n_ss } else { nn_ss <- n_plots }
+                for (k in 1:nn_ss) {  # Number of participants of predictions in each fold
+                    if (trajectories_separate) {
+                        trainIndeces <- indeces[(folds2 == j) & (folds != k)]
+                        testIndeces <- indeces[(folds2 == j) & (folds == k)]
+                    } else {
+                        trainIndeces <- indeces[(folds == j) & (folds2 != k)]
+                        testIndeces <- indeces[(folds == j) & (folds2 == k)]
+                    }
 
-    # Get_noise_ceiling function
-    summary_satisfaction <- Get_noise_ceiling(dat_long, "satisfaction", n_ss)
+                    if (predictors[i] == "Sentiment Score") { # Exclude train indexes that is not a word
+                        trainIndeces <- subset(trainIndeces, dat$is_word[trainIndeces])
+                    }
 
-    #-------------------------------------------------------------------------------------------------------------------
+                    if (predictors[i] == "Sentiment Score" && !dat$is_word[testIndeces]) { # Do not fit if not a word
+                        next
+                    } else {
+                        if (ptype == 'satisfaction') {
+                            fitpc <- lm(satisfaction ~ get(predictors[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
+                        } else {
+                            fitpc <- lm(personal_desirability ~ get(predictors[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
+                        }
 
-    #2. Personal Desirability
-    results_pd <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
-    rownames(results_pd) <- predictors
-
-    for (i in 1:length(predictors)) {
-        for (j in 1:n_folds) {
-            ss_results <- c()
-            truths <- c()
-
-            for (k in 1:n_plots) {
-                trainIndeces <- indeces[(folds == j) & (folds2 != k)]
-                testIndeces <- indeces[(folds == j) & (folds2 == k)]
-
-                if( predictors[i] == "Sentiment Score" ) { # Exclude train indexes that is not a word
-                    trainIndeces <- subset(trainIndeces, dat$is_word[trainIndeces])
+                        ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
+                        truths <- c(truths, dat[testIndeces, ptype])
+                    }
                 }
-
-                if( predictors[i] == "Sentiment Score" && !dat$is_word[testIndeces] ) { # Do not fit if not a word
-                    next
-                } else {
-                    fitpc <- lm(personal_desirability ~ get(predictors[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
-                    ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
-                    truths <- c(truths, dat$personal_desirability[testIndeces])
-                }
+                results[i, j] <- cor(truths, ss_results)
             }
 
-            results_pd[i, j] <- cor(truths, ss_results)
+
+            print(paste(ptype, ': mean predictor result,', predictors[i], ': ', mean(as.numeric(results[i,]), na.rm = TRUE)))
+            print(paste(ptype, ': median predictor result,', predictors[i], ': ', median(as.numeric(results[i,]), na.rm = TRUE)))
+
         }
 
-        print(paste('personal desirability: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_pd[i,]), na.rm = TRUE)))
-        print(paste('personal desirability: median predictor result,', predictors[i], ': ', median(as.numeric(results_pd[i,]), na.rm = TRUE)))
+        if (ptype == 'satisfaction') {
+            # Reorder predictors according to their significance
+            t_results_satisfaction <- as.data.frame(t(results))
+            colnames(t_results_satisfaction) <- predictors
+            results_satisfaction_long <- gather(t_results_satisfaction, key = predictors, value = predictors_results, colnames(t_results_satisfaction)) #length(predictors)*n_folds
+            satisfaction_new_order <- with(results_satisfaction_long, reorder(predictors, predictors_results, median, na.rm = TRUE))
+            results_satisfaction_long["satisfaction_new_order"] <- satisfaction_new_order
+
+            # Get_noise_ceiling function
+            summary_satisfaction <- Get_noise_ceiling(dat_long, "satisfaction", n_ss)
+        } else {
+            # Reorder predictors according to their significance
+            t_results_pd <- as.data.frame(t(results))
+            colnames(t_results_pd) <- predictors
+            results_pd_long <- gather(t_results_pd, key = predictors, value = predictors_results, colnames(t_results_pd)) #length(predictors)*n_folds
+            pd_new_order <- with(results_pd_long, reorder(predictors, predictors_results, median, na.rm = TRUE))
+            results_pd_long["pd_new_order"] <- pd_new_order
+            results_pd_long <- results_pd_long[order(match(results_pd_long[, "pd_new_order"], results_satisfaction_long[, "satisfaction_new_order"])),] #order by satisfaction scores
+
+            # Get_noise_ceiling function
+            summary_pd <- Get_noise_ceiling(dat_long, "personal_desirability", n_ss)
+        }
     }
-
-    # Reorder predictors according to their significance
-    t_results_pd <- as.data.frame(t(results_pd))
-    colnames(t_results_pd) <- predictors
-    results_pd_long <- gather(t_results_pd, key = predictors, value = predictors_results, colnames(t_results_pd)) #length(predictors)*n_folds
-    pd_new_order <- with(results_pd_long, reorder(predictors, predictors_results, median, na.rm = TRUE))
-    results_pd_long["pd_new_order"] <- pd_new_order
-    results_pd_long <- results_pd_long[order(match(results_pd_long[, "pd_new_order"], results_satisfaction_long[, "satisfaction_new_order"])),] #order by satisfaction scores
-
-    # Get_noise_ceiling function
-    summary_pd <- Get_noise_ceiling(dat_long, "personal_desirability", n_ss)
 
     #-------------------------------------------------------------------------------------------------------------------
 
@@ -1205,10 +1193,13 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
     predictors_results_ordered <- data.frame(predictors_order = results_satisfaction_long$satisfaction_new_order,
                                              satisfaction_results = results_satisfaction_long$predictors_results,
                                              pd_results = results_pd_long$predictors_results) #combine satisfaction and pd results
-    predictors_results_long <- gather(predictors_results_ordered, key = question_type, value = results, satisfaction_results, pd_results)
+    predictors_results_long <- gather(predictors_results_ordered, key = question_type, value = results,
+                                      satisfaction_results, pd_results)
 
     # Make boxplot from CV_plotter function
-    predictors_plot <- CV_plotter(predictors_results_long, predictors_results_long$predictors_order, predictors_results_long$results, predictors_results_long$question_type, "Predictors", summary_satisfaction, summary_pd)
+    predictors_plot <- CV_plotter(predictors_results_long, predictors_results_long$predictors_order,
+                                  predictors_results_long$results, predictors_results_long$question_type,
+                                  "Predictors", summary_satisfaction, summary_pd)
 
     # Get the labels
     x_labs <- ggplot_build(predictors_plot)$layout$panel_params[[1]]$
@@ -1235,7 +1226,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
     }
 
     # Personal Desirability: One-sided Wilcox test
-    print("Personal Desirability: --------------------------------------------------------------------------------------")
+    print("Personal Desirability: -----------------------------------------------------------------------------------")
     for (i in x_labs) {
         print(paste0(i, " --------------------------------------------------------------------------------------"))
         wilcox_test_wt_pd[[i]] <- wilcox.test(t_results_pd[, i], y = NULL, alternative = "greater",
@@ -1253,8 +1244,12 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
 
     # Add to the plot: stars indicating significance
     for (i in 1:20) {
-        predictors_plot <- predictors_plot + ggplot2::annotate("text", x = satisfaction_bottom_x + i - 1, y = satisfaction_bottom_y, size = 8, label = p_value_stars_satisfaction[[i]])
-        predictors_plot <- predictors_plot + ggplot2::annotate("text", x = pd_bottom_x + i - 1, y = pd_bottom_y, size = 8, label = p_value_stars_pd[[i]])
+        predictors_plot <- predictors_plot + ggplot2::annotate("text", x = satisfaction_bottom_x + i - 1,
+                                                               y = satisfaction_bottom_y, size = 8,
+                                                               label = p_value_stars_satisfaction[[i]])
+        predictors_plot <- predictors_plot + ggplot2::annotate("text", x = pd_bottom_x + i - 1,
+                                                               y = pd_bottom_y, size = 8,
+                                                               label = p_value_stars_pd[[i]])
     }
 
     return(predictors_plot)
@@ -1335,15 +1330,12 @@ ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
 dev.off()
 
 
-grouped_bar_plot_wtp <- MakeGroupedBarPlot(data_plot_long, wtp=TRUE)
+grouped_bar_plot_wtp <- MakeGroupedBarPlot(data_plot_long, wtp = TRUE)
 plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot_wtp, plot_names) #the little customer journey icons
 
 pdf(file = "customer_journeys_bar_plot_wtp.pdf", width = 17, height = 8)
 ggdraw(insert_xaxis_grob(grouped_bar_plot_wtp, plot_images, position = "bottom"))
 dev.off()
-
-
-
 
 
 ## ========================================== (2) Plot Data and Save ==================================================
@@ -1386,7 +1378,7 @@ Get main statistical effects, and run descriptive and predictive analyses
 "
 
 #### (3.1) GET MAIN EFFECTS
-d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment, model_type='ai')
+d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment, model_type = 'ai')
 d_long$sentiment_score[is.na(d_long$sentiment_score)] <- 0
 
 d_long[, "is_word"] <- lapply(d_long["word"], is.word)
@@ -1398,12 +1390,11 @@ dat <- dplyr::select(dat, subject, plot_names, question_type, score, willingness
 
 main_effects <- GetMainEffects(dat, n_plots, plot_names, my_embeddings)
 pdf(file = "linear_vs_quadratic_fit.pdf", width = 13, height = 6.5)
-    main_effects
-    dev.off()
+main_effects
+dev.off()
 
 write.csv(data.frame(word = d_long), "./data/d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
 write.csv(data.frame(word = dat), "./data/dat.csv", row.names = FALSE) #create word analysis csv for google colab code
-
 
 
 #### (3.2) RUN DESCRIPTIVE ANALYSES
@@ -1431,7 +1422,12 @@ cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(s
 pdf(file = "predictions_wt_predictors_cv_plot.pdf", width = 17, height = 9)
 cross_validation_analysis_wt_predictors
 dev.off()
-# same note above
+
+
+cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(score_features_df, d_long, n_after_exclusions, n_plots, trajectories_separate = TRUE)
+pdf(file = "predictions_wt_predictors_cv_plot_traj_separate.pdf", width = 17, height = 9)
+cross_validation_analysis_wt_predictors
+dev.off()
 
 ## =========================================== (4) Move Files ====================================================
 
