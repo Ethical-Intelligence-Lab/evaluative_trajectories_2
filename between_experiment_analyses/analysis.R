@@ -59,5 +59,3 @@ d_ll <- d_lifelines[d_lifelines$word.question_type == "personal_desirability",]
 d_cj <- d_customer_journeys[d_customer_journeys$word.question_type == "satisfaction",]
 cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
          aggregate(d_ll, list(d_ll$word.plot_names), mean)$word.score)
-
-i
