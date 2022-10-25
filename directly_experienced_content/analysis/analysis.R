@@ -41,27 +41,28 @@ pacman::p_load('data.table', #rename data frame columns
                'splitstackshape'
 )
 
+source('./plotting.R')
 source('../../tools/common_functions.R')
 
 ProcessForPlots <- function(data, n_plots, plot_names) {
     "
-    Create a new data frame to store the enjoyment and PD scores by ascending enjoyment scores
+    Create a new data frame to store the willing and PD scores by ascending willing scores
     Input: data_long, n_plots, plot_names   #num_rows = num_ss*num_plots
-    Output: data_plot_long (in order of ascending enjoyment scores)   #num_rows = num_plots*num_questions
+    Output: data_plot_long (in order of ascending willing scores)   #num_rows = num_plots*num_questions
     "
 
     # Get mean scores for all questions, then reshape data from wide to long format
     stats <- Get_stats(data, n_plots)
     data_plot <- data.frame(cluster_names = cluster_names,
-                            enjoyment_score_avg = unlist(stats)[c(TRUE, FALSE)],
-                            enjoyment_score_sd = unlist(stats)[c(FALSE, TRUE)])
-    data_plot_sorted <- data_plot[order(data_plot$enjoyment_score_avg),] #order by enjoyment
+                            willing_score_avg = unlist(stats)[c(TRUE, FALSE)],
+                            willing_score_sd = unlist(stats)[c(FALSE, TRUE)])
+    data_plot_sorted <- data_plot[order(data_plot$willing_score_avg),] #order by willing
     data_plot_long <- gather(data_plot_sorted, key = question_type, #create separate entries for each question type, i.e., num_plots*num_questions
-                             value = score, enjoyment_score_avg)
+                             value = score, willing_score_avg)
 
     # Compile all standard deviation values
     stan_dev <- gather(data_plot_sorted, key = question_type,
-                       value = sd, enjoyment_score_sd)
+                       value = sd, willing_score_sd)
 
     # Bind the SE column to the rest of the dataframe
     data_plot_long <- cbind(dplyr::select(data_plot_long, cluster_names, question_type, score), sd = stan_dev$sd)
@@ -99,7 +100,7 @@ TransformWTP <- function(data_long) {
 
 Get_stats <- function(data, n_plots) {
     "
-    Find enjoyment and personal desirability means and standard deviations for every plot
+    Find willing and personal desirability means and standard deviations for every plot
     Every plot repeats every 8 times, since there are 8 plots title.
     Hence the 'seq' indeces for each calculation
     Input: data_long, n_plots
@@ -115,137 +116,46 @@ Get_stats <- function(data, n_plots) {
     return(equations)
 }
 
-##================================================================================================================
-##FUNCTIONS FOR PLOTTING BAR CHARTS##
-##================================================================================================================
-
-MakeGroupedBarPlot <- function(data_plot_long) {
-    "
-    Plot the grouped bar graph in order of ascending enjoyment scores
-    Input: data_plot_long
-    Output: grouped_bar_plot (the grouped bar graph)
-    "
-
-    grouped_bar_plot <- ggplot(data_plot_long, aes(x = cluster_names, y = score, fill = question_type)) +
-        geom_bar(position = "dodge", stat = "identity") +
-        geom_errorbar(aes(ymin = score - sd, ymax = score + sd), width = .2,
-                      position = position_dodge(.9)) +
-        ggtitle("Summarizing the Enjoyment of Different Customer Journeys") +
-        xlab("Customer Journey Plots") +
-        ylab("Scaled Rating") +
-        theme(
-            plot.title = element_blank(),
-            legend.title = element_blank(),
-            legend.text = element_text(color = "black", size = 28),
-            legend.position = "top",
-            legend.title.align = 0.5,
-            text = element_text(color = "black", size = 25),
-            axis.title.y = element_text(color = "black", size = 30, face = "bold"),
-            axis.title.x = element_text(color = "black", size = 30, face = "bold"),
-            axis.text.x = element_blank(),
-            axis.ticks.x = element_blank()
-        ) +
-        scale_fill_manual(
-            name = "Judgment Type",
-            breaks = c("enjoyment_score_avg"),
-            labels = c("Willingness to Buy"),
-            values = c("#56B4E9"),
-            guide = guide_legend(title.position = "top")
-        )
-    return(grouped_bar_plot)
-}
-
-
-MakeGroupedBarPlotImages <- function(LifelinesPlot, data_plot_long) {
-    "
-    Make a plotter function that produces 'clean' (no labels) version of individual images
-    for the x-axis. Then, plot the images in order of ascending satisfaction scores,
-    which can be determined by the order in data_plot_long$plot_names[1:n].
-    Input: grouped_bar_plot, plot_names
-    Output: the plot labels for the grouped bar graph and the sentiment bar graph
-    "
-
-    plot_images <- axis_canvas(LifelinesPlot, axis = 'x')
-
-    sorted_cluster_names <- c(data_plot_long[, 'cluster_names'])
-
-    for (i in 1:n_clusters) {
-        plot_images <- plot_images + draw_image(paste0("./plots/cluster/", sorted_cluster_names[i], "_", n_clusters, ".png"), x = i - 0.5)
-    }
-
-    return(plot_images)
-}
-
-##================================================================================================================
-##FUNCTIONS FOR PLOTTING SENTIMENT BAR PLOT##
-##================================================================================================================
-
+##===========================================##
+## FUNCTIONS FOR PLOTTING SENTIMENT BAR PLOT ##
+##===========================================##
 
 OrderSentimentDataframe <- function(data, n_plots, plot_names) {
     "
-    Create a new data frame to store the sentiment scores by ascending enjoyment scores
+    Create a new data frame to store the sentiment scores by ascending willing scores
     Input: data_long, n_plots, plot_names
     Output: sentiment_df_sorted (the sentiment_df ordered by levels in the function factor())
     "
 
-    # Get the order of enjoyment scores
+    # Get the order of willing scores
     stats <- Get_stats(data, n_plots)
     data_plot <- data.frame(plot_names = plot_names,
-                            enjoyment_score_avg = unlist(stats)[c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE)],
-                            enjoyment_score_sd = unlist(stats)[c(FALSE, TRUE, FALSE, FALSE, FALSE, FALSE)],
+                            willing_score_avg = unlist(stats)[c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE)],
+                            willing_score_sd = unlist(stats)[c(FALSE, TRUE, FALSE, FALSE, FALSE, FALSE)],
                             pd_score_avg = unlist(stats)[c(FALSE, FALSE, TRUE, FALSE, FALSE, FALSE)],
                             pd_score_sd = unlist(stats)[c(FALSE, FALSE, FALSE, TRUE, FALSE, FALSE)],
                             wtp_score_avg = unlist(stats)[c(FALSE, FALSE, FALSE, FALSE, TRUE, FALSE)],
                             wtp_score_sd = unlist(stats)[c(FALSE, FALSE, FALSE, FALSE, FALSE, TRUE)])
 
-    # Create sentiment data frame ordered by ascending enjoyment scores
+    # Create sentiment data frame ordered by ascending willing scores
     sentiment_stats <- Get_sentiment_stats(data, n_plots)
     sentiment_df <- data.frame(plot_names = plot_names,
                                mean = unlist(sentiment_stats)[c(TRUE, FALSE)],
                                sd = unlist(sentiment_stats)[c(FALSE, TRUE)])
-    sentiment_df_sorted <- sentiment_df[order(data_plot$enjoyment_score_avg),]
+    sentiment_df_sorted <- sentiment_df[order(data_plot$willing_score_avg),]
     sentiment_df_sorted$plot_names <- factor(sentiment_df_sorted$plot_names, levels = data_plot_long$plot_names[1:n_plots])
 
     return(sentiment_df_sorted)
 }
 
+##========================##
+## FUNCTIONS FOR ANALYSIS ##
+##========================##
 
-MakeSentimentBarPlot <- function(data, n_plots, plot_names) {
-    "
-    Plot the sentiment bar graph in order of ascending enjoyment scores.
-    Input: data_long, n_plots, plot_names
-    Output: the sentiment bar graph by ascending enjoyment scores
-    "
-
-    sentiment_df <- OrderSentimentDataframe(data, n_plots, plot_names)
-    sentiment_bar_plot <- ggplot(sentiment_df, aes(x = plot_names, y = mean)) +
-        geom_bar(position = "dodge", stat = "identity", fill = "darkorange") +
-        geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), width = .2,
-                      position = position_dodge(.9)) +
-        ggtitle("Mean Sentiment Scores by Ascending enjoyment Scores") +
-        xlab("Customer Journey Plots") +
-        ylab("Mean Sentiment Score") +
-        theme(
-            plot.title = element_blank(), #element_text(color = "black", size=31, face="bold", hjust = 0.5),
-            text = element_text(color = "black", size = 25),
-            axis.title.y = element_text(color = "black", size = 30, face = "bold"),
-            axis.title.x = element_text(color = "black", size = 30, face = "bold"),
-            axis.text.x = element_blank(),
-            axis.ticks.x = element_blank()
-        )
-
-    return(sentiment_bar_plot)
-}
-
-
-##================================================================================================================
-##FUNCTIONS FOR ANALYSIS##
-##================================================================================================================
 GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
 
     # "We found a significant effect of cluster type on willingness to buy: "
     print(summary(lm(data = data, willing ~ cluster_labels)))
-
 }
 
 
@@ -272,7 +182,7 @@ Get_noise_ceiling <- function(dat_long, question_type, n_ss) {
     "
     Find correlation values between two randomly sample halves of the data,
     correct with the Spearman-Brown Prophecy formula (defined above), and put into a list.
-    Input: data_long, question type ('enjoyment' or 'personal_desirability')
+    Input: data_long, question type ('willing' or 'personal_desirability')
     Output: summary of the correlation results, to be used to plot noise ceiling (25th and 75th percentiles)
     "
 
@@ -331,10 +241,10 @@ Get_noise_ceiling <- function(dat_long, question_type, n_ss) {
 }
 
 
-CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, sum_enjoyment, y_axis = "Pearson's r", no_kfold = FALSE) {
+CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, sum_willing, y_axis = "Pearson's r", no_kfold = FALSE) {
     "
     What this function does: creates a grouped box plot of the cross-validated prediction results
-    Inputs: results_df, x_order, results_order, ques_type, x_labels, sum_enjoyment
+    Inputs: results_df, x_order, results_order, ques_type, x_labels, sum_willing
     Output: a boxplot of participant rating predictions with either principal components or predictors
     "
 
@@ -347,17 +257,17 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
     if (no_kfold) { y_label <- paste0("Prediction Accuracy\n(", y_axis, ")") }
     grouped_box_plot <- ggplot() +
         scale_x_discrete() +
-        #geom_rect(aes(xmin = 0.2, xmax = Inf, ymin = sum_enjoyment["1st Qu."], ymax = sum_enjoyment["3rd Qu."]),
+        #geom_rect(aes(xmin = 0.2, xmax = Inf, ymin = sum_willing["1st Qu."], ymax = sum_willing["3rd Qu."]),
         #          alpha = 1, fill = "gray60") + #"dodgerblue3") + # #56B4E9
         geom_hline(yintercept = 0, color = "gray60") +
         geom_boxplot(data = results_df, aes(x = x_order, y = results_order, fill = ques_type), outlier.shape = NA) +
-        ggtitle(paste0("enjoyment and Desirability Predictions with ", x_labels)) +
+        ggtitle(paste0("willing and Desirability Predictions with ", x_labels)) +
         xlab(x_labels) +
         ylab(y_label) +
         scale_y_continuous(breaks = round(seq(-1, 1, by = 0.2), 1)) +
         scale_fill_manual(
             name = "Judgment Type",
-            breaks = c("enjoyment_results"),
+            breaks = c("willing_results"),
             labels = c(box_label),
             values = c("#56B4E9"),
             guide = guide_legend(title.position = "top")) +
@@ -394,7 +304,7 @@ MakePCAFunction <- function(score_features_df) {
     "
     Perform mixed-effects regression based on PCA-reduced features of our predictors.
     Input: score_features_df
-    Output: the structure of the PCA fit, the PCA correlation values for both enjoyment and pd
+    Output: the structure of the PCA fit, the PCA correlation values for both willing and pd
     scores, and score_features_df (now with the addition of PC1 through PC5 scores)
     "
 
@@ -410,7 +320,7 @@ MakePCAFunction <- function(score_features_df) {
     # Print, then save the features corrplot
     corrplot(my_PCA$Structure, method = "circle", mar = c(0, 0, 2, 0))
     mtext("Features Correlation Matrix \nover PCs", at = 1, line = 1, cex = 1.5)
-    pdf(file = "./plots/features_corrplot.pdf")
+    pdf(file = "./plots/analysis_plots/features_corrplot.pdf")
     corrplot(my_PCA$Structure, method = "circle", mar = c(0, 0, 4, 0))
     mtext("Features Correlation Matrix \nover PCs", at = 1, line = 1, cex = 1.5)
     dev.off()
@@ -421,7 +331,7 @@ MakePCAFunction <- function(score_features_df) {
     # Bind the PC1 through PC5 scores to the score_features_df data frame
     score_features_df <- cbind(score_features_df, my_PCA$scores)
 
-    # 1. Fit mixed effects regression predicting enjoyment
+    # 1. Fit mixed effects regression predicting willing
     willing_features <- lmer(data = score_features_df,
                                willing ~ PC1 +
                                    PC2 +
@@ -482,26 +392,25 @@ CrossValidationAnalysisWtPCs <- function(dat, n_ss, n_plots) {
     }
 
     # Reorder pcs according to their significance
-    t_results_enjoyment <- as.data.frame(t(results))
-    colnames(t_results_enjoyment) <- c("PC1\nSecond Derivative\nPredictors", "PC2\nFirst Derivative\nPredictors and End Value",
+    t_results_willing <- as.data.frame(t(results))
+    colnames(t_results_willing) <- c("PC1\nSecond Derivative\nPredictors", "PC2\nFirst Derivative\nPredictors and End Value",
                                        "PC3\nMin, Max\nSentiment, and Integral", "PC4\nNumber of Peaks\nValleys, and Extrema",
                                        "PC5\nInterestingness")
-    results_enjoyment_long <- gather(t_results_enjoyment, key = principal_components, value = pcs_results, colnames(t_results_enjoyment)) #length(pcs)*n_folds
-    enjoyment_new_order <- with(results_enjoyment_long, reorder(principal_components, pcs_results, median, na.rm = TRUE))
-    results_enjoyment_long["enjoyment_new_order"] <- enjoyment_new_order
+    results_willing_long <- gather(t_results_willing, key = principal_components, value = pcs_results, colnames(t_results_willing)) #length(pcs)*n_folds
+    willing_new_order <- with(results_willing_long, reorder(principal_components, pcs_results, median, na.rm = TRUE))
+    results_willing_long["willing_new_order"] <- willing_new_order
 
-    # Get_noise_ceiling function
-    #summary_enjoyment <- Get_noise_ceiling(dat_long, "willing", n_ss)
+    summary_willing <- Get_noise_ceiling(dat, "willing", n_ss)
 
     #-------------------------------------------------------------------------------------------------------------------
 
     #3. Plotting
-    pcs_results_ordered <- data.frame(pcs_order = results_enjoyment_long$enjoyment_new_order,
-                                      enjoyment_results = results_enjoyment_long$pcs_results) #combine enjoyment and pd results
-    pcs_results_long <- gather(pcs_results_ordered, key = question_type, value = results, enjoyment_results)
+    pcs_results_ordered <- data.frame(pcs_order = results_willing_long$willing_new_order,
+                                      willing_results = results_willing_long$pcs_results) #combine willing and pd results
+    pcs_results_long <- gather(pcs_results_ordered, key = question_type, value = results, willing_results)
 
     # Make boxplot from CV_plotter function
-    pcs_plot <- CV_plotter(pcs_results_long, pcs_results_long$pcs_order, pcs_results_long$results, pcs_results_long$question_type, "Principal Components", summary_enjoyment)
+    pcs_plot <- CV_plotter(pcs_results_long, pcs_results_long$pcs_order, pcs_results_long$results, pcs_results_long$question_type, "Principal Components", summary_willing)
 
     # Get the labels
     x_labs <- ggplot_build(pcs_plot)$layout$panel_params[[1]]$
@@ -510,39 +419,39 @@ CrossValidationAnalysisWtPCs <- function(dat, n_ss, n_plots) {
 
     # Perform Wilcoxon tests and get stars for significance
     # Define empty lists
-    wilcox_test_1_wt_enjoyment <- c()
-    wilcox_test_2_wt_enjoyment <- c()
-    p_value_stars_1_enjoyment <- c()
-    p_value_stars_2_enjoyment <- c()
+    wilcox_test_1_wt_willing <- c()
+    wilcox_test_2_wt_willing <- c()
+    p_value_stars_1_willing <- c()
+    p_value_stars_2_willing <- c()
     wilcox_test_1_wt_pd <- c()
     wilcox_test_2_wt_pd <- c()
     p_value_stars_1_pd <- c()
     p_value_stars_2_pd <- c()
 
     # Loop through the pcs, comparing each to null, then PC2 vs PC3, PC3 vs PC5, PC5 vs PC1, and PC1 vs PC4
-    # enjoyment: One-sided Wilcox test
-    print("enjoyment: --------------------------------------------------------------------------------------")
+    # willing: One-sided Wilcox test
+    print("willing: --------------------------------------------------------------------------------------")
     for (i in 1:length(pcs)) {
         pcs_index <- x_labs[i]
         pcs_index_plus_one <- x_labs[i + 1]
-        wilcox_test_1_wt_enjoyment[[i]] <- wilcox.test(t_results_enjoyment[, pcs_index], y = NULL, alternative = "greater",
-                                                       conf.int = TRUE, data = t_results_enjoyment)
-        p_value_stars_1_enjoyment[i] <- stars.pval(wilcox_test_1_wt_enjoyment[[i]]$"p.value") #get stars
+        wilcox_test_1_wt_willing[[i]] <- wilcox.test(t_results_willing[, pcs_index], y = NULL, alternative = "greater",
+                                                       conf.int = TRUE, data = t_results_willing)
+        p_value_stars_1_willing[i] <- stars.pval(wilcox_test_1_wt_willing[[i]]$"p.value") #get stars
 
         print(paste0(x_labs[i], " --------------------------------------------------------------------------------------"))
-        print(wilcox_test_1_wt_enjoyment[[i]])
+        print(wilcox_test_1_wt_willing[[i]])
     }
 
     # Define heights of annotations
     bottom_y <- -1.05 #y value for all bottom stars
 
-    enjoyment_color <- "#56B4E9"
-    enjoyment_bottom_x <- 1.19 #x value for bottom stars
-    enjoyment_top_x <- enjoyment_bottom_x + 0.5 #x value for top stars
-    enjoyment_top_y <- 1.17 #y value for top stars
-    enjoyment_bracket_y <- 1.07 #y value for top bracket
-    enjoyment_bracket_start <- 1.24 #x starting point for top bracket
-    enjoyment_bracket_end <- 2.15 #x ending point for top bracket
+    willing_color <- "#56B4E9"
+    willing_bottom_x <- 1.19 #x value for bottom stars
+    willing_top_x <- willing_bottom_x + 0.5 #x value for top stars
+    willing_top_y <- 1.17 #y value for top stars
+    willing_bracket_y <- 1.07 #y value for top bracket
+    willing_bracket_start <- 1.24 #x starting point for top bracket
+    willing_bracket_end <- 2.15 #x ending point for top bracket
 
     pd_color <- "#009E73"
     pd_bottom_x <- 0.813 #x value for bottom stars
@@ -556,21 +465,21 @@ CrossValidationAnalysisWtPCs <- function(dat, n_ss, n_plots) {
     pcs_plot <- pcs_plot +
 
         # One-sided Wilcox test
-        ggplot2::annotate("text", x = enjoyment_bottom_x, y = bottom_y, size = 8, label = p_value_stars_1_enjoyment[[1]]) +
-        ggplot2::annotate("text", x = enjoyment_bottom_x + 1, y = bottom_y, size = 8, label = p_value_stars_1_enjoyment[[2]]) +
-        ggplot2::annotate("text", x = enjoyment_bottom_x + 2, y = bottom_y, size = 8, label = p_value_stars_1_enjoyment[[3]]) +
-        ggplot2::annotate("text", x = enjoyment_bottom_x + 3, y = bottom_y, size = 8, label = p_value_stars_1_enjoyment[[4]]) +
-        ggplot2::annotate("text", x = enjoyment_bottom_x + 4, y = bottom_y, size = 8, label = p_value_stars_1_enjoyment[[5]]) +
+        ggplot2::annotate("text", x = willing_bottom_x, y = bottom_y, size = 8, label = p_value_stars_1_willing[[1]]) +
+        ggplot2::annotate("text", x = willing_bottom_x + 1, y = bottom_y, size = 8, label = p_value_stars_1_willing[[2]]) +
+        ggplot2::annotate("text", x = willing_bottom_x + 2, y = bottom_y, size = 8, label = p_value_stars_1_willing[[3]]) +
+        ggplot2::annotate("text", x = willing_bottom_x + 3, y = bottom_y, size = 8, label = p_value_stars_1_willing[[4]]) +
+        ggplot2::annotate("text", x = willing_bottom_x + 4, y = bottom_y, size = 8, label = p_value_stars_1_willing[[5]]) +
 
         # Two-sided Wilcox test (with brackets)
-        geom_segment(aes(x = enjoyment_bracket_start, xend = enjoyment_bracket_end, y = enjoyment_bracket_y, yend = enjoyment_bracket_y, colour = enjoyment_color)) +
-        ggplot2::annotate("text", x = enjoyment_top_x, y = enjoyment_top_y, size = 8, label = p_value_stars_2_enjoyment[[1]]) +
-        geom_segment(aes(x = enjoyment_bracket_start + 1, xend = enjoyment_bracket_end + 1, y = enjoyment_bracket_y, yend = enjoyment_bracket_y, color = enjoyment_color)) +
-        ggplot2::annotate("text", x = enjoyment_top_x + 1, y = enjoyment_top_y, size = 8, label = p_value_stars_2_enjoyment[[2]]) +
-        geom_segment(aes(x = enjoyment_bracket_start + 2, xend = enjoyment_bracket_end + 2, y = enjoyment_bracket_y, yend = enjoyment_bracket_y, color = enjoyment_color)) +
-        ggplot2::annotate("text", x = enjoyment_top_x + 2, y = enjoyment_top_y, size = 8, label = p_value_stars_2_enjoyment[[3]]) +
-        geom_segment(aes(x = enjoyment_bracket_start + 3, xend = enjoyment_bracket_end + 3, y = enjoyment_bracket_y, yend = enjoyment_bracket_y, color = enjoyment_color)) +
-        ggplot2::annotate("text", x = enjoyment_top_x + 3, y = enjoyment_top_y, size = 8, label = p_value_stars_2_enjoyment[[4]]) +
+        geom_segment(aes(x = willing_bracket_start, xend = willing_bracket_end, y = willing_bracket_y, yend = willing_bracket_y, colour = willing_color)) +
+        ggplot2::annotate("text", x = willing_top_x, y = willing_top_y, size = 8, label = p_value_stars_2_willing[[1]]) +
+        geom_segment(aes(x = willing_bracket_start + 1, xend = willing_bracket_end + 1, y = willing_bracket_y, yend = willing_bracket_y, color = willing_color)) +
+        ggplot2::annotate("text", x = willing_top_x + 1, y = willing_top_y, size = 8, label = p_value_stars_2_willing[[2]]) +
+        geom_segment(aes(x = willing_bracket_start + 2, xend = willing_bracket_end + 2, y = willing_bracket_y, yend = willing_bracket_y, color = willing_color)) +
+        ggplot2::annotate("text", x = willing_top_x + 2, y = willing_top_y, size = 8, label = p_value_stars_2_willing[[3]]) +
+        geom_segment(aes(x = willing_bracket_start + 3, xend = willing_bracket_end + 3, y = willing_bracket_y, yend = willing_bracket_y, color = willing_color)) +
+        ggplot2::annotate("text", x = willing_top_x + 3, y = willing_top_y, size = 8, label = p_value_stars_2_willing[[4]]) +
         scale_colour_identity()
 
     #-------------------------------------------------------------------------------------------------------------------
@@ -586,9 +495,6 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, co
     Input: data_wt_PCs, data_long, n_after_exclusions, n_plots
     Output: relative importance of individual predictors and its graph
     "
-
-    # dat <- e3_data_wt_PCs
-    # dat_long <- d_long
 
     # n_ss <- n_after_exclusions
     fold_size <- 8
@@ -617,13 +523,13 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, co
 
     #-------------------------------------------------------------------------------------------------------------------
 
-    # Train for and Predict Enjoyment
+    # Train for and Predict willing
     if (genres_separate) {
-        results_enjoyment <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_plots))
+        results_willing <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_plots))
     } else {
-        results_enjoyment <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
+        results_willing <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
     }
-    rownames(results_enjoyment) <- predictors
+    rownames(results_willing) <- predictors
 
     if (!random) {
         for (i in 1:length(predictors)) {
@@ -665,17 +571,17 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, co
                     }
                 }
 
-                results_enjoyment[i, j] <- cor(truths, ss_results)
+                results_willing[i, j] <- cor(truths, ss_results)
             }
 
-            print(paste('enjoyment: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_enjoyment[i,]), na.rm = TRUE)))
-            print(paste('enjoyment: median predictor result,', predictors[i], ': ', median(as.numeric(results_enjoyment[i,]), na.rm = TRUE)))
+            print(paste('willing: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_willing[i,]), na.rm = TRUE)))
+            print(paste('willing: median predictor result,', predictors[i], ': ', median(as.numeric(results_willing[i,]), na.rm = TRUE)))
         }
     } else {
         s <- sample(1:dim(dat)[1])
         random_train_splits <- split(s, ceiling(seq_along(s) / fold_size))
-        results_enjoyment <- data.frame(matrix(NA, nrow = length(predictors), ncol = length(random_train_splits)))
-        rownames(results_enjoyment) <- predictors
+        results_willing <- data.frame(matrix(NA, nrow = length(predictors), ncol = length(random_train_splits)))
+        rownames(results_willing) <- predictors
 
         for (i in 1:length(predictors)) {
             for (j in 1:length(random_train_splits)) {  # Number of folds
@@ -702,34 +608,33 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, co
 
                 }
 
-                results_enjoyment[i, j] <- cor(truths, ss_results)
+                results_willing[i, j] <- cor(truths, ss_results)
             }
 
-            print(paste('enjoyment: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_enjoyment[i,]), na.rm = TRUE)))
-            print(paste('enjoyment: median predictor result,', predictors[i], ': ', median(as.numeric(results_enjoyment[i,]), na.rm = TRUE)))
+            print(paste('willing: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_willing[i,]), na.rm = TRUE)))
+            print(paste('willing: median predictor result,', predictors[i], ': ', median(as.numeric(results_willing[i,]), na.rm = TRUE)))
         }
     }
 
 
     # Reorder predictors according to their significance
-    t_results_enjoyment <- as.data.frame(t(results_enjoyment))
-    colnames(t_results_enjoyment) <- predictors
-    results_enjoyment_long <- gather(t_results_enjoyment, key = predictors, value = predictors_results, colnames(t_results_enjoyment)) #length(predictors)*n_folds
-    enjoyment_new_order <- with(results_enjoyment_long, reorder(predictors, predictors_results, median, na.rm = TRUE))
-    results_enjoyment_long["enjoyment_new_order"] <- enjoyment_new_order
+    t_results_willing <- as.data.frame(t(results_willing))
+    colnames(t_results_willing) <- predictors
+    results_willing_long <- gather(t_results_willing, key = predictors, value = predictors_results, colnames(t_results_willing)) #length(predictors)*n_folds
+    willing_new_order <- with(results_willing_long, reorder(predictors, predictors_results, median, na.rm = TRUE))
+    results_willing_long["willing_new_order"] <- willing_new_order
 
-    # Get_noise_ceiling function
-    #summary_enjoyment <- Get_noise_ceiling(dat, "willing", n_folds)
+    summary_willing <- Get_noise_ceiling(dat, "willing", n_folds)
 
     #-------------------------------------------------------------------------------------------------------------------
     #-------------------------------------------------------------------------------------------------------------------
     #3. Plotting
-    predictors_results_ordered <- data.frame(predictors_order = results_enjoyment_long$enjoyment_new_order,
-                                             enjoyment_results = results_enjoyment_long$predictors_results)
-    predictors_results_long <- gather(predictors_results_ordered, key = question_type, value = results, enjoyment_results)
+    predictors_results_ordered <- data.frame(predictors_order = results_willing_long$willing_new_order,
+                                             willing_results = results_willing_long$predictors_results)
+    predictors_results_long <- gather(predictors_results_ordered, key = question_type, value = results, willing_results)
 
     # Make boxplot from CV_plotter function
-    predictors_plot <- CV_plotter(predictors_results_long, predictors_results_long$predictors_order, predictors_results_long$results, predictors_results_long$question_type, "Predictors", summary_enjoyment)
+    predictors_plot <- CV_plotter(predictors_results_long, predictors_results_long$predictors_order, predictors_results_long$results, predictors_results_long$question_type, "Predictors", summary_willing)
 
     # Get the labels
     x_labs <- ggplot_build(predictors_plot)$layout$panel_params[[1]]$
@@ -738,30 +643,30 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, co
 
     # Perform Wilcoxon tests and get stars for significance
     # Define empty lists
-    wilcox_test_wt_enjoyment <- c()
-    p_value_stars_enjoyment <- c()
+    wilcox_test_wt_willing <- c()
+    p_value_stars_willing <- c()
     wilcox_test_wt_pd <- c()
     p_value_stars_pd <- c()
 
     # Loop through the predictors, comparing each to a null distribution
-    # enjoyment: One-sided Wilcox test
-    print("enjoyment: --------------------------------------------------------------------------------------")
+    # willing: One-sided Wilcox test
+    print("willing: --------------------------------------------------------------------------------------")
     for (i in x_labs) {
         print(paste0(i, " --------------------------------------------------------------------------------------"))
-        wilcox_test_wt_enjoyment[[i]] <- wilcox.test(t_results_enjoyment[, i], y = NULL, alternative = "greater",
+        wilcox_test_wt_willing[[i]] <- wilcox.test(t_results_willing[, i], y = NULL, alternative = "greater",
                                                      conf.int = TRUE)
-        p_value_stars_enjoyment[i] <- stars.pval(wilcox_test_wt_enjoyment[[i]]$"p.value") #get stars
+        p_value_stars_willing[i] <- stars.pval(wilcox_test_wt_willing[[i]]$"p.value") #get stars
 
-        print(wilcox_test_wt_enjoyment[[i]])
+        print(wilcox_test_wt_willing[[i]])
     }
 
 
     # Define heights of annotations
-    enjoyment_bottom_x <- 1.0 #x value for bottom stars
-    enjoyment_bottom_y <- -1.0 #y value for bottom stars
+    willing_bottom_x <- 1.0 #x value for bottom stars
+    willing_bottom_y <- -1.0 #y value for bottom stars
 
     for (i in 1:20) {
-        predictors_plot <- predictors_plot + ggplot2::annotate("text", x = enjoyment_bottom_x + i - 1, y = enjoyment_bottom_y, size = 8, label = p_value_stars_enjoyment[[i]])
+        predictors_plot <- predictors_plot + ggplot2::annotate("text", x = willing_bottom_x + i - 1, y = willing_bottom_y, size = 8, label = p_value_stars_willing[[i]])
     }
 
     return(predictors_plot)
@@ -810,7 +715,7 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
     indeces <- seq(1, (n_plots * n_participants))
 
     #-------------------------------------------------------------------------------------------------------------------
-    p_value_stars_enjoyment <- c()
+    p_value_stars_willing <- c()
     fit_wts = ifelse(dat$picked_movie == TRUE, 6, 1)
     if (no_kfold) {
         results_raffle <- data.frame(matrix(NA, nrow = length(predictors), ncol = 1))
@@ -836,7 +741,7 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
             results_raffle[i, 1] <- score
 
             # Save p-value!
-            p_value_stars_enjoyment[i] <- stars.pval(coef(summary(fitpc))[2, 4]) #get stars
+            p_value_stars_willing[i] <- stars.pval(coef(summary(fitpc))[2, 4]) #get stars
         }
     } else if (random) {
         # Create fold_amount random partitions with equal class distribution
@@ -877,8 +782,8 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
                 results_raffle[i, j] <- score
             }
 
-            print(paste('enjoyment: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_raffle[i,]), na.rm = TRUE)))
-            print(paste('enjoyment: median predictor result,', predictors[i], ': ', median(as.numeric(results_raffle[i,]), na.rm = TRUE)))
+            print(paste('willing: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_raffle[i,]), na.rm = TRUE)))
+            print(paste('willing: median predictor result,', predictors[i], ': ', median(as.numeric(results_raffle[i,]), na.rm = TRUE)))
         }
     } else { # Train on each participant separately
         results_raffle <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
@@ -915,8 +820,8 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
                 results_raffle[i, j] <- score
             }
 
-            print(paste('enjoyment: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_raffle[i,]), na.rm = TRUE)))
-            print(paste('enjoyment: median predictor result,', predictors[i], ': ', median(as.numeric(results_raffle[i,]), na.rm = TRUE)))
+            print(paste('willing: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_raffle[i,]), na.rm = TRUE)))
+            print(paste('willing: median predictor result,', predictors[i], ': ', median(as.numeric(results_raffle[i,]), na.rm = TRUE)))
         }
     }
 
@@ -924,23 +829,22 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
     t_results_raffle <- as.data.frame(t(results_raffle))
     colnames(t_results_raffle) <- predictors
     results_raffle_long <- gather(t_results_raffle, key = predictors, value = predictors_results, colnames(t_results_raffle)) #length(predictors)*n_folds
-    enjoyment_new_order <- with(results_raffle_long, reorder(predictors, predictors_results, median, na.rm = TRUE))
-    results_raffle_long["enjoyment_new_order"] <- enjoyment_new_order
+    willing_new_order <- with(results_raffle_long, reorder(predictors, predictors_results, median, na.rm = TRUE))
+    results_raffle_long["willing_new_order"] <- willing_new_order
 
-    # Get_noise_ceiling function
-    #summary_enjoyment <- Get_noise_ceiling(dat, "willing", n_folds)
+    summary_willing <- Get_noise_ceiling(dat, "willing", n_folds)
 
     #-------------------------------------------------------------------------------------------------------------------
     #-------------------------------------------------------------------------------------------------------------------
     #3. Plotting
-    predictors_results_ordered <- data.frame(predictors_order = results_raffle_long$enjoyment_new_order,
-                                             enjoyment_results = results_raffle_long$predictors_results)
-    predictors_results_long <- gather(predictors_results_ordered, key = question_type, value = results, enjoyment_results)
+    predictors_results_ordered <- data.frame(predictors_order = results_raffle_long$willing_new_order,
+                                             willing_results = results_raffle_long$predictors_results)
+    predictors_results_long <- gather(predictors_results_ordered, key = question_type, value = results, willing_results)
 
     # Make boxplot from CV_plotter function
     predictors_plot <- CV_plotter(predictors_results_long, predictors_results_long$predictors_order,
                                   predictors_results_long$results, predictors_results_long$question_type,
-                                  "Predictors", summary_enjoyment, y_axis = paste0(perf_metric, " Score"), no_kfold = no_kfold)
+                                  "Predictors", summary_willing, y_axis = paste0(perf_metric, " Score"), no_kfold = no_kfold)
 
     # Get the labels
     x_labs <- ggplot_build(predictors_plot)$layout$panel_params[[1]]$
@@ -949,31 +853,31 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
 
 
     # Loop through the predictors, comparing each to a null distribution
-    # enjoyment: One-sided Wilcox test
+    # willing: One-sided Wilcox test
     if (!no_kfold) {
-        wilcox_test_wt_enjoyment <- c()
-        p_value_stars_enjoyment <- c()
+        wilcox_test_wt_willing <- c()
+        p_value_stars_willing <- c()
         wilcox_test_wt_pd <- c()
         p_value_stars_pd <- c()
 
-        print("enjoyment: --------------------------------------------------------------------------------------")
+        print("willing: --------------------------------------------------------------------------------------")
         for (i in x_labs) {
             print(paste0(i, " --------------------------------------------------------------------------------------"))
-            wilcox_test_wt_enjoyment[[i]] <- wilcox.test(t_results_raffle[, i], y = rep(0.125, length(t_results_raffle[, i])), alternative = "greater",
+            wilcox_test_wt_willing[[i]] <- wilcox.test(t_results_raffle[, i], y = rep(0.125, length(t_results_raffle[, i])), alternative = "greater",
                                                          conf.int = TRUE)
-            p_value_stars_enjoyment[i] <- stars.pval(wilcox_test_wt_enjoyment[[i]]$"p.value") #get stars
+            p_value_stars_willing[i] <- stars.pval(wilcox_test_wt_willing[[i]]$"p.value") #get stars
 
-            print(wilcox_test_wt_enjoyment[[i]])
+            print(wilcox_test_wt_willing[[i]])
         }
     }
 
 
     # Define heights of annotations
-    enjoyment_bottom_x <- 1.0 #x value for bottom stars
-    enjoyment_bottom_y <- -1.0 #y value for bottom stars
+    willing_bottom_x <- 1.0 #x value for bottom stars
+    willing_bottom_y <- -1.0 #y value for bottom stars
 
     for (i in 1:20) {
-        predictors_plot <- predictors_plot + ggplot2::annotate("text", x = enjoyment_bottom_x + i - 1, y = enjoyment_bottom_y, size = 8, label = p_value_stars_enjoyment[[i]])
+        predictors_plot <- predictors_plot + ggplot2::annotate("text", x = willing_bottom_x + i - 1, y = willing_bottom_y, size = 8, label = p_value_stars_willing[[i]])
     }
 
     return(predictors_plot)
@@ -1049,11 +953,11 @@ for (i in 0:(n_clusters - 1)) {
 data_plot_long <- ProcessForPlots(d_long, n_plots, plot_names)
 
 
-#### (2.1) MAKE BAR PLOT OF enjoyment SCORES
+#### (2.1) MAKE BAR PLOT OF willing SCORES
 grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)
 plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot, data_plot_long) #the little customer journey icons
 
-pdf(file = paste0("./plots/customer_journeys_bar_plot_", "k=", n_clusters, ".pdf"), width = 17, height = 8)
+pdf(file = paste0("./plots/analysis_plots/customer_journeys_bar_plot_", "k=", n_clusters, ".pdf"), width = 17, height = 8)
 ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
 dev.off()
 
@@ -1068,15 +972,15 @@ if (FALSE) {
     MakeWordClouds(d_long, n_plots, plot_names) #make word cloud images
     arranged_word_clouds <- ArrangeWordClouds() #arrange word clouds into a grid
 
-    pdf(file = "./plots/customer_journeys_word_clouds.pdf", width = 18, height = 8)
+    pdf(file = "./plots/analysis_plots/customer_journeys_word_clouds.pdf", width = 18, height = 8)
     plot(arranged_word_clouds)
     dev.off()
 
-    #### (2.3) MAKE PLOT OF SENTIMENT SCORES, ORDERED BY enjoyment SCORES
+    #### (2.3) MAKE PLOT OF SENTIMENT SCORES, ORDERED BY willing SCORES
     sentiment_bar_plot <- MakeSentimentBarPlot(d_long, n_plots, plot_names)
     sentiment_plot_images <- MakeGroupedBarPlotImages(sentiment_bar_plot, plot_names) #the little customer journey icons
 
-    pdf(file = "./plots/customer_journeys_sentiment_plot.pdf", width = 17, height = 8)
+    pdf(file = "./plots/analysis_plots/customer_journeys_sentiment_plot.pdf", width = 17, height = 8)
     ggdraw(insert_xaxis_grob(sentiment_bar_plot, sentiment_plot_images, position = "bottom"))
     dev.off()
 
@@ -1122,7 +1026,7 @@ data_wt_PCs <- MakePCAFunction(d_long)
 # Get performance of each predictor and PCA-reduced feature using cross-validation.
 n_after_exclusions <- dim(d_long)[1] / n_plots
 cross_validation_analysis_wt_pcs <- CrossValidationAnalysisWtPCs(data_wt_PCs, n_after_exclusions, n_plots)
-pdf(file = "./plots/predictions_wt_pcs_cv_plot.pdf", width = 17, height = 9)
+pdf(file = "./plots/analysis_plots/predictions_wt_pcs_cv_plot.pdf", width = 17, height = 9)
 plot(cross_validation_analysis_wt_pcs)
 dev.off()
 
@@ -1178,8 +1082,8 @@ if (FALSE) {
     dev.off()
 }
 
+# Cross Validation on Whole dataset
 if (TRUE) {
-    # Cross Validation on Whole dataset
     if (sentence_data) { fname <- "./plots/analysis_plots_sentence/predictions_wt_predictors_cv_plot_sentence.pdf" } else { fname <- "./plots/analysis_plots/predictions_wt_predictors_cv_plot.pdf" }
     cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(d_long, n_plots)
     pdf(file = fname, width = 17, height = 9)
@@ -1236,9 +1140,6 @@ if (FALSE) {
     }
 }
 
-
 ##=====##
 ## END ##
 ##=====##
-
-
