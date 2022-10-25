@@ -1,5 +1,5 @@
 ## Analysis script for 'Evaluative Summaries'
-## Study 1: Customer Journeys 
+## For Study: Directly Experienced Content
 
 ## Needed for semantic analysis: https://colab.research.google.com/drive/19cwz29yei-RwLnQ8HuEbjy74HRx94A6b?usp=sharing
 
@@ -44,6 +44,7 @@ pacman::p_load('data.table', #rename data frame columns
 
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #set working directory to current directory
 source('../../tools/common_functions.R')
+source('./plotting.R')
 
 ##===============================
 ## FUNCTIONS FOR PREPROCESSING ##
@@ -274,118 +275,9 @@ Get_stats <- function(data, n_plots) {
     return(equations)
 }
 
-##=====================================
-## FUNCTIONS FOR PLOTTING BAR CHARTS ##
-##=====================================
-
-MakeGroupedBarPlot <- function(data_plot_long, wtp = FALSE) {
-    "
-    Plot the grouped bar graph in order of ascending satisfaction scores 
-    Input: data_plot_long
-    Output: grouped_bar_plot (the grouped bar graph)
-    "
-
-    if (wtp) {
-        data_plot_long <- data_plot_long[data_plot_long$question_type == "wtp_score_avg",]
-        grouped_bar_plot <- ggplot(data_plot_long, aes(x = plot_names, y = score, fill = question_type)) +
-            geom_bar(position = "dodge", stat = "identity") +
-            geom_errorbar(aes(ymin = score - sd, ymax = score + sd), width = .2,
-                          position = position_dodge(.9)) +
-            ggtitle("Summarizing the Satisfaction and Desirability of Different Customer Journeys") +
-            xlab("Customer Journey Plots") +
-            ylab("Scaled Rating") +
-            theme(
-                plot.title = element_blank(),
-                legend.title = element_blank(),
-                legend.text = element_text(color = "black", size = 28),
-                legend.position = "top",
-                legend.title.align = 0.5,
-                text = element_text(color = "black", size = 25),
-                axis.title.y = element_text(color = "black", size = 30, face = "bold"),
-                axis.title.x = element_text(color = "black", size = 30, face = "bold"),
-                axis.text.x = element_blank(),
-                axis.ticks.x = element_blank()
-            ) +
-            scale_fill_manual(
-                name = "Judgment Type",
-                breaks = c("wtp_score_avg"),
-                labels = c("Willingness to Pay"),
-                values = c("#5660e9"),
-                guide = guide_legend(title.position = "top")
-            )
-
-        return(grouped_bar_plot)
-    }
-
-    data_plot_long <- data_plot_long[data_plot_long['question_type'] != 'wtp_score_avg',]
-    grouped_bar_plot <- ggplot(data_plot_long, aes(x = plot_names, y = score, fill = question_type)) +
-        geom_bar(position = "dodge", stat = "identity") +
-        geom_errorbar(aes(ymin = score - sd, ymax = score + sd), width = .2,
-                      position = position_dodge(.9)) +
-        ggtitle("Summarizing the Satisfaction and Desirability of Different Customer Journeys") +
-        xlab("Customer Journey Plots") +
-        ylab("Scaled Rating") +
-        scale_y_continuous(breaks = seq(0, 80, 40)) +
-        theme(
-            plot.title = element_blank(), #element_text(color = "black", size=30, face="bold", hjust = 0.5),
-            legend.title = element_blank(), #element_text(color = "black", size=30),
-            legend.text = element_text(color = "black", size = 28),
-            legend.position = "top",
-            legend.title.align = 0.5,
-            text = element_text(color = "black", size = 25),
-            axis.title.y = element_text(color = "black", size = 30, face = "bold"),
-            axis.title.x = element_text(color = "black", size = 30, face = "bold"),
-            axis.text.x = element_blank(),
-            axis.ticks.x = element_blank()
-        ) +
-        scale_fill_manual(
-            name = "Judgment Type",
-            breaks = c("satisfaction_score_avg", "pd_score_avg"),
-            labels = c("Satisfaction", "Personal Desirability"),
-            values = c("#56B4E9", "#009E73"),
-            guide = guide_legend(title.position = "top")
-        )
-    return(grouped_bar_plot)
-}
-
-
-MakeGroupedBarPlotImages <- function(LifelinesPlot, plot_names) {
-    "
-    Make a plotter function that produces 'clean' (no labels) version of individual images 
-    for the x-axis. Then, plot the images in order of ascending satisfaction scores, 
-    which can be determined by the order in data_plot_long$plot_names[1:27].
-    Input: grouped_bar_plot, plot_names 
-    Output: the plot labels for the grouped bar graph and the sentiment bar graph
-    "
-
-    # Make "clean" (no labels) version of individual images for x-axis
-    Plotter_2 <- function(equation, x_range, y_range) {
-        plot(equation, lwd = 30, xlim = c(start_age, end_age), ylim = c(0, end_y_axis), main = "",
-             xlab = "", ylab = "", axes = FALSE, col = "firebrick3")
-
-        return(Plotter_2)
-    }
-
-    # Print the images that will comprise the x-axis
-    for (i in 1:length(my_equations)) { #print individual plots
-        png(file = paste0(plot_names[i], "_plot.png", ""))
-        sapply(my_equations[i], Plotter_2)
-        dev.off()
-    }
-
-    # Assemble images in the order of data_plot_long$plot_names[1:27]
-    plot_images <- axis_canvas(LifelinesPlot, axis = 'x')
-
-    for (i in 27) {
-        plot_images <- plot_images + draw_image(paste0(data_plot_long$plot_names[i], "_plot.png"), x = i - 0.5)
-    }
-
-    return(plot_images)
-}
-
-##================================================================================================================
-##FUNCTIONS FOR PLOTTING SENTIMENT BAR PLOT##
-##================================================================================================================
+##===========================================##
+## FUNCTIONS FOR PLOTTING SENTIMENT BAR PLOT ##
+##===========================================##
 
 Get_sentiment_stats <- function(data, n_plots) {
     "
@@ -458,35 +350,6 @@ OrderSentimentDataframe <- function(data, n_plots, plot_names) {
 
     return(sentiment_df_sorted)
 }
-
-
-MakeSentimentBarPlot <- function(data, n_plots, plot_names, title = "Satisfaction") {
-    "
-    Plot the sentiment bar graph in order of ascending satisfaction scores.
-    Input: data_long, n_plots, plot_names
-    Output: the sentiment bar graph by ascending satisfaction scores
-    "
-
-    sentiment_df <- OrderSentimentDataframe(data, n_plots, plot_names)
-    sentiment_bar_plot <- ggplot(sentiment_df, aes(x = plot_names, y = mean)) +
-        geom_bar(position = "dodge", stat = "identity", fill = "darkorange") +
-        geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), width = .2,
-                      position = position_dodge(.9)) +
-        ggtitle(paste("Mean Sentiment Scores by Ascending", title, "Scores")) +
-        xlab("Customer Journey Plots") +
-        ylab("Mean Sentiment Score") +
-        theme(
-            plot.title = element_blank(), #element_text(color = "black", size=31, face="bold", hjust = 0.5),
-            text = element_text(color = "black", size = 25),
-            axis.title.y = element_text(color = "black", size = 30, face = "bold"),
-            axis.title.x = element_text(color = "black", size = 30, face = "bold"),
-            axis.text.x = element_blank(),
-            axis.ticks.x = element_blank()
-        )
-
-    return(sentiment_bar_plot)
-}
-
 
 ##========================##
 ## FUNCTIONS FOR ANALYSIS ##
@@ -728,60 +591,6 @@ Get_noise_ceiling <- function(dat_long, question_type, n_ss) {
 }
 
 
-CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, sum_satisfaction, sum_pd) {
-    "
-    What this function does: creates a grouped box plot of the cross-validated prediction results
-    Inputs: results_df, x_order, results_order, ques_type, x_labels, sum_satisfaction, sum_pd
-    Output: a boxplot of participant rating predictions with either principal components or predictors
-    "
-
-    grouped_box_plot <- ggplot() +
-        scale_x_discrete() +
-        geom_rect(aes(xmin = 0.2, xmax = Inf, ymin = sum_satisfaction["1st Qu."], ymax = sum_satisfaction["3rd Qu."]),
-                  alpha = 1, fill = "gray60") + #"dodgerblue3") + # #56B4E9
-        geom_rect(aes(xmin = 0.2, xmax = Inf, ymin = sum_pd["1st Qu."], ymax = sum_pd["3rd Qu."]),
-                  alpha = 1, fill = "gray60") + #"forestgreen") + # #009E73
-        geom_hline(yintercept = 0, color = "gray60") +
-        geom_boxplot(data = results_df, aes(x = x_order, y = results_order, fill = ques_type), outlier.shape = NA) +
-        ggtitle(paste0("Satisfaction and Desirability Predictions with ", x_labels)) +
-        xlab(x_labels) +
-        ylab("Prediction Performance\n(Cross-Validated Pearson's r)") +
-        scale_y_continuous(breaks = round(seq(-1, 1, by = 0.2), 1)) +
-        scale_fill_manual(
-            name = "Judgment Type",
-            breaks = c("satisfaction_results", "pd_results"),
-            labels = c("Satisfaction", "Personal Desirability"),
-            values = c("#56B4E9", "#009E73"),
-            guide = guide_legend(title.position = "top")) +
-        theme_bw() +
-        if (x_labels == "Predictors") {
-            theme(element_blank(),
-                  plot.title = element_blank(), #element_text(color = "black", size=32, face = "bold", hjust = 0.5),
-                  text = element_text(color = "black", size = 25),
-                  axis.title.y = element_text(color = "black", size = 30, face = "bold"),
-                  axis.title.x = element_text(color = "black", size = 30, face = "bold"),
-                  axis.text.x = element_text(color = "black", angle = 60, vjust = 1, hjust = 1),
-                  legend.title = element_blank(), #element_text(color = "black", size=30),
-                  legend.text = element_text(color = "black", size = 30),
-                  legend.position = "top",
-                  legend.title.align = 0.5)
-        } else {
-            theme(element_blank(),
-                  plot.title = element_blank(), #element_text(color = "black", size=32, face = "bold", hjust = 0.5),
-                  text = element_text(color = "black", size = 25),
-                  axis.title.y = element_text(color = "black", size = 30, face = "bold"),
-                  axis.title.x = element_text(color = "black", size = 30, face = "bold", margin = margin(t = 20, r = 0, b = 0, l = 0)),
-                  axis.text.x = element_text(color = "black", size = 17.5),
-                  legend.title = element_blank(), #element_text(color = "black", size=30),
-                  legend.text = element_text(color = "black", size = 30),
-                  legend.position = "top",
-                  legend.title.align = 0.5) }
-
-
-    return(grouped_box_plot)
-}
-
-
 MakePCAFunction <- function(score_features_df) {
     "
     Perform mixed-effects regression based on PCA-reduced features of our predictors.
@@ -890,8 +699,8 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
     # Reorder pcs according to their significance
     t_results_satisfaction <- as.data.frame(t(results_satisfaction))
     colnames(t_results_satisfaction) <- c("PC1\nFirst Derivative\nPredictors and End Value", "PC2\nSecond Derivative\nPredictors",
-                                       "PC3\nEmbeddings, Sentiment\nIntegral, and Min", "PC4\nInterestingness, Max, \nNumber of Valleys and Extrema",
-                                       "PC5\nNumber of Peaks")
+                                          "PC3\nEmbeddings, Sentiment\nIntegral, and Min", "PC4\nInterestingness, Max, \nNumber of Valleys and Extrema",
+                                          "PC5\nNumber of Peaks")
     results_satisfaction_long <- gather(t_results_satisfaction, key = principal_components, value = pcs_results, colnames(t_results_satisfaction)) #length(pcs)*n_folds
     satisfaction_new_order <- with(results_satisfaction_long, reorder(principal_components, pcs_results, median, na.rm = TRUE))
     results_satisfaction_long["satisfaction_new_order"] <- satisfaction_new_order
@@ -928,8 +737,8 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
     # Reorder pcs according to their significance
     t_results_pd <- as.data.frame(t(results_pd))
     colnames(t_results_pd) <- c("PC1\nFirst Derivative\nPredictors and End Value", "PC2\nSecond Derivative\nPredictors",
-                                       "PC3\nEmbeddings, Sentiment\nIntegral, and Min", "PC4\nInterestingness, Max, \nNumber of Valleys and Extrema",
-                                       "PC5\nNumber of Peaks")
+                                "PC3\nEmbeddings, Sentiment\nIntegral, and Min", "PC4\nInterestingness, Max, \nNumber of Valleys and Extrema",
+                                "PC5\nNumber of Peaks")
     results_pd_long <- gather(t_results_pd, key = principal_components, value = pcs_results, colnames(t_results_pd)) #length(pcs)*n_folds
     pd_new_order <- with(results_pd_long, reorder(principal_components, pcs_results, median, na.rm = TRUE))
     results_pd_long["pd_new_order"] <- pd_new_order
@@ -1046,41 +855,21 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
     pd_bracket_end <- 1.8 #x ending point for top bracket
 
     # Add to the plot: stars indicating significance
-    pcs_plot <- pcs_plot +
+    for (i in 0:4) {
+        pcs_plot <- pcs_plot + ggplot2::annotate("text", x = satisfaction_bottom_x + i,
+                                                 y = bottom_y, size = 8, label = p_value_stars_1_satisfaction[[i + 1]])
+        pcs_plot <- pcs_plot + ggplot2::annotate("text", x = pd_bottom_x + i, y = bottom_y,
+                                                 size = 8, label = p_value_stars_1_pd[[i + 1]])
 
-        # One-sided Wilcox test
-        ggplot2::annotate("text", x = satisfaction_bottom_x, y = bottom_y, size = 8, label = p_value_stars_1_satisfaction[[1]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 1, y = bottom_y, size = 8, label = p_value_stars_1_satisfaction[[2]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 2, y = bottom_y, size = 8, label = p_value_stars_1_satisfaction[[3]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 3, y = bottom_y, size = 8, label = p_value_stars_1_satisfaction[[4]]) +
-        ggplot2::annotate("text", x = satisfaction_bottom_x + 4, y = bottom_y, size = 8, label = p_value_stars_1_satisfaction[[5]]) +
-        ggplot2::annotate("text", x = pd_bottom_x, y = bottom_y, size = 8, label = p_value_stars_1_pd[[1]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 1, y = bottom_y, size = 8, label = p_value_stars_1_pd[[2]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 2, y = bottom_y, size = 8, label = p_value_stars_1_pd[[3]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 3, y = bottom_y, size = 8, label = p_value_stars_1_pd[[4]]) +
-        ggplot2::annotate("text", x = pd_bottom_x + 4, y = bottom_y, size = 8, label = p_value_stars_1_pd[[5]]) +
+        if (i != 4) {
+            pcs_plot <- pcs_plot + geom_segment(aes(x = satisfaction_bracket_start + i, xend = satisfaction_bracket_end + i, y = satisfaction_bracket_y, yend = satisfaction_bracket_y, colour = satisfaction_color))
+            pcs_plot <- pcs_plot + ggplot2::annotate("text", x = satisfaction_top_x + i, y = satisfaction_top_y, size = 8, label = p_value_stars_2_satisfaction[[i + 1]])
+            pcs_plot <- pcs_plot + geom_segment(aes(x = pd_bracket_start + i, xend = pd_bracket_end + i, y = pd_bracket_y, yend = pd_bracket_y, colour = satisfaction_color))
+            pcs_plot <- pcs_plot + ggplot2::annotate("text", x = pd_top_x + i, y = pd_top_y, size = 8, label = p_value_stars_2_pd[[i + 1]])
+        }
+    }
 
-        # Two-sided Wilcox test (with brackets)
-        geom_segment(aes(x = satisfaction_bracket_start, xend = satisfaction_bracket_end, y = satisfaction_bracket_y, yend = satisfaction_bracket_y, colour = satisfaction_color)) +
-        ggplot2::annotate("text", x = satisfaction_top_x, y = satisfaction_top_y, size = 8, label = p_value_stars_2_satisfaction[[1]]) +
-        geom_segment(aes(x = satisfaction_bracket_start + 1, xend = satisfaction_bracket_end + 1, y = satisfaction_bracket_y, yend = satisfaction_bracket_y, color = satisfaction_color)) +
-        ggplot2::annotate("text", x = satisfaction_top_x + 1, y = satisfaction_top_y, size = 8, label = p_value_stars_2_satisfaction[[2]]) +
-        geom_segment(aes(x = satisfaction_bracket_start + 2, xend = satisfaction_bracket_end + 2, y = satisfaction_bracket_y, yend = satisfaction_bracket_y, color = satisfaction_color)) +
-        ggplot2::annotate("text", x = satisfaction_top_x + 2, y = satisfaction_top_y, size = 8, label = p_value_stars_2_satisfaction[[3]]) +
-        geom_segment(aes(x = satisfaction_bracket_start + 3, xend = satisfaction_bracket_end + 3, y = satisfaction_bracket_y, yend = satisfaction_bracket_y, color = satisfaction_color)) +
-        ggplot2::annotate("text", x = satisfaction_top_x + 3, y = satisfaction_top_y, size = 8, label = p_value_stars_2_satisfaction[[4]]) +
-        geom_segment(aes(x = pd_bracket_start, xend = pd_bracket_end, y = pd_bracket_y, yend = pd_bracket_y, color = pd_color)) +
-        ggplot2::annotate("text", x = pd_top_x, y = pd_top_y, size = 8, label = p_value_stars_2_pd[[1]]) +
-        geom_segment(aes(x = pd_bracket_start + 1, xend = pd_bracket_end + 1, y = pd_bracket_y, yend = pd_bracket_y, color = pd_color)) +
-        ggplot2::annotate("text", x = pd_top_x + 1, y = pd_top_y, size = 8, label = p_value_stars_2_pd[[2]]) +
-        geom_segment(aes(x = pd_bracket_start + 2, xend = pd_bracket_end + 2, y = pd_bracket_y, yend = pd_bracket_y, color = pd_color)) +
-        ggplot2::annotate("text", x = pd_top_x + 2, y = pd_top_y, size = 8, label = p_value_stars_2_pd[[3]]) +
-        geom_segment(aes(x = pd_bracket_start + 3, xend = pd_bracket_end + 3, y = pd_bracket_y, yend = pd_bracket_y, color = pd_color)) +
-        ggplot2::annotate("text", x = pd_top_x + 3, y = pd_top_y, size = 8, label = p_value_stars_2_pd[[4]]) +
-        scale_colour_identity()
-
-    #-------------------------------------------------------------------------------------------------------------------
-
+    pcs_plot <- pcs_plot + scale_colour_identity()
     return(pcs_plot)
 }
 
@@ -1089,8 +878,11 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots, tr
     "
     Measure the performance of each of our predictors by doing cross-validated regressions, holding out
     one participant for each cross-validation step.
-    Input: data_wt_PCs, data_long, n_after_exclusions, n_plots
+    Input: dat, data_long, n_after_exclusions, n_plots, trajectories_separate
     Output: relative importance of individual predictors and its graph
+
+    'trajectories_separate' parameter, when TRUE, trains with trajectories only, i.e.,
+     there will be 'n_plots' amount of folds
     "
 
     is_word <- subset(dat, dat['is_word'] == TRUE)['is_word']
@@ -1256,9 +1048,9 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots, tr
     return(predictors_plot)
 }
 
-##======##
-## MAIN ##
-##======##
+##======####======####======####======####======####======####======####======####======####======####======####======##
+## MAIN #### MAIN #### MAIN #### MAIN #### MAIN #### MAIN #### MAIN #### MAIN #### MAIN #### MAIN #### MAIN #### MAIN ##
+##======####======####======####======####======####======####======####======####======####======####======####======##
 
 # Define global variables
 n_plots <- 27
@@ -1324,7 +1116,7 @@ data_plot_long <- ProcessForPlots(d_long, n_plots, plot_names) #num_rows = num_p
 
 
 ## ========================================== (2) Plot Data and Save ==================================================
-if (FALSE) {
+if (TRUE) {
     "
     Create bar plot, word clouds, and sentiment plot
     "
@@ -1347,7 +1139,7 @@ if (FALSE) {
 
     #### (2.2) MAKE WORD CLOUDS (WARNING: takes ~5 minutes; feel free to skip)
     MakeWordClouds(d_long, n_plots, plot_names) #make word cloud images
-    arranged_word_clouds <- ArrangeWordClouds(d_long, n_plots) #arrange word clouds into a grid
+    arranged_word_clouds <- ArrangeWordClouds(d_long) #arrange word clouds into a grid
 
     pdf(file = "customer_journeys_word_clouds.pdf", width = 18, height = 8)
     plot(arranged_word_clouds)
