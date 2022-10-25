@@ -12,21 +12,21 @@ CleanWord <- function(word) {
 }
 
 # Check if input is actually an English word
-is.word  <- function(word) {
+is.word <- function(word) {
     word <- CleanWord(word)
     return(word %in% GradyAugmented)
 }
 
 
-CalculateSentiment <- function(rword, model_type='sentimentr', is_sentence=FALSE) {
-    if(!is_sentence) { rword <- CleanWord(rword) }
+CalculateSentiment <- function(rword, model_type = 'sentimentr', is_sentence = FALSE) {
+    if (!is_sentence) { rword <- CleanWord(rword) }
     #print(paste0("Cleaned word: ", rword))
 
     if (model_type == 'sentimentr') {
-        return( sentiment_by(rword)$ave_sentiment )
+        return(sentiment_by(rword)$ave_sentiment)
     } else if (model_type == 'vader') {
-        sent_vals <- vector(mode="integer", length=length(rword))
-        for(i in (1:length(rword))) {sent_vals[i] <- (as.numeric(get_vader(rword[[i]])[['compound']]))}
+        sent_vals <- vector(mode = "integer", length = length(rword))
+        for (i in (1:length(rword))) { sent_vals[i] <- (as.numeric(get_vader(rword[[i]])[['compound']])) }
         return(sent_vals)
     } else if (model_type == 'ai') {
         return(sentiment_score(rword))
@@ -41,6 +41,12 @@ MakeWordClouds <- function(data, n_plots, plot_names) {
     Output: individual word clouds; takes a long time because we are using ggsave, which saves
     super high-quality images necessary for producing small word clouds
     "
+
+    if(n_plots != 27) { # Directly experienced content
+
+
+
+    }
 
     plot_word_clouds <- function(data) {
         # Define word clouds
@@ -204,147 +210,40 @@ MakeWordClouds <- function(data, n_plots, plot_names) {
 }
 
 
-ArrangeWordClouds <- function() {
+ArrangeWordClouds <- function(d_long, n_plots) {
     "Arrange word clouds and plot labels into a grid using ggplot.
-    Input: none
+    Input: d_long, n_plots
     Output: a grid of word clouds (arranged in order of ascending satisfaction scores)
     "
 
-    # (The simpler alternative is to use grid.arrange with lapply([PNGs], rasterGrob),
-    # with [PNGs] being a set of predefined word clouds,
-    # but rasterGrob produces an error when used in such a list.)
+    items_wc = list()
+    items_plot = list()
+    for (i in (1:n_plots)) {
+        items_wc <- append(items_wc, rasterGrob(readPNG(paste0(d_long$plot_names[i], "_WC.png")), interpolate = TRUE))
+        items_plot <- append(items_plot, rasterGrob(readPNG(paste0(d_long$plot_names[i], "_plot.png")), interpolate = TRUE))
+    }
 
-    a <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[1], "_WC.png")), interpolate = TRUE)
-    b <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[2], "_WC.png")), interpolate = TRUE)
-    c <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[3], "_WC.png")), interpolate = TRUE)
-    d <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[4], "_WC.png")), interpolate = TRUE)
-    e <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[5], "_WC.png")), interpolate = TRUE)
-    f <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[6], "_WC.png")), interpolate = TRUE)
-    g <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[7], "_WC.png")), interpolate = TRUE)
-    h <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[8], "_WC.png")), interpolate = TRUE)
-    i <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[9], "_WC.png")), interpolate = TRUE)
-
-    j <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[1], "_plot.png")), interpolate = TRUE)
-    k <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[2], "_plot.png")), interpolate = TRUE)
-    l <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[3], "_plot.png")), interpolate = TRUE)
-    m <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[4], "_plot.png")), interpolate = TRUE)
-    n <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[5], "_plot.png")), interpolate = TRUE)
-    o <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[6], "_plot.png")), interpolate = TRUE)
-    p <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[7], "_plot.png")), interpolate = TRUE)
-    q <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[8], "_plot.png")), interpolate = TRUE)
-    r <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[9], "_plot.png")), interpolate = TRUE)
-
-    s <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[10], "_WC.png")), interpolate = TRUE)
-    t <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[11], "_WC.png")), interpolate = TRUE)
-    u <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[12], "_WC.png")), interpolate = TRUE)
-    v <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[13], "_WC.png")), interpolate = TRUE)
-    w <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[14], "_WC.png")), interpolate = TRUE)
-    x <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[15], "_WC.png")), interpolate = TRUE)
-    y <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[16], "_WC.png")), interpolate = TRUE)
-    z <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[17], "_WC.png")), interpolate = TRUE)
-    aa <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[18], "_WC.png")), interpolate = TRUE)
-
-    bb <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[10], "_plot.png")), interpolate = TRUE)
-    cc <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[11], "_plot.png")), interpolate = TRUE)
-    dd <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[12], "_plot.png")), interpolate = TRUE)
-    ee <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[13], "_plot.png")), interpolate = TRUE)
-    ff <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[14], "_plot.png")), interpolate = TRUE)
-    gg <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[15], "_plot.png")), interpolate = TRUE)
-    hh <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[16], "_plot.png")), interpolate = TRUE)
-    ii <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[17], "_plot.png")), interpolate = TRUE)
-    jj <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[18], "_plot.png")), interpolate = TRUE)
-
-    kk <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[19], "_WC.png")), interpolate = TRUE)
-    ll <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[20], "_WC.png")), interpolate = TRUE)
-    mm <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[21], "_WC.png")), interpolate = TRUE)
-    nn <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[22], "_WC.png")), interpolate = TRUE)
-    oo <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[23], "_WC.png")), interpolate = TRUE)
-    pp <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[24], "_WC.png")), interpolate = TRUE)
-    qq <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[25], "_WC.png")), interpolate = TRUE)
-    rr <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[26], "_WC.png")), interpolate = TRUE)
-    ss <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[27], "_WC.png")), interpolate = TRUE)
-
-    tt <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[19], "_plot.png")), interpolate = TRUE)
-    uu <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[20], "_plot.png")), interpolate = TRUE)
-    vv <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[21], "_plot.png")), interpolate = TRUE)
-    ww <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[22], "_plot.png")), interpolate = TRUE)
-    xx <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[23], "_plot.png")), interpolate = TRUE)
-    yy <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[24], "_plot.png")), interpolate = TRUE)
-    zz <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[25], "_plot.png")), interpolate = TRUE)
-    aaa <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[26], "_plot.png")), interpolate = TRUE)
-    bbb <- rasterGrob(readPNG(paste0(data_plot_long$plot_names[27], "_plot.png")), interpolate = TRUE)
-
-    #create a grid of word clouds and plot labels
     df <- data.frame() #empty dataframe
     wc_plot <- ggplot(df) + #empty ggplot
         geom_point() +
         xlim(0, 8) +
         ylim(-0.5, 9.5) +
-        theme_void() +
-        annotation_custom(a, xmin = -0.5, xmax = 0.5, ymin = 8, ymax = 10) +
-        annotation_custom(b, xmin = 0.5, xmax = 1.5, ymin = 8, ymax = 10) +
-        annotation_custom(c, xmin = 1.5, xmax = 2.5, ymin = 8, ymax = 10) +
-        annotation_custom(d, xmin = 2.5, xmax = 3.5, ymin = 8, ymax = 10) +
-        annotation_custom(e, xmin = 3.5, xmax = 4.5, ymin = 8, ymax = 10) +
-        annotation_custom(f, xmin = 4.5, xmax = 5.5, ymin = 8, ymax = 10) +
-        annotation_custom(g, xmin = 5.5, xmax = 6.5, ymin = 8, ymax = 10) +
-        annotation_custom(h, xmin = 6.5, xmax = 7.5, ymin = 8, ymax = 10) +
-        annotation_custom(i, xmin = 7.5, xmax = 8.5, ymin = 8, ymax = 10) +
+        theme_void()
 
-        annotation_custom(j, xmin = -0.25, xmax = 0.25, ymin = 7, ymax = 8) +
-        annotation_custom(k, xmin = 0.75, xmax = 1.25, ymin = 7, ymax = 8) +
-        annotation_custom(l, xmin = 1.75, xmax = 2.25, ymin = 7, ymax = 8) +
-        annotation_custom(m, xmin = 2.75, xmax = 3.25, ymin = 7, ymax = 8) +
-        annotation_custom(n, xmin = 3.75, xmax = 4.25, ymin = 7, ymax = 8) +
-        annotation_custom(o, xmin = 4.75, xmax = 5.25, ymin = 7, ymax = 8) +
-        annotation_custom(p, xmin = 5.75, xmax = 6.25, ymin = 7, ymax = 8) +
-        annotation_custom(q, xmin = 6.75, xmax = 7.25, ymin = 7, ymax = 8) +
-        annotation_custom(r, xmin = 7.75, xmax = 8.25, ymin = 7, ymax = 8) +
+    for (i in 1:9) {
+        wc_plot <- wc_plot + annotation_custom(items_wc[i], xmin = -1.5 + i, xmax = -0.5 + i, ymin = 8, ymax = 10)
+        wc_plot <- wc_plot + annotation_custom(items_wc[i + 9], xmin = -1.5 + i, xmax = -0.5 + i, ymin = 4, ymax = 6)
+        wc_plot <- wc_plot + annotation_custom(items_wc[i + 18], xmin = -1.5 + i, xmax = -0.5 + i, ymin = 0, ymax = 2)
 
-        annotation_custom(s, xmin = -0.5, xmax = 0.5, ymin = 4, ymax = 6) +
-        annotation_custom(t, xmin = 0.5, xmax = 1.5, ymin = 4, ymax = 6) +
-        annotation_custom(u, xmin = 1.5, xmax = 2.5, ymin = 4, ymax = 6) +
-        annotation_custom(v, xmin = 2.5, xmax = 3.5, ymin = 4, ymax = 6) +
-        annotation_custom(w, xmin = 3.5, xmax = 4.5, ymin = 4, ymax = 6) +
-        annotation_custom(x, xmin = 4.5, xmax = 5.5, ymin = 4, ymax = 6) +
-        annotation_custom(y, xmin = 5.5, xmax = 6.5, ymin = 4, ymax = 6) +
-        annotation_custom(z, xmin = 6.5, xmax = 7.5, ymin = 4, ymax = 6) +
-        annotation_custom(aa, xmin = 7.5, xmax = 8.5, ymin = 4, ymax = 6) +
-
-        annotation_custom(bb, xmin = -0.25, xmax = 0.25, ymin = 3, ymax = 4) +
-        annotation_custom(cc, xmin = 0.75, xmax = 1.25, ymin = 3, ymax = 4) +
-        annotation_custom(dd, xmin = 1.75, xmax = 2.25, ymin = 3, ymax = 4) +
-        annotation_custom(ee, xmin = 2.75, xmax = 3.25, ymin = 3, ymax = 4) +
-        annotation_custom(ff, xmin = 3.75, xmax = 4.25, ymin = 3, ymax = 4) +
-        annotation_custom(gg, xmin = 4.75, xmax = 5.25, ymin = 3, ymax = 4) +
-        annotation_custom(hh, xmin = 5.75, xmax = 6.25, ymin = 3, ymax = 4) +
-        annotation_custom(ii, xmin = 6.75, xmax = 7.25, ymin = 3, ymax = 4) +
-        annotation_custom(jj, xmin = 7.75, xmax = 8.25, ymin = 3, ymax = 4) +
-
-        annotation_custom(kk, xmin = -0.5, xmax = 0.5, ymin = 0, ymax = 2) +
-        annotation_custom(ll, xmin = 0.5, xmax = 1.5, ymin = 0, ymax = 2) +
-        annotation_custom(mm, xmin = 1.5, xmax = 2.5, ymin = 0, ymax = 2) +
-        annotation_custom(nn, xmin = 2.5, xmax = 3.5, ymin = 0, ymax = 2) +
-        annotation_custom(oo, xmin = 3.5, xmax = 4.5, ymin = 0, ymax = 2) +
-        annotation_custom(pp, xmin = 4.5, xmax = 5.5, ymin = 0, ymax = 2) +
-        annotation_custom(qq, xmin = 5.5, xmax = 6.5, ymin = 0, ymax = 2) +
-        annotation_custom(rr, xmin = 6.5, xmax = 7.5, ymin = 0, ymax = 2) +
-        annotation_custom(ss, xmin = 7.5, xmax = 8.5, ymin = 0, ymax = 2) +
-
-        annotation_custom(tt, xmin = -0.25, xmax = 0.25, ymin = -1, ymax = 0) +
-        annotation_custom(uu, xmin = 0.75, xmax = 1.25, ymin = -1, ymax = 0) +
-        annotation_custom(vv, xmin = 1.75, xmax = 2.25, ymin = -1, ymax = 0) +
-        annotation_custom(ww, xmin = 2.75, xmax = 3.25, ymin = -1, ymax = 0) +
-        annotation_custom(xx, xmin = 3.75, xmax = 4.25, ymin = -1, ymax = 0) +
-        annotation_custom(yy, xmin = 4.75, xmax = 5.25, ymin = -1, ymax = 0) +
-        annotation_custom(zz, xmin = 5.75, xmax = 6.25, ymin = -1, ymax = 0) +
-        annotation_custom(aaa, xmin = 6.75, xmax = 7.25, ymin = -1, ymax = 0) +
-        annotation_custom(bbb, xmin = 7.75, xmax = 8.25, ymin = -1, ymax = 0)
+        wc_plot <- wc_plot + annotation_custom(items_plot[i], xmin = -1.25 + i, xmax = -0.75 + i, ymin = 7, ymax = 8)
+        wc_plot <- wc_plot + annotation_custom(items_plot[i + 9], xmin = -1.25 + i, xmax = -0.75 + i, ymin = 3, ymax = 4)
+        wc_plot <- wc_plot + annotation_custom(items_plot[i + 18], xmin = -1.25 + i, xmax = -0.75 + i, ymin = -1, ymax = 0)
+    }
 
     return(wc_plot)
 }
 
-AnalyzeRidgeRegression <- function(score_features_df, metric='satisfaction') {
+AnalyzeRidgeRegression <- function(score_features_df, metric = 'satisfaction') {
     "
     Measure the performance of individual predictors by doing cross-validated (nfold = 10) ridge regression
     Input: score_features_df
@@ -453,62 +352,62 @@ AnalyzeRidgeRegression <- function(score_features_df, metric='satisfaction') {
 
     #------------------------------------------------------------------------------------------------
 
-    if(metric == 'satisfaction') {
+    if (metric == 'satisfaction') {
         # 2. Personal Desirability
-    pd_scores <- score_features_df$personal_desirability
+        pd_scores <- score_features_df$personal_desirability
 
-    # Create testing and training data
-    set.seed(1)
-    indeces <- sample(nrow(my_predictors), nrow(my_predictors) * 0.8)
+        # Create testing and training data
+        set.seed(1)
+        indeces <- sample(nrow(my_predictors), nrow(my_predictors) * 0.8)
 
-    my_predictors_train <- my_predictors[indeces,]
-    pd_scores_train <- pd_scores[indeces]
+        my_predictors_train <- my_predictors[indeces,]
+        pd_scores_train <- pd_scores[indeces]
 
-    my_predictors_test <- my_predictors[-indeces,]
-    pd_scores_test <- pd_scores[-indeces]
+        my_predictors_test <- my_predictors[-indeces,]
+        pd_scores_test <- pd_scores[-indeces]
 
-    # Standardize data
-    my_predictors_train_stdz <- apply(my_predictors_train, 2, scale)
-    pd_scores_train_stdz <- scale(pd_scores_train)
+        # Standardize data
+        my_predictors_train_stdz <- apply(my_predictors_train, 2, scale)
+        pd_scores_train_stdz <- scale(pd_scores_train)
 
-    my_predictors_test_stdz <- apply(my_predictors_test, 2, scale)
-    pd_scores_test_stdz <- scale(pd_scores_test)
+        my_predictors_test_stdz <- apply(my_predictors_test, 2, scale)
+        pd_scores_test_stdz <- scale(pd_scores_test)
 
-    # Run regular regression
-    lm_pd_features <- glmnet(my_predictors_train_stdz, pd_scores_train_stdz,
-                             alpha = 0, lambda = 0)
+        # Run regular regression
+        lm_pd_features <- glmnet(my_predictors_train_stdz, pd_scores_train_stdz,
+                                 alpha = 0, lambda = 0)
 
-    # Run ridge regression
-    set.seed(123)
-    lambdas <- seq(1, 10e-5, length = 100)
-    ridge_pd_features <- cv.glmnet(my_predictors_train_stdz, pd_scores_train_stdz,
-                                   nfolds = 10, alpha = 0, lambda = lambdas)
-    plot(ridge_pd_features)
-    lambda_best <- ridge_pd_features$lambda.min
-    ridge_pd_features1 <- glmnet(my_predictors_train_stdz, pd_scores_train_stdz,
-                                 alpha = 0, lambda = lambda_best)
+        # Run ridge regression
+        set.seed(123)
+        lambdas <- seq(1, 10e-5, length = 100)
+        ridge_pd_features <- cv.glmnet(my_predictors_train_stdz, pd_scores_train_stdz,
+                                       nfolds = 10, alpha = 0, lambda = lambdas)
+        plot(ridge_pd_features)
+        lambda_best <- ridge_pd_features$lambda.min
+        ridge_pd_features1 <- glmnet(my_predictors_train_stdz, pd_scores_train_stdz,
+                                     alpha = 0, lambda = lambda_best)
 
-    # Order the regression results from most to least important predictors (rounded to 5 digits)
-    pd_features_rounded <- round(coef(ridge_pd_features1), 5)
-    x_pd_ordered = order(pd_features_rounded@x, decreasing = TRUE)
-    pd_features_rounded@Dimnames[[1]] <- pd_features_rounded@Dimnames[[1]][x_pd_ordered]
-    pd_features_rounded@x <- pd_features_rounded@x[x_pd_ordered]
+        # Order the regression results from most to least important predictors (rounded to 5 digits)
+        pd_features_rounded <- round(coef(ridge_pd_features1), 5)
+        x_pd_ordered = order(pd_features_rounded@x, decreasing = TRUE)
+        pd_features_rounded@Dimnames[[1]] <- pd_features_rounded@Dimnames[[1]][x_pd_ordered]
+        pd_features_rounded@x <- pd_features_rounded@x[x_pd_ordered]
 
-    print('personal desirability vs. features:')
-    print(pd_features_rounded)
+        print('personal desirability vs. features:')
+        print(pd_features_rounded)
 
-    # Compare standard regression to ridge regression
-    predict_pd_lm <- predict(lm_pd_features, my_predictors_test_stdz)
-    mse_pd_lm <- mean((pd_scores_test_stdz - predict_pd_lm)^2)
-    mse_pd_lm
-    predict_pd_ridge <- predict(ridge_pd_features1, my_predictors_test_stdz)
-    mse_pd_ridge <- mean((pd_scores_test_stdz - predict_pd_ridge)^2)
-    mse_pd_ridge
-    #Again, linear regression does slightly better than ridge regression.
+        # Compare standard regression to ridge regression
+        predict_pd_lm <- predict(lm_pd_features, my_predictors_test_stdz)
+        mse_pd_lm <- mean((pd_scores_test_stdz - predict_pd_lm)^2)
+        mse_pd_lm
+        predict_pd_ridge <- predict(ridge_pd_features1, my_predictors_test_stdz)
+        mse_pd_ridge <- mean((pd_scores_test_stdz - predict_pd_ridge)^2)
+        mse_pd_ridge
+        #Again, linear regression does slightly better than ridge regression.
 
-    # Plot functions
-    plot_Fit(pd_scores_test_stdz, predict_pd_lm, my_title = "LM: Personal Desirability")
-    plot_Fit(pd_scores_test_stdz, predict_pd_ridge, my_title = "RIDGE: Personal Desirability")
+        # Plot functions
+        plot_Fit(pd_scores_test_stdz, predict_pd_lm, my_title = "LM: Personal Desirability")
+        plot_Fit(pd_scores_test_stdz, predict_pd_ridge, my_title = "RIDGE: Personal Desirability")
     }
 
 }
@@ -569,8 +468,8 @@ TopicModeling <- function(dat_long, n_plots, plot_names) {
     # words_tdm                      ## DTM still tf-weighted
 
     # Finding a reasonable number of topics
-    k_topics <- FindTopicsNumber(words_tdm, topics = 2:n_plots, metrics = c("Arun2010", "CaoJuan2009", "Griffiths2004", "Deveaud2014"), control = list(seed = 1))
-    FindTopicsNumber_plot(k_topics)
+    #k_topics <- FindTopicsNumber(words_tdm, topics = 2:n_plots, metrics = c("Arun2010", "CaoJuan2009", "Griffiths2004", "Deveaud2014"), control = list(seed = 1))
+    #FindTopicsNumber_plot(k_topics)
 
     # Fit topic model
     words_k <- 3 #although the metrics suggest using 5-6, 3 is easier to interpret
@@ -632,8 +531,8 @@ TopicModeling <- function(dat_long, n_plots, plot_names) {
 
     # Using topics(words_lda), automatically assign plots to their respective topic model
     # Define blank plot and universal starting point
-    png("NA_plot.png") #used for when rownames(words_df_i) runs out when everything is automated
-    dev.off()
+    #png("NA_plot.png") #used for when rownames(words_df_i) runs out when everything is automated
+    #dev.off()
     start <- -0.5005
     image_size <- 0.5
 
@@ -789,14 +688,14 @@ GetWordAnalysis <- function(data, n_plots) {
     return(equations)
 }
 
-MakeSentimentBarPlot <- function(data, n_plots, plot_names, title="Satisfaction") {
+MakeSentimentBarPlot <- function(data, n_plots, plot_names, title = "Satisfaction") {
     "
     Plot the sentiment bar graph in order of ascending satisfaction scores.
     Input: data_long, n_plots, plot_names
     Output: the sentiment bar graph by ascending satisfaction scores
     "
 
-    if( title == 'Hiring' ) {x_label <- 'Interview Performance Plots'} else {x_label <- "Customer Journey Plots"}
+    if (title == 'Hiring') { x_label <- 'Interview Performance Plots' } else { x_label <- "Customer Journey Plots" }
 
     sentiment_df <- OrderSentimentDataframe(data, n_plots, plot_names)
     sentiment_bar_plot <- ggplot(sentiment_df, aes(x = plot_names, y = mean)) +

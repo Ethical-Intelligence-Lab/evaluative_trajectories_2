@@ -792,6 +792,7 @@ MakePCAFunction <- function(score_features_df) {
 
     # Define the columns that we want for the PCA: from embeddings to integral and the D1 & D2 predictors.
     score_features_ss <- subset(score_features_df, select = c(embeddings:integral, d1_avg_unweight:d1_avg_weight_end, d2_avg_unweight:d2_avg_weight_end))
+    score_features_ss$is_word <- NULL
 
     # Fit the PCA
     my_PCA <- principal(score_features_ss, 5, rotate = "promax")
@@ -889,8 +890,8 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
     # Reorder pcs according to their significance
     t_results_satisfaction <- as.data.frame(t(results_satisfaction))
     colnames(t_results_satisfaction) <- c("PC1\nFirst Derivative\nPredictors and End Value", "PC2\nSecond Derivative\nPredictors",
-                                          "PC3\nFluctuations, Embeddings,\nand Interestingness", "PC4\nNumber of Peaks\nand Extrema",
-                                          "PC5\nIntegral, Sentiment,\nMax, and Min")
+                                       "PC3\nEmbeddings, Sentiment\nIntegral, and Min", "PC4\nInterestingness, Max, \nNumber of Valleys and Extrema",
+                                       "PC5\nNumber of Peaks")
     results_satisfaction_long <- gather(t_results_satisfaction, key = principal_components, value = pcs_results, colnames(t_results_satisfaction)) #length(pcs)*n_folds
     satisfaction_new_order <- with(results_satisfaction_long, reorder(principal_components, pcs_results, median, na.rm = TRUE))
     results_satisfaction_long["satisfaction_new_order"] <- satisfaction_new_order
@@ -927,8 +928,8 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
     # Reorder pcs according to their significance
     t_results_pd <- as.data.frame(t(results_pd))
     colnames(t_results_pd) <- c("PC1\nFirst Derivative\nPredictors and End Value", "PC2\nSecond Derivative\nPredictors",
-                                "PC3\nFluctuations, Embeddings,\nand Interestingness", "PC4\nNumber of Peaks\nand Extrema",
-                                "PC5\nIntegral, Sentiment,\nMax, and Min")
+                                       "PC3\nEmbeddings, Sentiment\nIntegral, and Min", "PC4\nInterestingness, Max, \nNumber of Valleys and Extrema",
+                                       "PC5\nNumber of Peaks")
     results_pd_long <- gather(t_results_pd, key = principal_components, value = pcs_results, colnames(t_results_pd)) #length(pcs)*n_folds
     pd_new_order <- with(results_pd_long, reorder(principal_components, pcs_results, median, na.rm = TRUE))
     results_pd_long["pd_new_order"] <- pd_new_order
@@ -1321,22 +1322,6 @@ d_long <- cbind(d_long, interestingness)
 data_plot_long = NULL
 data_plot_long <- ProcessForPlots(d_long, n_plots, plot_names) #num_rows = num_plots*num_questions
 
-#### (2.1) MAKE BAR PLOT OF SATISFACTION SCORES
-grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)
-plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot, plot_names) #the little customer journey icons
-
-pdf(file = "customer_journeys_bar_plot.pdf", width = 17, height = 8)
-ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
-dev.off()
-
-
-grouped_bar_plot_wtp <- MakeGroupedBarPlot(data_plot_long, wtp = TRUE)
-plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot_wtp, plot_names) #the little customer journey icons
-
-pdf(file = "customer_journeys_bar_plot_wtp.pdf", width = 17, height = 8)
-ggdraw(insert_xaxis_grob(grouped_bar_plot_wtp, plot_images, position = "bottom"))
-dev.off()
-
 
 ## ========================================== (2) Plot Data and Save ==================================================
 if (FALSE) {
@@ -1344,13 +1329,28 @@ if (FALSE) {
     Create bar plot, word clouds, and sentiment plot
     "
 
+    #### (2.1) MAKE BAR PLOT OF SATISFACTION SCORES
+    grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)
+    plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot, plot_names) #the little customer journey icons
+
+    pdf(file = "customer_journeys_bar_plot.pdf", width = 17, height = 8)
+    ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
+    dev.off()
+
+
+    grouped_bar_plot_wtp <- MakeGroupedBarPlot(data_plot_long, wtp = TRUE)
+    plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot_wtp, plot_names) #the little customer journey icons
+
+    pdf(file = "customer_journeys_bar_plot_wtp.pdf", width = 17, height = 8)
+    ggdraw(insert_xaxis_grob(grouped_bar_plot_wtp, plot_images, position = "bottom"))
+    dev.off()
 
     #### (2.2) MAKE WORD CLOUDS (WARNING: takes ~5 minutes; feel free to skip)
     MakeWordClouds(d_long, n_plots, plot_names) #make word cloud images
-    arranged_word_clouds <- ArrangeWordClouds() #arrange word clouds into a grid
+    arranged_word_clouds <- ArrangeWordClouds(d_long, n_plots) #arrange word clouds into a grid
 
     pdf(file = "customer_journeys_word_clouds.pdf", width = 18, height = 8)
-    arranged_word_clouds
+    plot(arranged_word_clouds)
     dev.off()
 
 
@@ -1363,7 +1363,7 @@ if (FALSE) {
     dev.off()
 
     #### (2.4) MAKE FREQUENCY PLOTS FOR TOPIC MODELING
-    #topic_modeling <- TopicModeling(d_long, n_plots, plot_names)
+    topic_modeling <- TopicModeling(d_long, n_plots, plot_names)
 
     plot_files <- list.files(pattern = c("(.pdf|.png)"))
     file.move(plot_files, "./plots/analysis_plots", overwrite = TRUE)
@@ -1402,31 +1402,30 @@ write.csv(data.frame(word = dat), "./data/dat.csv", row.names = FALSE) #create w
 # Create a dataframe of features and subject scores
 score_features_df <- CreateDataFeaturesDF(d_long, features, n_after_exclusions)
 
-# Run regularized regression on all predictors
-#ridge_regression_wt_predictors <- AnalyzeRidgeRegression(score_features_df)
 
-# Run mixed-effects regression on PCA-reduced features
-#data_wt_PCs <- MakePCAFunction(score_features_df)
+if (TRUE) {
+    # Run regularized regression on all predictors
+    ridge_regression_wt_predictors <- AnalyzeRidgeRegression(score_features_df)
 
+    # Run mixed-effects regression on PCA-reduced features
+    data_wt_PCs <- MakePCAFunction(score_features_df)
 
-##### (3.3) RUN PREDICTIVE ANALYSES
-
-# Get performance of each predictor and PCA-reduced feature using cross-validation.
-#cross_validation_analysis_wt_pcs <- CrossValidationAnalysisWtPCs(data_wt_PCs, d_long, n_after_exclusions, n_plots)
-#pdf(file = "predictions_wt_pcs_cv_plot.pdf", width = 17, height = 9)
-#cross_validation_analysis_wt_pcs
-#dev.off()
-# errors pop up because I removed outliers
+    # Get performance of each predictor and PCA-reduced feature using cross-validation.
+    cross_validation_analysis_wt_pcs <- CrossValidationAnalysisWtPCs(data_wt_PCs, d_long, n_after_exclusions, n_plots)
+    pdf(file = "predictions_wt_pcs_cv_plot.pdf", width = 17, height = 9)
+    plot(cross_validation_analysis_wt_pcs)
+    dev.off()
+}
 
 cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(score_features_df, d_long, n_after_exclusions, n_plots)
 pdf(file = "predictions_wt_predictors_cv_plot.pdf", width = 17, height = 9)
-cross_validation_analysis_wt_predictors
+plot(cross_validation_analysis_wt_predictors)
 dev.off()
 
 
 cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(score_features_df, d_long, n_after_exclusions, n_plots, trajectories_separate = TRUE)
 pdf(file = "predictions_wt_predictors_cv_plot_traj_separate.pdf", width = 17, height = 9)
-cross_validation_analysis_wt_predictors
+plot(cross_validation_analysis_wt_predictors)
 dev.off()
 
 ## =========================================== (4) Move Files ====================================================

@@ -103,7 +103,7 @@ Get_stats <- function(data, n_plots) {
     Every plot repeats every 8 times, since there are 8 plots title.
     Hence the 'seq' indeces for each calculation
     Input: data_long, n_plots
-    Output: equations (a list of means and standard deviations of enjoyment and pd scores for every plot)
+    Output: equations (a list of means and standard deviations of willingness scores for every plot)
     "
 
     # Get means and standard deviations
@@ -148,7 +148,7 @@ MakeGroupedBarPlot <- function(data_plot_long) {
         scale_fill_manual(
             name = "Judgment Type",
             breaks = c("enjoyment_score_avg"),
-            labels = c("Enjoyment"),
+            labels = c("Willingness to Buy"),
             values = c("#56B4E9"),
             guide = guide_legend(title.position = "top")
         )
@@ -160,18 +160,17 @@ MakeGroupedBarPlotImages <- function(LifelinesPlot, data_plot_long) {
     "
     Make a plotter function that produces 'clean' (no labels) version of individual images
     for the x-axis. Then, plot the images in order of ascending satisfaction scores,
-    which can be determined by the order in data_plot_long$plot_names[1:27].
+    which can be determined by the order in data_plot_long$plot_names[1:n].
     Input: grouped_bar_plot, plot_names
     Output: the plot labels for the grouped bar graph and the sentiment bar graph
     "
 
-    # Assemble images in the order of data_plot_long$plot_names[1:27]
     plot_images <- axis_canvas(LifelinesPlot, axis = 'x')
 
     sorted_cluster_names <- c(data_plot_long[, 'cluster_names'])
 
-    for (i in 1:27) {
-        plot_images <- plot_images + draw_image(paste0("./plots/cluster/", sorted_cluster_names[i], ".png"), x = i - 0.5)
+    for (i in 1:n_clusters) {
+        plot_images <- plot_images + draw_image(paste0("./plots/cluster/", sorted_cluster_names[i], "_", n_clusters, ".png"), x = i - 0.5)
     }
 
     return(plot_images)
@@ -242,152 +241,10 @@ MakeSentimentBarPlot <- function(data, n_plots, plot_names) {
 ##================================================================================================================
 ##FUNCTIONS FOR ANALYSIS##
 ##================================================================================================================
-GetMainEffects <- function(data, data_long, data_plot_long, n_plots, plot_names, my_embeddings) {
-    "
-    This function gets various correlations and main effects of the participant data.
-    Input: This function takes as input a dataframe with rows = num_ss*num_plots*num_questions.
-          (e3_dat, d_long, data_plot_long, data_plot_long, n_plots, plot_names, my_embeddings)
-    Output: various correlation and linear regression results; also, linear and quadratic plots ordered by enjoyment scores
-    "
+GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
 
-    # 1. Question & Plot Types
-
-    data$plot_type_n <- as.numeric(factor(data$plot_names)) #create numeric version of plot_names
-    data$score_n <- as.numeric(data$score) #create numeric version of score (which are characters)
-    data$question_type_n <- as.numeric(factor(data$question_type, levels = unique(data$question_type)))
-    data$willingness_to_pay <- as.numeric(data$willingness_to_pay) #create numeric version of willingness_to_pay
-    data$subject_n <- as.numeric(factor(data$subject))
-
-    print('Did answers vary depending on question and plot type?')
-    effect_mod <- lm(data$score_n ~ data$question_type_n * data$plot_type_n + (1 | data$subject_n))
-    print(summary(effect_mod))
-    print('-----------------------------------------------------')
-
-    print('Which question type scored higher?')
-    t_mod <- t.test(data$score_n ~ data$question_type, paired = TRUE)
-    print(t_mod)
-    print(paste('Means: ', unique(data$question_type)[1], ': ', tapply(data$score_n, data$question_type, mean)[[unique(data$question_type)[1]]]))
-    print(paste('Means: ', unique(data$question_type)[2], ': ', tapply(data$score_n, data$question_type, mean)[[unique(data$question_type)[2]]]))
-    print(paste('SDs: ', unique(data$question_type)[1], ': ', tapply(data$score_n, data$question_type, sd)[[unique(data$question_type)[1]]]))
-    print(paste('SDs: ', unique(data$question_type)[2], ': ', tapply(data$score_n, data$question_type, sd)[[unique(data$question_type)[2]]]))
-    print('-----------------------------------------------------')
-
-    print('Did sentiment scores vary depending on plot type?')
-    effect_mod <- lm(data = data, sentiment_score ~ plot_type_n + (1 | subject_n))
-    print(summary(effect_mod))
-    print('-----------------------------------------------------')
-
-    print('Do the sentiment scores correlate with enjoyment ratings?')
-    enjoyment_corr <- cor.test(data$sentiment_score[data$question_type == "enjoyment"],
-                               data$score_n[data$question_type == "enjoyment"])
-    print('sentiment vs. enjoyment:')
-    print(enjoyment_corr)
-    print('-----------------------------------------------------')
-
-    print('Do the sentiment scores correlate with personal desirability ratings?')
-    pd_corr <- cor.test(data$sentiment_score[data$question_type == "personal_desirability"],
-                        data$score_n[data$question_type == "personal_desirability"])
-    print('sentiment vs. personal desirability:')
-    print(pd_corr)
-    print('-----------------------------------------------------')
-
-    # 3. Willingness to Pay
-
-    print('Did willingness to pay vary depending on plot type?')
-    wtp_mod <- lm(data = data, willingness_to_pay ~ plot_type_n + (1 | subject_n))
-    print(summary(wtp_mod))
-    print('-----------------------------------------------------')
-
-    print('Does willingness to pay correlate with enjoyment ratings?')
-    wtp_enjoyment_corr <- cor.test(data$willingness_to_pay[data$question_type == "enjoyment"],
-                                   data$score_n[data$question_type == "enjoyment"])
-    print('willingness to pay vs. enjoyment:')
-    print(wtp_enjoyment_corr)
-    print('-----------------------------------------------------')
-
-    print('Does willingness to pay correlate with personal desirability ratings?')
-    wtp_pd_corr <- cor.test(data$willingness_to_pay[data$question_type == "personal_desirability"],
-                            data$score_n[data$question_type == "personal_desirability"])
-    print('willingness to pay vs. personal desirability:')
-    print(wtp_pd_corr)
-    print('-----------------------------------------------------')
-
-    # 4. Difference between linear and quadratic models for enjoyment and personal desirability
-
-    # Get the order of average enjoyment scores
-    stats <- Get_stats(data_long, n_plots)
-    data_plot <- data.frame(plot_names = plot_names,
-                            enjoyment_score_avg = unlist(stats)[c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE)],
-                            enjoyment_score_sd = unlist(stats)[c(FALSE, TRUE, FALSE, FALSE, FALSE, FALSE)],
-                            pd_score_avg = unlist(stats)[c(FALSE, FALSE, TRUE, FALSE, FALSE, FALSE)],
-                            pd_score_sd = unlist(stats)[c(FALSE, FALSE, FALSE, TRUE, FALSE, FALSE)],
-                            wtp_score_avg = unlist(stats)[c(FALSE, FALSE, FALSE, FALSE, TRUE, FALSE)],
-                            wtp_score_sd = unlist(stats)[c(FALSE, FALSE, FALSE, FALSE, FALSE, TRUE)])
-    data_plot <- data_plot[order(data_plot$enjoyment_score_avg),]
-    data_plot$order_num <- 1:n_plots
-
-    # Add a column of the difference between the average ratings of enjoyment and personal desirability for each customer journey
-    data_plot["enjoyment_pd_diff"] <- data_plot["enjoyment_score_avg"] - data_plot["pd_score_avg"]
-    enjoyment_score_avg <- data_plot[, "enjoyment_score_avg"]
-    pd_score_avg <- data_plot[, "pd_score_avg"]
-    enjoyment_pd_diff <- data_plot[, "enjoyment_pd_diff"]
-
-    print('Does a quadratic regression fit the shape of the difference between enjoyment and desirability ratings better than a linear one does?')
-    print('First, the linear fit:')
-    enjoyment_pd_diff_lin <- lm(enjoyment_pd_diff ~ data_plot$order_num)
-    print(summary(enjoyment_pd_diff_lin))
-    linear_plot <- ggplot(enjoyment_pd_diff_lin, aes(data_plot$order_num, enjoyment_pd_diff)) +
-        theme_classic() +
-        geom_point() +
-        stat_smooth(method = lm, formula = y ~ x) +
-        theme(axis.text = element_text(color = "black", size = 20),
-              axis.title.y = element_blank(),
-              axis.title.x = element_blank())
-    print('-----------------------------------------------------')
-
-    print('Second, the quadratic fit:')
-    enjoyment_pd_diff_quadratic <- lm(enjoyment_pd_diff ~ data_plot$order_num + I(data_plot$order_num^2))
-    print(summary(enjoyment_pd_diff_quadratic))
-    quadratic_plot <- ggplot(enjoyment_pd_diff_quadratic, aes(data_plot$order_num, enjoyment_pd_diff)) +
-        theme_classic() +
-        geom_point() +
-        stat_smooth(method = lm, formula = y ~ poly(x, 2, raw = TRUE)) +
-        theme(axis.text = element_text(color = "black", size = 20),
-              axis.title.y = element_blank(),
-              axis.title.x = element_blank())
-    print('-----------------------------------------------------')
-
-    print('Difference between linear and quadratic models:')
-    enjoyment_pd_diff_lrt <- lrtest(enjoyment_pd_diff_lin, enjoyment_pd_diff_quadratic)
-    print(enjoyment_pd_diff_lrt)
-    print('-----------------------------------------------------')
-
-    linear_quad <- ggarrange(linear_plot, quadratic_plot, nrow = 1, ncol = 2)
-    # theme(plot.margin = margin(0.1,0.1,-0.5,0.1, "cm"))
-    linear_quad <- annotate_figure(linear_quad,
-                                   left = text_grob("Difference Between enjoyment and Desirability", color = "black", face = "bold", size = 20, rot = 90),
-                                   bottom = text_grob("Plot Ordered by enjoyment Scores", color = "black", face = "bold", size = 20, vjust = 0.4))
-    print(linear_quad)
-
-    print('Regress enjoyment on embeddings: ')
-    enjoyment_embedding_df <- cbind(enjoyment = data_long$enjoyment, my_embeddings[2:513])
-    enjoyment_embedding_lm <- lm(enjoyment ~ ., data = enjoyment_embedding_df)
-    #print('enjoyment vs. embeddings:')
-    #print(summary(enjoyment_embedding_lm))
-    # Error: 486 not defined because of singularities
-    # I checked for multicollinearity with cor(my_embeddings[2:513]) but did not find any perfect correlations
-    # (except for of course the correlation of a given variable with itself, which had a coefficient of 1).
-
-    # print('Regress personal desirability on embeddings: ')
-    # pd_embedding_df <- cbind(personal_desirability = data_long$personal_desirability, my_embeddings[2:513])
-    # pd_embedding_lm <- lm(personal_desirability ~ ., data = pd_embedding_df)
-    #print('personal desirability vs. embeddings:')
-    #print(summary(pd_embedding_lm))
-    # Same error as above
-
-    # Return plots
-    # plot_list <- list(linear_plot, quadratic_plot)
-    return(linear_quad)
+    # "We found a significant effect of cluster type on willingness to buy: "
+    print(summary(lm(data = data, willing ~ cluster_labels)))
 
 }
 
@@ -483,7 +340,7 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
 
     y_label <- paste0("Prediction Accuracy\n(Cross-Validated\n", y_axis, ")")
 
-    box_label <- "Enjoyment"
+    box_label <- "Willingness to Buy"
     if (y_axis != "Pearson's r") {
         box_label <- "Raffle Choice"
     }
@@ -542,7 +399,7 @@ MakePCAFunction <- function(score_features_df) {
     "
 
     # Define the columns that we want for the PCA: from embeddings to integral and the D1 & D2 predictors.
-    score_features_ss <- subset(score_features_df, select = c(embeddings:integral, d1_avg_unweight:d1_avg_weight_end, d2_avg_unweight:d2_avg_weight_end))
+    score_features_ss <- subset(score_features_df, select = c(number_peaks:d2_avg_weight_end, embeddings:sentiment_score))
 
     # Fit the PCA
     my_PCA <- principal(score_features_ss, 5, rotate = "promax")
@@ -553,7 +410,7 @@ MakePCAFunction <- function(score_features_df) {
     # Print, then save the features corrplot
     corrplot(my_PCA$Structure, method = "circle", mar = c(0, 0, 2, 0))
     mtext("Features Correlation Matrix \nover PCs", at = 1, line = 1, cex = 1.5)
-    pdf(file = "features_corrplot.pdf")
+    pdf(file = "./plots/features_corrplot.pdf")
     corrplot(my_PCA$Structure, method = "circle", mar = c(0, 0, 4, 0))
     mtext("Features Correlation Matrix \nover PCs", at = 1, line = 1, cex = 1.5)
     dev.off()
@@ -565,38 +422,24 @@ MakePCAFunction <- function(score_features_df) {
     score_features_df <- cbind(score_features_df, my_PCA$scores)
 
     # 1. Fit mixed effects regression predicting enjoyment
-    enjoyment_features <- lmer(data = score_features_df,
-                               enjoyment ~ PC1 +
+    willing_features <- lmer(data = score_features_df,
+                               willing ~ PC1 +
                                    PC2 +
                                    PC3 +
                                    PC4 +
                                    PC5 +
-                                   (1 | subject) +
-                                   (1 | plot_names))
+                                   (1 | Unnamed..0) +
+                                   (1 | genre))
 
-    print('enjoyment vs. features:')
-    print(summary(enjoyment_features, correlation = TRUE))
-
-
-    # 2. Fit mixed effects regression predicting personal desirability
-    pd_features <- lmer(data = score_features_df,
-                        personal_desirability ~ PC1 +
-                            PC2 +
-                            PC3 +
-                            PC4 +
-                            PC5 +
-                            (1 | subject) +
-                            (1 | plot_names))
-
-    print('personal desirability vs. features:')
-    print(summary(pd_features, correlation = TRUE))
+    print('WTP vs. features:')
+    print(summary(willing_features, correlation = TRUE))
 
     return(score_features_df)
 
 }
 
 
-CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
+CrossValidationAnalysisWtPCs <- function(dat, n_ss, n_plots) {
     "
     Measure the performance of each of our PCs by doing cross-validated regressions, holding out
     one participant for each cross-validation step.
@@ -613,9 +456,9 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
 
     #-------------------------------------------------------------------------------------------------------------------
 
-    #1. enjoyment
-    results_enjoyment <- data.frame(matrix(NA, nrow = length(pcs), ncol = n_folds))
-    rownames(results_enjoyment) <- pcs
+    #1. WTP
+    results <- data.frame(matrix(NA, nrow = length(pcs), ncol = n_folds))
+    rownames(results) <- pcs
 
     for (i in 1:length(pcs)) {
         for (j in 1:n_folds) {
@@ -625,23 +468,24 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
             for (k in 1:n_plots) {
                 trainIndeces <- indeces[(folds == j) & (folds2 != k)]
                 testIndeces <- indeces[(folds == j) & (folds2 == k)]
-                fitpc <- lm(enjoyment ~ get(pcs[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
+
+                fitpc <- lm(willing ~ get(pcs[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
                 ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
-                truths <- c(truths, dat$enjoyment[testIndeces])
+                truths <- c(truths, dat$willing[testIndeces])
             }
 
-            results_enjoyment[i, j] <- cor(truths, ss_results)
+            results[i, j] <- cor(truths, ss_results)
         }
 
-        print(paste('enjoyment: mean PC result,', pcs[i], ': ', mean(as.numeric(results_enjoyment[i,]), na.rm = TRUE)))
-        print(paste('enjoyment: median PC result,', pcs[i], ': ', median(as.numeric(results_enjoyment[i,]), na.rm = TRUE)))
+        print(paste('wtp: mean PC result,', pcs[i], ': ', mean(as.numeric(results[i,]), na.rm = TRUE)))
+        print(paste('wtp: median PC result,', pcs[i], ': ', median(as.numeric(results[i,]), na.rm = TRUE)))
     }
 
     # Reorder pcs according to their significance
-    t_results_enjoyment <- as.data.frame(t(results_enjoyment))
-    colnames(t_results_enjoyment) <- c("PC1\nFirst Derivative\nPredictors and End Value", "PC2\nSecond Derivative\nPredictors",
-                                       "PC3\nFluctuations, Embeddings,\nand Interestingness", "PC4\nNumber of Peaks\nand Extrema",
-                                       "PC5\nIntegral, Sentiment,\nMax, and Min")
+    t_results_enjoyment <- as.data.frame(t(results))
+    colnames(t_results_enjoyment) <- c("PC1\nSecond Derivative\nPredictors", "PC2\nFirst Derivative\nPredictors and End Value",
+                                       "PC3\nMin, Max\nSentiment, and Integral", "PC4\nNumber of Peaks\nValleys, and Extrema",
+                                       "PC5\nInterestingness")
     results_enjoyment_long <- gather(t_results_enjoyment, key = principal_components, value = pcs_results, colnames(t_results_enjoyment)) #length(pcs)*n_folds
     enjoyment_new_order <- with(results_enjoyment_long, reorder(principal_components, pcs_results, median, na.rm = TRUE))
     results_enjoyment_long["enjoyment_new_order"] <- enjoyment_new_order
@@ -653,12 +497,11 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
 
     #3. Plotting
     pcs_results_ordered <- data.frame(pcs_order = results_enjoyment_long$enjoyment_new_order,
-                                      enjoyment_results = results_enjoyment_long$pcs_results,
-                                      pd_results = results_pd_long$pcs_results) #combine enjoyment and pd results
-    pcs_results_long <- gather(pcs_results_ordered, key = question_type, value = results, enjoyment_results, pd_results)
+                                      enjoyment_results = results_enjoyment_long$pcs_results) #combine enjoyment and pd results
+    pcs_results_long <- gather(pcs_results_ordered, key = question_type, value = results, enjoyment_results)
 
     # Make boxplot from CV_plotter function
-    #pcs_plot <- CV_plotter(pcs_results_long, pcs_results_long$pcs_order, pcs_results_long$results, pcs_results_long$question_type, "Principal Components", summary_enjoyment, summary_pd)
+    pcs_plot <- CV_plotter(pcs_results_long, pcs_results_long$pcs_order, pcs_results_long$results, pcs_results_long$question_type, "Principal Components", summary_enjoyment)
 
     # Get the labels
     x_labs <- ggplot_build(pcs_plot)$layout$panel_params[[1]]$
@@ -956,7 +799,7 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
     predictors <- c("Embeddings", "Interestingness", "Sentiment Score", "Maximum", "Minimum", "End Value", "Number of\nPeaks", "Number of\nValleys", "Number of\nExtrema", "Integral",
                     "1st Derivative", "1st Derivative\nPrime", "1st Derivative\nAscending", "1st Derivative\nDescending", "1st Derivative\nEnd",
                     "2nd Derivative", "2nd Derivative\nPrime", "2nd Derivative\nAscending", "2nd Derivative\nDescending", "2nd Derivative\nEnd")
-    if (colnames(dat)[10] != "End Value") {
+    if (colnames(dat)[10] != "Integral") {
         setnames(dat, old = predictors_old, new = predictors)
     }
 
@@ -1116,7 +959,7 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
         print("enjoyment: --------------------------------------------------------------------------------------")
         for (i in x_labs) {
             print(paste0(i, " --------------------------------------------------------------------------------------"))
-            wilcox_test_wt_enjoyment[[i]] <- wilcox.test(t_results_raffle[, i], y = NULL, alternative = "greater",
+            wilcox_test_wt_enjoyment[[i]] <- wilcox.test(t_results_raffle[, i], y = rep(0.125, length(t_results_raffle[, i])), alternative = "greater",
                                                          conf.int = TRUE)
             p_value_stars_enjoyment[i] <- stars.pval(wilcox_test_wt_enjoyment[[i]]$"p.value") #get stars
 
@@ -1148,11 +991,11 @@ movies <- c('Knock at the Cabin', 'Dungeons and Dragons', 'She Said', 'I Wanna D
 plot_names <- genres
 n_plots <- length(genres)
 sentence_data = FALSE
-n_clusters <- 27
+n_clusters <- 50
 cluster_names_sorted <- c()
 
 # Read Data and Create Folder for Saving Files
-if (sentence_data) { fname <- './data/data_sentence.csv' } else { fname <- './data/data_long_cluster.csv' }
+if (sentence_data) { fname <- './data/data_sentence.csv' } else { fname <- paste0('./data/data_long_cluster_', n_clusters,'.csv') }
 
 d_long <- read.csv(fname)
 dir.create("plots/analysis_plots")
@@ -1180,7 +1023,7 @@ analyze_words_df <- cbind(genres = genres, words = words_df$V1)
 if (sentence_data) { fname <- "word_analysis_sentence.csv" } else { fname <- "word_analysis.csv" }
 write.csv(analyze_words_df, , row.names = FALSE) #create word analysis csv for google colab code
 
-if (sentence_data) { fname <- "d_long_sentence.csv" } else { fname <- "d_long.csv" }
+if (sentence_data) { fname <- "./data/d_long_sentence.csv" } else { fname <- "./data/d_long.csv" }
 write.csv(d_long, fname, row.names = FALSE) #create word analysis csv for google colab code
 
 ### (ii) CREATE SEMANTIC EMBEDDINGS DATAFRAME [**NB: YOU NEED TO HAVE ALREADY EXTRACTED EMBEDDINGS FOR word_analysis.csv]
@@ -1210,32 +1053,30 @@ data_plot_long <- ProcessForPlots(d_long, n_plots, plot_names)
 grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)
 plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot, data_plot_long) #the little customer journey icons
 
-pdf(file = "customer_journeys_bar_plot.pdf", width = 17, height = 8)
+pdf(file = paste0("./plots/customer_journeys_bar_plot_", "k=", n_clusters, ".pdf"), width = 17, height = 8)
 ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
 dev.off()
 
 
 ## ========================================== (2) Plot Data and Save ==================================================
+
 if (FALSE) {
     "
     Create bar plot, word clouds, and sentiment plot
     "
-
-
     #### (2.2) MAKE WORD CLOUDS (WARNING: takes ~5 minutes; feel free to skip)
     MakeWordClouds(d_long, n_plots, plot_names) #make word cloud images
     arranged_word_clouds <- ArrangeWordClouds() #arrange word clouds into a grid
 
-    pdf(file = "customer_journeys_word_clouds.pdf", width = 18, height = 8)
-    arranged_word_clouds
+    pdf(file = "./plots/customer_journeys_word_clouds.pdf", width = 18, height = 8)
+    plot(arranged_word_clouds)
     dev.off()
-
 
     #### (2.3) MAKE PLOT OF SENTIMENT SCORES, ORDERED BY enjoyment SCORES
     sentiment_bar_plot <- MakeSentimentBarPlot(d_long, n_plots, plot_names)
     sentiment_plot_images <- MakeGroupedBarPlotImages(sentiment_bar_plot, plot_names) #the little customer journey icons
 
-    pdf(file = "customer_journeys_sentiment_plot.pdf", width = 17, height = 8)
+    pdf(file = "./plots/customer_journeys_sentiment_plot.pdf", width = 17, height = 8)
     ggdraw(insert_xaxis_grob(sentiment_bar_plot, sentiment_plot_images, position = "bottom"))
     dev.off()
 
@@ -1252,10 +1093,6 @@ Get main statistical effects, and run descriptive and predictive analyses
 
 #### (3.1) GET MAIN EFFECTS
 
-# Get dataframe for analysis (dat), with nrows = num_ss*num_plots*num_questions
-#dat <- gather(d_long, key = question_type, value = score, enjoyment, personal_desirability)
-#dat <- dplyr::select(dat, subject, plot_names, question_type, score, willingness_to_pay) #rows = num_ss*num_plots*num_questions
-
 d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment, model_type = 'ai')
 d_long$sentiment_score[is.na(d_long$sentiment_score)] <- 0
 
@@ -1268,16 +1105,7 @@ d_long[, "is_word"] <- lapply(d_long["word"], is.word)
 if (sentence_data) { fname <- "./data/d_long_sentence.csv" } else { fname <- "./data/d_long.csv" }
 write.csv(data.frame(word = d_long), fname, row.names = FALSE) #create word analysis csv for google colab code
 
-if (FALSE) {
-    # Get main statistical effects
-    main_effects <- GetMainEffects(d_long, d_long, data_plot_long, n_plots, plot_names, my_embeddings)
-    #See error: 486 not defined because of singularities; checked for perfect correlation but did not find any
-
-    pdf(file = "linear_vs_quadratic_fit.pdf", width = 13, height = 6.5)
-    plot(main_effects)
-    dev.off()
-}
-
+GetMainEffects(d_long, n_plots, plot_names, my_embeddings)
 
 #### (3.2) RUN DESCRIPTIVE ANALYSES
 
@@ -1285,59 +1113,72 @@ if (FALSE) {
 dat <- d_long
 d_long <- CreateDataFeaturesDF(d_long)
 
-# Run regularized regression on all predictors
-#ridge_regression_wt_predictors <- AnalyzeRidgeRegression(score_features_df, metric='enjoyment')
-
 # Run mixed-effects regression on PCA-reduced features
-#data_wt_PCs <- MakePCAFunction(score_features_df)
+data_wt_PCs <- MakePCAFunction(d_long)
 
 
 ##### (3.3) RUN PREDICTIVE ANALYSES
 
 # Get performance of each predictor and PCA-reduced feature using cross-validation.
-#cross_validation_analysis_wt_pcs <- CrossValidationAnalysisWtPCs(data_wt_PCs, d_long, n_after_exclusions, n_plots)
-#pdf(file = "predictions_wt_pcs_cv_plot.pdf", width = 17, height = 9)
-#cross_validation_analysis_wt_pcs
-#dev.off()
+n_after_exclusions <- dim(d_long)[1] / n_plots
+cross_validation_analysis_wt_pcs <- CrossValidationAnalysisWtPCs(data_wt_PCs, n_after_exclusions, n_plots)
+pdf(file = "./plots/predictions_wt_pcs_cv_plot.pdf", width = 17, height = 9)
+plot(cross_validation_analysis_wt_pcs)
+dev.off()
+
 # Cross Validation for Raffle
 if (FALSE) {
-    cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE, random = FALSE, fold_amount = 180, perf_metric = "F1")
+    cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE,
+                                                                                       random = FALSE, fold_amount = 180,
+                                                                                       perf_metric = "F1")
     pdf(file = "./plots/analysis_plots/raffle_kfold_f1.pdf", width = 17, height = 9)
     plot(cross_validation_analysis_wt_predictors_raffle)
     dev.off()
 
-    cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE, random = FALSE, fold_amount = 180, perf_metric = "Balanced Accuracy")
+    cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE,
+                                                                                       random = FALSE, fold_amount = 180,
+                                                                                       perf_metric = "Balanced Accuracy")
     pdf(file = "./plots/analysis_plots/raffle_kfold_balanced_acc.pdf", width = 17, height = 9)
     plot(cross_validation_analysis_wt_predictors_raffle)
     dev.off()
 
-    cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = TRUE, random = FALSE, fold_amount = 180, perf_metric = "F1")
+    cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = TRUE,
+                                                                                       random = FALSE, fold_amount = 180,
+                                                                                       perf_metric = "F1")
     pdf(file = "./plots/analysis_plots/raffle_nokfold_f1.pdf", width = 17, height = 9)
     plot(cross_validation_analysis_wt_predictors_raffle)
     dev.off()
 
-    cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = TRUE, random = FALSE, fold_amount = 180, perf_metric = "Balanced Accuracy")
+    cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = TRUE,
+                                                                                       random = FALSE, fold_amount = 180,
+                                                                                       perf_metric = "Balanced Accuracy")
     pdf(file = "./plots/analysis_plots/raffle_nokfold_balanced_accuracy.pdf", width = 17, height = 9)
     plot(cross_validation_analysis_wt_predictors_raffle)
     dev.off()
 
-    cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE, random = TRUE, fold_amount = 10, perf_metric = "Balanced Accuracy")
+    cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE,
+                                                                                       random = TRUE, fold_amount = 10,
+                                                                                       perf_metric = "Balanced Accuracy")
     pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_balanced_10.pdf"), width = 17, height = 9)
     plot(cross_validation_analysis_wt_predictors_raffle)
     dev.off()
 
-    cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE, random = TRUE, fold_amount = 10, perf_metric = "F1")
+    cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE,
+                                                                                       random = TRUE, fold_amount = 10,
+                                                                                       perf_metric = "F1")
     pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_f1_10.pdf"), width = 17, height = 9)
     plot(cross_validation_analysis_wt_predictors_raffle)
     dev.off()
 
-    cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE, random = TRUE, fold_amount = 10, perf_metric = "Accuracy")
+    cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE,
+                                                                                       random = TRUE, fold_amount = 10,
+                                                                                       perf_metric = "Accuracy")
     pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_accuracy_10.pdf"), width = 17, height = 9)
     plot(cross_validation_analysis_wt_predictors_raffle)
     dev.off()
 }
 
-if (FALSE) {
+if (TRUE) {
     # Cross Validation on Whole dataset
     if (sentence_data) { fname <- "./plots/analysis_plots_sentence/predictions_wt_predictors_cv_plot_sentence.pdf" } else { fname <- "./plots/analysis_plots/predictions_wt_predictors_cv_plot.pdf" }
     cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(d_long, n_plots)
@@ -1396,8 +1237,8 @@ if (FALSE) {
 }
 
 
-##================================================================================================================
-##END##
-##================================================================================================================
+##=====##
+## END ##
+##=====##
 
 

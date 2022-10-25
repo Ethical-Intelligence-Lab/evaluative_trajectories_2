@@ -2,6 +2,7 @@ Data and Code for 'Evaluative Summaries'
 Julian De Freitas, Pechthida Kim, Tomer Ullman
 
 ## Instructions
+* For topic modelling, install 'gsl' (If you use homebrew, execute `brew install gsl`)
 * First run `tools/Lifelines_Generate_Plots.R`, since we will use the variables generated here in the other analyses.
 
 ### E1 Customer Journeys:

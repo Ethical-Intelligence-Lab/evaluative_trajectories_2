@@ -1,7 +1,6 @@
 # Analysis script for 'Evaluative Summaries'
 # Experiment 6
 
-## Clear workspace
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #set working directory to current directory
 
 # Import libraries
@@ -604,16 +603,6 @@ ArrangeWordClouds <- function() {
         annotation_custom(h, xmin = 6.5, xmax = 7.5, ymin = 8, ymax = 10) +
         annotation_custom(i, xmin = 7.5, xmax = 8.5, ymin = 8, ymax = 10) +
 
-        annotation_custom(j, xmin = -0.25, xmax = 0.25, ymin = 7, ymax = 8) +
-        annotation_custom(k, xmin = 0.75, xmax = 1.25, ymin = 7, ymax = 8) +
-        annotation_custom(l, xmin = 1.75, xmax = 2.25, ymin = 7, ymax = 8) +
-        annotation_custom(m, xmin = 2.75, xmax = 3.25, ymin = 7, ymax = 8) +
-        annotation_custom(n, xmin = 3.75, xmax = 4.25, ymin = 7, ymax = 8) +
-        annotation_custom(o, xmin = 4.75, xmax = 5.25, ymin = 7, ymax = 8) +
-        annotation_custom(p, xmin = 5.75, xmax = 6.25, ymin = 7, ymax = 8) +
-        annotation_custom(q, xmin = 6.75, xmax = 7.25, ymin = 7, ymax = 8) +
-        annotation_custom(r, xmin = 7.75, xmax = 8.25, ymin = 7, ymax = 8) +
-
         annotation_custom(s, xmin = -0.5, xmax = 0.5, ymin = 4, ymax = 6) +
         annotation_custom(t, xmin = 0.5, xmax = 1.5, ymin = 4, ymax = 6) +
         annotation_custom(u, xmin = 1.5, xmax = 2.5, ymin = 4, ymax = 6) +
@@ -624,6 +613,26 @@ ArrangeWordClouds <- function() {
         annotation_custom(z, xmin = 6.5, xmax = 7.5, ymin = 4, ymax = 6) +
         annotation_custom(aa, xmin = 7.5, xmax = 8.5, ymin = 4, ymax = 6) +
 
+         annotation_custom(kk, xmin = -0.5, xmax = 0.5, ymin = 0, ymax = 2) +
+        annotation_custom(ll, xmin = 0.5, xmax = 1.5, ymin = 0, ymax = 2) +
+        annotation_custom(mm, xmin = 1.5, xmax = 2.5, ymin = 0, ymax = 2) +
+        annotation_custom(nn, xmin = 2.5, xmax = 3.5, ymin = 0, ymax = 2) +
+        annotation_custom(oo, xmin = 3.5, xmax = 4.5, ymin = 0, ymax = 2) +
+        annotation_custom(pp, xmin = 4.5, xmax = 5.5, ymin = 0, ymax = 2) +
+        annotation_custom(qq, xmin = 5.5, xmax = 6.5, ymin = 0, ymax = 2) +
+        annotation_custom(rr, xmin = 6.5, xmax = 7.5, ymin = 0, ymax = 2) +
+        annotation_custom(ss, xmin = 7.5, xmax = 8.5, ymin = 0, ymax = 2) +
+
+        annotation_custom(j, xmin = -0.25, xmax = 0.25, ymin = 7, ymax = 8) +
+        annotation_custom(k, xmin = 0.75, xmax = 1.25, ymin = 7, ymax = 8) +
+        annotation_custom(l, xmin = 1.75, xmax = 2.25, ymin = 7, ymax = 8) +
+        annotation_custom(m, xmin = 2.75, xmax = 3.25, ymin = 7, ymax = 8) +
+        annotation_custom(n, xmin = 3.75, xmax = 4.25, ymin = 7, ymax = 8) +
+        annotation_custom(o, xmin = 4.75, xmax = 5.25, ymin = 7, ymax = 8) +
+        annotation_custom(p, xmin = 5.75, xmax = 6.25, ymin = 7, ymax = 8) +
+        annotation_custom(q, xmin = 6.75, xmax = 7.25, ymin = 7, ymax = 8) +
+        annotation_custom(r, xmin = 7.75, xmax = 8.25, ymin = 7, ymax = 8) +
+
         annotation_custom(bb, xmin = -0.25, xmax = 0.25, ymin = 3, ymax = 4) +
         annotation_custom(cc, xmin = 0.75, xmax = 1.25, ymin = 3, ymax = 4) +
         annotation_custom(dd, xmin = 1.75, xmax = 2.25, ymin = 3, ymax = 4) +
@@ -633,16 +642,6 @@ ArrangeWordClouds <- function() {
         annotation_custom(hh, xmin = 5.75, xmax = 6.25, ymin = 3, ymax = 4) +
         annotation_custom(ii, xmin = 6.75, xmax = 7.25, ymin = 3, ymax = 4) +
         annotation_custom(jj, xmin = 7.75, xmax = 8.25, ymin = 3, ymax = 4) +
-
-        annotation_custom(kk, xmin = -0.5, xmax = 0.5, ymin = 0, ymax = 2) +
-        annotation_custom(ll, xmin = 0.5, xmax = 1.5, ymin = 0, ymax = 2) +
-        annotation_custom(mm, xmin = 1.5, xmax = 2.5, ymin = 0, ymax = 2) +
-        annotation_custom(nn, xmin = 2.5, xmax = 3.5, ymin = 0, ymax = 2) +
-        annotation_custom(oo, xmin = 3.5, xmax = 4.5, ymin = 0, ymax = 2) +
-        annotation_custom(pp, xmin = 4.5, xmax = 5.5, ymin = 0, ymax = 2) +
-        annotation_custom(qq, xmin = 5.5, xmax = 6.5, ymin = 0, ymax = 2) +
-        annotation_custom(rr, xmin = 6.5, xmax = 7.5, ymin = 0, ymax = 2) +
-        annotation_custom(ss, xmin = 7.5, xmax = 8.5, ymin = 0, ymax = 2) +
 
         annotation_custom(tt, xmin = -0.25, xmax = 0.25, ymin = -1, ymax = 0) +
         annotation_custom(uu, xmin = 0.75, xmax = 1.25, ymin = -1, ymax = 0) +
@@ -864,8 +863,8 @@ TopicModeling <- function(dat_long, n_plots, plot_names) {
     # words_tdm                      ## DTM still tf-weighted
 
     # Finding a reasonable number of topics
-    k_topics <- FindTopicsNumber(words_tdm, topics = 2:n_plots, metrics = c("Arun2010", "CaoJuan2009", "Griffiths2004", "Deveaud2014"), control = list(seed = 1))
-    FindTopicsNumber_plot(k_topics)
+    #k_topics <- FindTopicsNumber(words_tdm, topics = 2:n_plots, metrics = c("Arun2010", "CaoJuan2009", "Griffiths2004", "Deveaud2014"), control = list(seed = 1))
+    #FindTopicsNumber_plot(k_topics)
 
     # Fit topic model
     words_k <- 3 #although the metrics suggest using 5-6, 3 is easier to interpret
@@ -2081,7 +2080,7 @@ plot_names <- c("linear_rise", "linear_fall",
 
 # Read Data and Create Folder for Saving Files
 data <- read.csv('./data/data.csv')
-dir.create("plots/analysis_plots")
+dir.create("./plots/analysis_plots")
 
 ## ================================= (1) Perform Exclusions and Process Data =====================================
 "
@@ -2128,7 +2127,7 @@ dim(data_plot_long)
 Create bar plot, word clouds, and sentiment plot
 "
 
-
+#### (2.1) MAKE BAR PLOT OF MEANINGFULNESS SCORES
 grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)
 plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot, plot_names) #the little lifeline icons
 
@@ -2138,9 +2137,6 @@ dev.off()
 
 
 if (FALSE) {
-    #### (2.1) MAKE BAR PLOT OF MEANINGFULNESS SCORES
-
-
     #### (2.2) MAKE WORD CLOUDS (WARNING: takes ~5 minutes; feel free to skip)
     MakeWordClouds(data_long, n_plots, plot_names) #make word cloud images
     arranged_word_clouds <- ArrangeWordClouds() #arrange word clouds into a grid
@@ -2217,9 +2213,9 @@ dev.off()
 ## =========================================== (4) Move Files ====================================================
 
 plot_files <- list.files(pattern = c("(.pdf|.png)"))
-file.move(plot_files, "analysis_plots", overwrite = TRUE)
+file.move(plot_files, "./plots/analysis_plots", overwrite = TRUE)
 analysis_files <- list.files(pattern = c("(.csv)"))
-file.move(analysis_files, "data", overwrite = TRUE)
+file.move(analysis_files, "./data", overwrite = TRUE)
 
 ##================================================================================================================
 ##END##
