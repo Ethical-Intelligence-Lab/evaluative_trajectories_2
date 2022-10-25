@@ -1,5 +1,5 @@
 ## Analysis script for 'Evaluative Summaries'
-## For Study: Directly Experienced Content
+## For Study: Customer Journeys
 
 ## Needed for semantic analysis: https://colab.research.google.com/drive/19cwz29yei-RwLnQ8HuEbjy74HRx94A6b?usp=sharing
 

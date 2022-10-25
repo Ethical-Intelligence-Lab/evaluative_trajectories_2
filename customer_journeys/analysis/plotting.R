@@ -1,5 +1,5 @@
 ########## ---- CONTAINS FUNCTIONS ONLY FOR PLOTTING (Common ones are in '/tools/common_functions.R') ---- #########
-## For Study: Directly Experienced Content
+## For Study: Customer Journeys
 
 MakeGroupedBarPlot <- function(data_plot_long, wtp = FALSE) {
     "
