@@ -44,6 +44,7 @@ pacman::p_load('ggplot2', #plot stuff
 # Call in the Lifelines_Generate_Plots.R script from the Lifelines folder for plot images
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #set working directory to current directory
 source('../../tools/common_functions.R')
+source('./plotting.R')
 
 ##================================================================================================================
 ##FUNCTIONS FOR PREPROCESSING##
@@ -204,105 +205,6 @@ Get_stats <- function(data, n_plots) {
 }
 
 ##================================================================================================================
-##FUNCTIONS FOR PLOTTING BAR CHARTS##
-##================================================================================================================
-
-MakeGroupedBarPlot <- function(data_plot_long) {
-    "
-    Plot the grouped bar graph in order of ascending hiring likelihood scores 
-    Input: data_plot_long
-    Output: grouped_bar_plot (the grouped bar graph)
-    "
-
-    grouped_bar_plot <- ggplot(data_plot_long, aes(x = plot_names, y = score)) +
-        geom_bar(position = "dodge", stat = "identity", fill = "#56B4E9") +
-        geom_errorbar(aes(ymin = score - sd, ymax = score + sd), width = .2,
-                      position = position_dodge(.9)) +
-        ggtitle("Summarizing the Hiring Likelihood of Different Interview Trajectories") +
-        xlab("Interview Performance Plots") +
-        ylab("Hiring Likelihood") +
-        scale_y_continuous(breaks = seq(0, 100, 40)) +
-        theme(
-            plot.title = element_blank(), #element_text(color = "black", size=31, face="bold", hjust = 0.5),
-            # legend.title = element_text(color = "black", size=25),
-            # legend.position = "top",
-            # legend.title.align = 0.5,
-            text = element_text(color = "black", size = 25),
-            axis.title.y = element_text(color = "black", size = 30, face = "bold"),
-            axis.title.x = element_text(color = "black", size = 30, face = "bold"),
-            axis.text.x = element_blank(),
-            axis.ticks.x = element_blank()
-        )
-
-    return(grouped_bar_plot)
-}
-
-MakeGroupedBarPlotImages <- function(LifelinesPlot, plot_names) {
-    "
-    Make a plotter function that produces 'clean' (no labels) version of individual images 
-    for the x-axis. Then, plot the images in order of ascending hiring likelihood scores, 
-    which can be determined by the order in data_plot_long$plot_names[1:27].
-    Input: grouped_bar_plot, plot_names 
-    Output: the plot labels for the grouped bar graph and the sentiment bar graph
-    "
-
-    # Make "clean" (no labels) version of individual images for x-axis
-    Plotter_2 <- function(equation, x_range, y_range) {
-        plot(equation, lwd = 30, xlim = c(start_age, end_age), ylim = c(0, end_y_axis), main = "",
-             xlab = "", ylab = "", axes = FALSE, col = "firebrick3")
-
-        return(Plotter_2)
-    }
-
-    # Print the images that will comprise the x-axis
-    for (i in 1:length(my_equations)) { #print individual plots
-        png(file = paste0(plot_names[i], "_plot.png", ""))
-        sapply(my_equations[i], Plotter_2)
-        dev.off()
-    }
-
-    # Assemble images in the order of data_plot_long$plot_names[1:27]
-    plot_images <- axis_canvas(LifelinesPlot, axis = 'x') +
-        # for(i in 1:length(data_plot_long$plot_names[1:n_plots])) {
-        #   placement = (i - 0.5)
-        #   plot_images <- axis_canvas(plot_images, axis = 'x') +
-        #     draw_image(paste0(data_plot_long$plot_names[i], "_plot.png"), x = placement)} +
-
-        draw_image(paste0(data_plot_long$plot_names[1], "_plot.png"), x = 0.5) +
-        draw_image(paste0(data_plot_long$plot_names[2], "_plot.png"), x = 1.5) +
-        draw_image(paste0(data_plot_long$plot_names[3], "_plot.png"), x = 2.5) +
-        draw_image(paste0(data_plot_long$plot_names[4], "_plot.png"), x = 3.5) +
-        draw_image(paste0(data_plot_long$plot_names[5], "_plot.png"), x = 4.5) +
-        draw_image(paste0(data_plot_long$plot_names[6], "_plot.png"), x = 5.5) +
-        draw_image(paste0(data_plot_long$plot_names[7], "_plot.png"), x = 6.5) +
-        draw_image(paste0(data_plot_long$plot_names[8], "_plot.png"), x = 7.5) +
-        draw_image(paste0(data_plot_long$plot_names[9], "_plot.png"), x = 8.5) +
-
-        draw_image(paste0(data_plot_long$plot_names[10], "_plot.png"), x = 9.5) +
-        draw_image(paste0(data_plot_long$plot_names[11], "_plot.png"), x = 10.5) +
-        draw_image(paste0(data_plot_long$plot_names[12], "_plot.png"), x = 11.5) +
-        draw_image(paste0(data_plot_long$plot_names[13], "_plot.png"), x = 12.5) +
-        draw_image(paste0(data_plot_long$plot_names[14], "_plot.png"), x = 13.5) +
-        draw_image(paste0(data_plot_long$plot_names[15], "_plot.png"), x = 14.5) +
-        draw_image(paste0(data_plot_long$plot_names[16], "_plot.png"), x = 15.5) +
-        draw_image(paste0(data_plot_long$plot_names[17], "_plot.png"), x = 16.5) +
-        draw_image(paste0(data_plot_long$plot_names[18], "_plot.png"), x = 17.5) +
-
-        draw_image(paste0(data_plot_long$plot_names[19], "_plot.png"), x = 18.5) +
-        draw_image(paste0(data_plot_long$plot_names[20], "_plot.png"), x = 19.5) +
-        draw_image(paste0(data_plot_long$plot_names[21], "_plot.png"), x = 20.5) +
-        draw_image(paste0(data_plot_long$plot_names[22], "_plot.png"), x = 21.5) +
-        draw_image(paste0(data_plot_long$plot_names[23], "_plot.png"), x = 22.5) +
-        draw_image(paste0(data_plot_long$plot_names[24], "_plot.png"), x = 23.5) +
-        draw_image(paste0(data_plot_long$plot_names[25], "_plot.png"), x = 24.5) +
-        draw_image(paste0(data_plot_long$plot_names[26], "_plot.png"), x = 25.5) +
-        draw_image(paste0(data_plot_long$plot_names[27], "_plot.png"), x = 26.5)
-
-
-    return(plot_images)
-}
-
-##================================================================================================================
 ##FUNCTIONS FOR PLOTTING SENTIMENT BAR PLOT##
 ##================================================================================================================
 
@@ -338,7 +240,7 @@ CreateSentimentDataframe <- function(data, n_plots, plot_names) {
     "
     Make a dataframe with sentiment scores for every plot, which we will use later to add to dat_final 
     Input: data_long, n_plots, plot_names 
-    Output: sentiment_df (will be important later on when we bind it to e5_dat for analysis)
+    Output: sentiment_df (will be important later on when we bind it to dat for analysis)
     "
 
     sentiment_stats <- Get_sentiment_stats(data, n_plots)
@@ -382,7 +284,7 @@ GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
     "
     This function gets various correlations and main effects of the participant data.
     Input: This function takes as input a dataframe with rows = num_ss*num_plots*num_questions.
-          (e5_dat_final, e5_data_long, e5_data_plot_long, data_plot_long, n_plots, plot_names, my_embeddings) 
+          (dat_final, data_long, data_plot_long, data_plot_long, n_plots, plot_names, my_embeddings) 
     Output: various correlation and linear regression results; also, linear and spline plots ordered by hiring likelihood scores
     "
 
@@ -398,7 +300,7 @@ GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
     print(summary(effect_mod))
     print('-----------------------------------------------------')
 
-     print('Did hiring likelihood scores vary depending on plot type?')
+    print('Did hiring likelihood scores vary depending on plot type?')
     effect_mod <- lm(data = data[data['question_type'] == "hiring_likelihood",], score ~ plot_type_n + (1 | subject_n))
     print(summary(effect_mod))
     print('-----------------------------------------------------')
@@ -514,50 +416,6 @@ Get_noise_ceiling <- function(dat_long, question_type, n_ss) {
     store_summary <- summary(corrected_store)
 
     return(store_summary)
-}
-
-
-CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, sum_hiring_likelihood) {
-    "
-    What this function does: creates a box plot of the cross-validated prediction results
-    Inputs: results_df, x_order, results_order, ques_type, x_labels, sum_hiring_likelihood
-    Output: a boxplot of participant rating predictions with either principal components or predictors
-    "
-
-    grouped_box_plot <- ggplot() +
-        scale_x_discrete() +
-        geom_rect(aes(xmin = 0.4, xmax = Inf, ymin = sum_hiring_likelihood["1st Qu."], ymax = sum_hiring_likelihood["3rd Qu."]),
-                  alpha = 1, fill = "gray40") + #"#56B4E9") +
-        geom_hline(yintercept = 0, color = "gray60") +
-        geom_boxplot(data = results_df, aes(x = x_order, y = results_order), fill = "#56B4E9", outlier.shape = NA) +
-        ggtitle(paste0("Hiring Likelihood Predictions with ", x_labels)) +
-        xlab(x_labels) +
-        ylab("Prediction Performance\n(Cross-Validated Pearson's r)") +
-        scale_y_continuous(breaks = round(seq(-1.20, 1.19, by = 0.2), 1)) +
-        theme_bw() +
-    { if (x_labels == "Predictors")
-        theme(element_blank(),
-              plot.title = element_blank(), #element_text(color = "black", size=32, face = "bold", hjust = 0.5), 
-              text = element_text(color = "black", size = 25),
-              axis.title.y = element_text(color = "black", size = 30, face = "bold"),
-              axis.title.x = element_text(color = "black", size = 30, face = "bold"),
-              axis.text.x = element_text(color = "black", angle = 60, vjust = 1, hjust = 1),
-              legend.title = element_blank(), #element_text(color = "black", size=30),
-              legend.position = "top",
-              legend.title.align = 0.5)
-    else
-        theme(element_blank(),
-              plot.title = element_blank(), #element_text(color = "black", size=32, face = "bold", hjust = 0.5),
-              text = element_text(color = "black", size = 25),
-              axis.title.y = element_text(color = "black", size = 30, face = "bold"),
-              axis.title.x = element_text(color = "black", size = 30, face = "bold", margin = margin(t = 20, r = 0, b = 0, l = 0)),
-              axis.text.x = element_text(color = "black", size = 17.5),
-              legend.title = element_blank(), #element_text(color = "black", size=25),
-              legend.position = "top",
-              legend.title.align = 0.5)
-    }
-
-    return(grouped_box_plot)
 }
 
 
@@ -797,11 +655,11 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
                 trainIndeces <- indeces[(folds == j) & (folds2 != k)]
                 testIndeces <- indeces[(folds == j) & (folds2 == k)]
 
-                if( predictors[i] == "Sentiment Score" ) { # Exclude train indexes that is not a word
+                if (predictors[i] == "Sentiment Score") { # Exclude train indexes that is not a word
                     trainIndeces <- subset(trainIndeces, dat$is_word[trainIndeces])
                 }
 
-                if( predictors[i] == "Sentiment Score" && !dat$is_word[testIndeces] ) { # Do not fit if not a word
+                if (predictors[i] == "Sentiment Score" && !dat$is_word[testIndeces]) { # Do not fit if not a word
                     next
                 } else {
                     fitpc <- lm(hiring_likelihood ~ get(predictors[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
@@ -917,19 +775,19 @@ d_raw <- read.csv('./data/data.csv')
 ## ================================= (1) Perform Exclusions and Process Data =====================================
 "
 - Perform exclusions
-- Create e5_data_long (nrows = num_ss*num_plots)
+- Create data_long (nrows = num_ss*num_plots)
 - Prepare for semantic and interestingness analyses
   - Create csv for semantic analysis
   - Create semantic embeddings dataframe
   - Create interestingness dataframe
-- Create e5_data_plot_long (nrows = num_plots*num_questions, i.e averages for plotting)
+- Create data_plot_long (nrows = num_plots*num_questions, i.e averages for plotting)
 "
 
 d <- PerformExclusions(d_raw) #num_rows = num_ss
 n_after_exclusions <- d$n_after_exclusions[1]
 num_subjects_and_plots <- n_after_exclusions * n_plots
 
-d_long <- Preprocess(d, n_plots, plot_names) #num_rows = num_ss*num_plots [to see e5_data without exclusions, replace e5_data_clean with e5_data]
+d_long <- Preprocess(d, n_plots, plot_names) #num_rows = num_ss*num_plots [to see data without exclusions, replace data_clean with data]
 d_long[, "hiring_likelihood"] <- sapply(d_long[, "hiring_likelihood"], as.numeric) #turn ratings to numeric
 
 ### (i) CREATE CSV FOR SEMANTIC ANALYSIS
@@ -969,14 +827,13 @@ dev.off()
 Create bar plot, word clouds, and sentiment plot
 "
 
-if (FALSE) {
-
+if (TRUE) {
     #### (2.2) MAKE WORD CLOUDS (WARNING: takes ~5 minutes; feel free to skip)
     MakeWordClouds(d_long, n_plots, plot_names) #make word cloud images
-    arranged_word_clouds <- ArrangeWordClouds() #arrange word clouds into a grid
+    arranged_word_clouds <- ArrangeWordClouds(d_long) #arrange word clouds into a grid
 
     pdf(file = "interview_performance_word_clouds.pdf", width = 18, height = 8)
-    arranged_word_clouds
+    plot(arranged_word_clouds)
     dev.off()
 
 
@@ -1005,7 +862,7 @@ d_long$sentiment_score[is.na(d_long$sentiment_score)] <- 0
 
 d_long[, "is_word"] <- lapply(d_long["word_gen"], is.word)
 
-# Get dataframe for analysis (e5_dat_final), with nrows = num_ss*num_plots*num_questions
+# Get dataframe for analysis (dat_final), with nrows = num_ss*num_plots*num_questions
 dat <- gather(d_long, key = question_type, value = score, hiring_likelihood)
 dat <- dplyr::select(dat, subject, plot_names, question_type, score, sentiment_score) #rows = num_ss*num_plots*num_questions
 
@@ -1013,17 +870,9 @@ write.csv(data.frame(word = d_long), "./data/d_long.csv", row.names = FALSE) #cr
 write.csv(data.frame(word = dat), "./data/dat.csv", row.names = FALSE) #create word analysis csv for google colab code
 
 main_effects <- GetMainEffects(dat, n_plots, plot_names, my_embeddings)
-
-# Get main statistical effects
-if (FALSE) {
-
-    #See possible error: 486 not defined because of singularities; checked for perfect correlation but did not find any
-
-    pdf(file = "linear_vs_quadratic_fit.pdf", width = 13, height = 6.5)
-    main_effects
-    dev.off()
-}
-
+#pdf(file = "linear_vs_quadratic_fit.pdf", width = 13, height = 6.5)
+#plot(main_effects)
+#dev.off()
 
 
 #### (3.2) RUN DESCRIPTIVE ANALYSES
@@ -1032,7 +881,7 @@ if (FALSE) {
 score_features_df <- CreateDataFeaturesDF(d_long, dat, features, n_after_exclusions, num_subjects_and_plots)
 
 # Run regularized regression on all predictors
-ridge_regression_wt_predictors <- AnalyzeRidgeRegression(score_features_df, metric='hiring_likelihood')
+ridge_regression_wt_predictors <- AnalyzeRidgeRegression(score_features_df, metric = 'hiring_likelihood')
 
 # Run mixed-effects regression on PCA-reduced features
 data_wt_PCs <- MakePCAFunction(score_features_df)
