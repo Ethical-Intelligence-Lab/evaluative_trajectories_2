@@ -645,54 +645,54 @@ TopicModeling <- function(dat_long, n_plots, plot_names) {
     end_1 <- (sort(freq_df[, 1], decreasing = TRUE)[1]) + start
     spacing_1 <- (end_1 - start) / (length(rownames(words_df_1)) - 1)
     plots_by_topic_1 <- axis_canvas(freq_df_list[[1]], axis = 'x') +
-        draw_image(paste0(rownames(words_df_1)[1], "_plot.png"), scale = image_size, x = start) +
-        draw_image(paste0(rownames(words_df_1)[2], "_plot.png"), scale = image_size, x = start + spacing_1) +
-        draw_image(paste0(rownames(words_df_1)[3], "_plot.png"), scale = image_size, x = start + 2 * spacing_1) +
-        draw_image(paste0(rownames(words_df_1)[4], "_plot.png"), scale = image_size, x = start + 3 * spacing_1) +
-        draw_image(paste0(rownames(words_df_1)[5], "_plot.png"), scale = image_size, x = start + 4 * spacing_1) +
-        draw_image(paste0(rownames(words_df_1)[6], "_plot.png"), scale = image_size, x = start + 5 * spacing_1) +
-        draw_image(paste0(rownames(words_df_1)[7], "_plot.png"), scale = image_size, x = start + 6 * spacing_1) +
-        draw_image(paste0(rownames(words_df_1)[8], "_plot.png"), scale = image_size, x = start + 7 * spacing_1) +
-        draw_image(paste0(rownames(words_df_1)[9], "_plot.png"), scale = image_size, x = start + 8 * spacing_1) +
-        draw_image(paste0(rownames(words_df_1)[10], "_plot.png"), scale = image_size, x = start + 9 * spacing_1) +
-        draw_image(paste0(rownames(words_df_1)[11], "_plot.png"), scale = image_size, x = start + 10 * spacing_1) +
-        draw_image(paste0(rownames(words_df_1)[12], "_plot.png"), scale = image_size, x = start + 11 * spacing_1)
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_1)[1], "_plot.png"), scale = image_size, x = start) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_1)[2], "_plot.png"), scale = image_size, x = start + spacing_1) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_1)[3], "_plot.png"), scale = image_size, x = start + 2 * spacing_1) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_1)[4], "_plot.png"), scale = image_size, x = start + 3 * spacing_1) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_1)[5], "_plot.png"), scale = image_size, x = start + 4 * spacing_1) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_1)[6], "_plot.png"), scale = image_size, x = start + 5 * spacing_1) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_1)[7], "_plot.png"), scale = image_size, x = start + 6 * spacing_1) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_1)[8], "_plot.png"), scale = image_size, x = start + 7 * spacing_1) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_1)[9], "_plot.png"), scale = image_size, x = start + 8 * spacing_1) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_1)[10], "_plot.png"), scale = image_size, x = start + 9 * spacing_1) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_1)[11], "_plot.png"), scale = image_size, x = start + 10 * spacing_1) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_1)[12], "_plot.png"), scale = image_size, x = start + 11 * spacing_1)
 
     # Frequency Plot 2
     words_df_2 <- as.data.frame(topics(words_lda)[as.data.frame(topics(words_lda)) == 2])
     end_2 <- (sort(freq_df[, 2], decreasing = TRUE)[1]) + start
     spacing_2 <- (end_2 - start) / (length(rownames(words_df_2)) - 1)
     plots_by_topic_2 <- axis_canvas(freq_df_list[[2]], axis = 'x') +
-        draw_image(paste0(rownames(words_df_2)[1], "_plot.png"), scale = image_size, x = start) +
-        draw_image(paste0(rownames(words_df_2)[2], "_plot.png"), scale = image_size, x = start + spacing_2) +
-        draw_image(paste0(rownames(words_df_2)[3], "_plot.png"), scale = image_size, x = start + 2 * spacing_2) +
-        draw_image(paste0(rownames(words_df_2)[4], "_plot.png"), scale = image_size, x = start + 3 * spacing_2) +
-        draw_image(paste0(rownames(words_df_2)[5], "_plot.png"), scale = image_size, x = start + 4 * spacing_2) +
-        draw_image(paste0(rownames(words_df_2)[6], "_plot.png"), scale = image_size, x = start + 5 * spacing_2) +
-        draw_image(paste0(rownames(words_df_2)[7], "_plot.png"), scale = image_size, x = start + 6 * spacing_2) +
-        draw_image(paste0(rownames(words_df_2)[8], "_plot.png"), scale = image_size, x = start + 7 * spacing_2) +
-        draw_image(paste0(rownames(words_df_2)[9], "_plot.png"), scale = image_size, x = start + 8 * spacing_2) +
-        draw_image(paste0(rownames(words_df_2)[10], "_plot.png"), scale = image_size, x = start + 9 * spacing_2) +
-        draw_image(paste0(rownames(words_df_2)[11], "_plot.png"), scale = image_size, x = start + 10 * spacing_2) +
-        draw_image(paste0(rownames(words_df_2)[12], "_plot.png"), scale = image_size, x = start + 11 * spacing_2)
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_2)[1], "_plot.png"), scale = image_size, x = start) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_2)[2], "_plot.png"), scale = image_size, x = start + spacing_2) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_2)[3], "_plot.png"), scale = image_size, x = start + 2 * spacing_2) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_2)[4], "_plot.png"), scale = image_size, x = start + 3 * spacing_2) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_2)[5], "_plot.png"), scale = image_size, x = start + 4 * spacing_2) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_2)[6], "_plot.png"), scale = image_size, x = start + 5 * spacing_2) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_2)[7], "_plot.png"), scale = image_size, x = start + 6 * spacing_2) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_2)[8], "_plot.png"), scale = image_size, x = start + 7 * spacing_2) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_2)[9], "_plot.png"), scale = image_size, x = start + 8 * spacing_2) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_2)[10], "_plot.png"), scale = image_size, x = start + 9 * spacing_2) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_2)[11], "_plot.png"), scale = image_size, x = start + 10 * spacing_2) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_2)[12], "_plot.png"), scale = image_size, x = start + 11 * spacing_2)
 
     # Frequency Plot 3
     words_df_3 <- as.data.frame(topics(words_lda)[as.data.frame(topics(words_lda)) == 3])
     end_3 <- (sort(freq_df[, 3], decreasing = TRUE)[1]) + start
     spacing_3 <- (end_3 - start) / (length(rownames(words_df_3)) - 1)
     plots_by_topic_3 <- axis_canvas(freq_df_list[[3]], axis = 'x') +
-        draw_image(paste0(rownames(words_df_3)[1], "_plot.png"), scale = image_size, x = start) +
-        draw_image(paste0(rownames(words_df_3)[2], "_plot.png"), scale = image_size, x = start + spacing_3) +
-        draw_image(paste0(rownames(words_df_3)[3], "_plot.png"), scale = image_size, x = start + 2 * spacing_3) +
-        draw_image(paste0(rownames(words_df_3)[4], "_plot.png"), scale = image_size, x = start + 3 * spacing_3) +
-        draw_image(paste0(rownames(words_df_3)[5], "_plot.png"), scale = image_size, x = start + 4 * spacing_3) +
-        draw_image(paste0(rownames(words_df_3)[6], "_plot.png"), scale = image_size, x = start + 5 * spacing_3) +
-        draw_image(paste0(rownames(words_df_3)[7], "_plot.png"), scale = image_size, x = start + 6 * spacing_3) +
-        draw_image(paste0(rownames(words_df_3)[8], "_plot.png"), scale = image_size, x = start + 7 * spacing_3) +
-        draw_image(paste0(rownames(words_df_3)[9], "_plot.png"), scale = image_size, x = start + 8 * spacing_3) +
-        draw_image(paste0(rownames(words_df_3)[10], "_plot.png"), scale = image_size, x = start + 9 * spacing_3) +
-        draw_image(paste0(rownames(words_df_3)[11], "_plot.png"), scale = image_size, x = start + 10 * spacing_3) +
-        draw_image(paste0(rownames(words_df_3)[12], "_plot.png"), scale = image_size, x = start + 11 * spacing_3)
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_3)[1], "_plot.png"), scale = image_size, x = start) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_3)[2], "_plot.png"), scale = image_size, x = start + spacing_3) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_3)[3], "_plot.png"), scale = image_size, x = start + 2 * spacing_3) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_3)[4], "_plot.png"), scale = image_size, x = start + 3 * spacing_3) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_3)[5], "_plot.png"), scale = image_size, x = start + 4 * spacing_3) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_3)[6], "_plot.png"), scale = image_size, x = start + 5 * spacing_3) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_3)[7], "_plot.png"), scale = image_size, x = start + 6 * spacing_3) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_3)[8], "_plot.png"), scale = image_size, x = start + 7 * spacing_3) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_3)[9], "_plot.png"), scale = image_size, x = start + 8 * spacing_3) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_3)[10], "_plot.png"), scale = image_size, x = start + 9 * spacing_3) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_3)[11], "_plot.png"), scale = image_size, x = start + 10 * spacing_3) +
+        draw_image(paste0("./plots/analysis_plots/", rownames(words_df_3)[12], "_plot.png"), scale = image_size, x = start + 11 * spacing_3)
 
     # Frequency Plot 4
     # words_df_4 <- as.data.frame(topics(words_lda)[as.data.frame(topics(words_lda)) == 4])

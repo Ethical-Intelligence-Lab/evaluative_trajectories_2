@@ -333,13 +333,13 @@ MakePCAFunction <- function(score_features_df) {
 
     # 1. Fit mixed effects regression predicting willing
     willing_features <- lmer(data = score_features_df,
-                               willing ~ PC1 +
-                                   PC2 +
-                                   PC3 +
-                                   PC4 +
-                                   PC5 +
-                                   (1 | Unnamed..0) +
-                                   (1 | genre))
+                             willing ~ PC1 +
+                                 PC2 +
+                                 PC3 +
+                                 PC4 +
+                                 PC5 +
+                                 (1 | Unnamed..0) +
+                                 (1 | genre))
 
     print('WTP vs. features:')
     print(summary(willing_features, correlation = TRUE))
@@ -394,8 +394,8 @@ CrossValidationAnalysisWtPCs <- function(dat, n_ss, n_plots) {
     # Reorder pcs according to their significance
     t_results_willing <- as.data.frame(t(results))
     colnames(t_results_willing) <- c("PC1\nSecond Derivative\nPredictors", "PC2\nFirst Derivative\nPredictors and End Value",
-                                       "PC3\nMin, Max\nSentiment, and Integral", "PC4\nNumber of Peaks\nValleys, and Extrema",
-                                       "PC5\nInterestingness")
+                                     "PC3\nMin, Max\nSentiment, and Integral", "PC4\nNumber of Peaks\nValleys, and Extrema",
+                                     "PC5\nInterestingness")
     results_willing_long <- gather(t_results_willing, key = principal_components, value = pcs_results, colnames(t_results_willing)) #length(pcs)*n_folds
     willing_new_order <- with(results_willing_long, reorder(principal_components, pcs_results, median, na.rm = TRUE))
     results_willing_long["willing_new_order"] <- willing_new_order
@@ -435,7 +435,7 @@ CrossValidationAnalysisWtPCs <- function(dat, n_ss, n_plots) {
         pcs_index <- x_labs[i]
         pcs_index_plus_one <- x_labs[i + 1]
         wilcox_test_1_wt_willing[[i]] <- wilcox.test(t_results_willing[, pcs_index], y = NULL, alternative = "greater",
-                                                       conf.int = TRUE, data = t_results_willing)
+                                                     conf.int = TRUE, data = t_results_willing)
         p_value_stars_1_willing[i] <- stars.pval(wilcox_test_1_wt_willing[[i]]$"p.value") #get stars
 
         print(paste0(x_labs[i], " --------------------------------------------------------------------------------------"))
@@ -654,7 +654,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, co
     for (i in x_labs) {
         print(paste0(i, " --------------------------------------------------------------------------------------"))
         wilcox_test_wt_willing[[i]] <- wilcox.test(t_results_willing[, i], y = NULL, alternative = "greater",
-                                                     conf.int = TRUE)
+                                                   conf.int = TRUE)
         p_value_stars_willing[i] <- stars.pval(wilcox_test_wt_willing[[i]]$"p.value") #get stars
 
         print(wilcox_test_wt_willing[[i]])
@@ -864,7 +864,7 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
         for (i in x_labs) {
             print(paste0(i, " --------------------------------------------------------------------------------------"))
             wilcox_test_wt_willing[[i]] <- wilcox.test(t_results_raffle[, i], y = rep(0.125, length(t_results_raffle[, i])), alternative = "greater",
-                                                         conf.int = TRUE)
+                                                       conf.int = TRUE)
             p_value_stars_willing[i] <- stars.pval(wilcox_test_wt_willing[[i]]$"p.value") #get stars
 
             print(wilcox_test_wt_willing[[i]])
@@ -899,7 +899,7 @@ n_clusters <- 50
 cluster_names_sorted <- c()
 
 # Read Data and Create Folder for Saving Files
-if (sentence_data) { fname <- './data/data_sentence.csv' } else { fname <- paste0('./data/data_long_cluster_', n_clusters,'.csv') }
+if (sentence_data) { fname <- './data/data_sentence.csv' } else { fname <- paste0('./data/data_long_cluster_', n_clusters, '.csv') }
 
 d_long <- read.csv(fname)
 dir.create("plots/analysis_plots")
@@ -944,6 +944,10 @@ interestingness <- GetInterestingness(d_long, n_plots)
 d_long <- cbind(d_long, embeddings_avg)
 d_long <- cbind(d_long, interestingness)
 data_plot_long = NULL
+
+d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment, model_type = 'ai')
+d_long$sentiment_score[is.na(d_long$sentiment_score)] <- 0
+
 
 cluster_names <- c()
 for (i in 0:(n_clusters - 1)) {
@@ -996,9 +1000,6 @@ Get main statistical effects, and run descriptive and predictive analyses
 "
 
 #### (3.1) GET MAIN EFFECTS
-
-d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment, model_type = 'ai')
-d_long$sentiment_score[is.na(d_long$sentiment_score)] <- 0
 
 if (sentence_data) {
     d_long[, "sentiment_score_sentence"] <- sapply(d_long["sentence"], CalculateSentiment, model_type = 'ai', is_sentence = TRUE)

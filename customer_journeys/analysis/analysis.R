@@ -1114,6 +1114,9 @@ d_long <- cbind(d_long, interestingness)
 data_plot_long = NULL
 data_plot_long <- ProcessForPlots(d_long, n_plots, plot_names) #num_rows = num_plots*num_questions
 
+d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment, model_type = 'ai')
+d_long$sentiment_score[is.na(d_long$sentiment_score)] <- 0
+d_long[, "is_word"] <- lapply(d_long["word"], is.word)
 
 ## ========================================== (2) Plot Data and Save ==================================================
 if (TRUE) {
@@ -1159,9 +1162,6 @@ if (TRUE) {
 
     plot_files <- list.files(pattern = c("(.pdf|.png)"))
     file.move(plot_files, "./plots/analysis_plots", overwrite = TRUE)
-    analysis_files <- list.files(pattern = c("word_analysis.csv|embeddings.csv|correlations.csv"))
-    file.move(analysis_files, "data", overwrite = TRUE)
-
 }
 
 ## ============================================== (3) Analysis =====================================================
@@ -1170,12 +1170,6 @@ Get main statistical effects, and run descriptive and predictive analyses
 "
 
 #### (3.1) GET MAIN EFFECTS
-d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment, model_type = 'ai')
-d_long$sentiment_score[is.na(d_long$sentiment_score)] <- 0
-
-d_long[, "is_word"] <- lapply(d_long["word"], is.word)
-
-
 # Get dataframe for analysis (dat_final), with nrows = num_ss*num_plots*num_questions
 dat <- gather(d_long, key = question_type, value = score, satisfaction, personal_desirability)
 dat <- dplyr::select(dat, subject, plot_names, question_type, score, willingness_to_pay, sentiment_score, wtp_original) #rows = num_ss*num_plots*num_questions
@@ -1214,11 +1208,12 @@ pdf(file = "predictions_wt_predictors_cv_plot.pdf", width = 17, height = 9)
 plot(cross_validation_analysis_wt_predictors)
 dev.off()
 
-
-cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(score_features_df, d_long, n_after_exclusions, n_plots, trajectories_separate = TRUE)
-pdf(file = "predictions_wt_predictors_cv_plot_traj_separate.pdf", width = 17, height = 9)
-plot(cross_validation_analysis_wt_predictors)
-dev.off()
+if (FALSE) {
+    cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(score_features_df, d_long, n_after_exclusions, n_plots, trajectories_separate = TRUE)
+    pdf(file = "predictions_wt_predictors_cv_plot_traj_separate.pdf", width = 17, height = 9)
+    plot(cross_validation_analysis_wt_predictors)
+    dev.off()
+}
 
 ## =========================================== (4) Move Files ====================================================
 

@@ -96,6 +96,10 @@ MakeGroupedBarPlotImages <- function(LifelinesPlot, plot_names) {
         dev.off()
     }
 
+    png(file = paste0("NA_plot.png", ""))
+    sapply("", Plotter_2)
+    dev.off()
+
     # Assemble images in the order of data_plot_long$plot_names[1:27]
     plot_images <- axis_canvas(LifelinesPlot, axis = 'x')
 

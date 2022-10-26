@@ -808,6 +808,11 @@ interestingness <- GetInterestingness(d_long, n_plots)
 ### (iv) PROCESS FOR PLOTS
 d_long <- cbind(d_long, embeddings_avg)
 d_long <- cbind(d_long, interestingness)
+
+d_long[, "sentiment_score"] <- sapply(d_long["word_gen"], CalculateSentiment, model_type = "ai")
+d_long$sentiment_score[is.na(d_long$sentiment_score)] <- 0
+d_long[, "is_word"] <- lapply(d_long["word_gen"], is.word)
+
 data_plot_long = NULL
 data_plot_long <- ProcessForPlots(d_long, n_plots, plot_names) #num_rows = num_plots*num_questions
 
@@ -857,10 +862,6 @@ Get main statistical effects, and run descriptive and predictive analyses
 "
 
 #### (3.1) GET MAIN EFFECTS
-d_long[, "sentiment_score"] <- sapply(d_long["word_gen"], CalculateSentiment, model_type = "ai")
-d_long$sentiment_score[is.na(d_long$sentiment_score)] <- 0
-
-d_long[, "is_word"] <- lapply(d_long["word_gen"], is.word)
 
 # Get dataframe for analysis (dat_final), with nrows = num_ss*num_plots*num_questions
 dat <- gather(d_long, key = question_type, value = score, hiring_likelihood)
