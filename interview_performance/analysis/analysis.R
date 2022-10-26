@@ -852,7 +852,6 @@ if (TRUE) {
 
     #### (2.4) MAKE FREQUENCY PLOTS FOR TOPIC MODELING
     topic_modeling <- TopicModeling(d_long, n_plots, plot_names)
-
 }
 
 
