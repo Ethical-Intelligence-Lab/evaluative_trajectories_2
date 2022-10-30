@@ -1119,7 +1119,7 @@ d_long$sentiment_score[is.na(d_long$sentiment_score)] <- 0
 d_long[, "is_word"] <- lapply(d_long["word"], is.word)
 
 ## ========================================== (2) Plot Data and Save ==================================================
-if (TRUE) {
+if (FALSE) {
     "
     Create bar plot, word clouds, and sentiment plot
     "

@@ -11,7 +11,7 @@ MakeGroupedBarPlot <- function(data_plot_long) {
         geom_errorbar(aes(ymin = score - sd, ymax = score + sd), width = .2,
                       position = position_dodge(.9)) +
         ggtitle("Summarizing the willing of Different Customer Journeys") +
-        xlab("Customer Journey Plots") +
+        xlab("Trailer Experience Clusters") +
         ylab("Scaled Rating") +
         theme(
             plot.title = element_blank(),
@@ -70,7 +70,7 @@ MakeSentimentBarPlot <- function(data, n_plots, plot_names) {
         geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), width = .2,
                       position = position_dodge(.9)) +
         ggtitle("Mean Sentiment Scores by Ascending WTP Scores") +
-        xlab("Customer Journey Plots") +
+        xlab("Trailer Experience Clusters") +
         ylab("Mean Sentiment Score") +
         theme(
             plot.title = element_blank(), #element_text(color = "black", size=31, face="bold", hjust = 0.5),

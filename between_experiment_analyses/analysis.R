@@ -5,18 +5,19 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 d_customer_journeys <- read.csv('../customer_journeys/analysis/data/dat.csv')
 d_interview_performance <- read.csv('../interview_performance/analysis/data/dat.csv')
 d_lifelines <- read.csv('../lifelines/analysis/data/d_long.csv')
+d_first_person <- read.csv('../directly_experienced_content/analysis/data/dat_for_comparison.csv')
 
 #correlation between WTP and satisfaction, and WTP and desirability
 
 ### Start Analysis ###
 print('Do "Customer Journeys" Satisfaction and Personal Desirability Correlate?')
 cor.test(d_customer_journeys$word.score[d_customer_journeys$word.question_type == "satisfaction"],
-                d_customer_journeys$word.score[d_customer_journeys$word.question_type == "personal_desirability"])
+         d_customer_journeys$word.score[d_customer_journeys$word.question_type == "personal_desirability"])
 
 
 print('Do "Lifelines" Meaningfulness and Personal Desirability Correlate?')
 cor.test(d_lifelines$word.score[d_lifelines$word.question_type == "meaningfulness"],
-                d_lifelines$word.score[d_lifelines$word.question_type == "personal_desirability"])
+         d_lifelines$word.score[d_lifelines$word.question_type == "personal_desirability"])
 
 print('Do average of each plot of "Customer Journeys" Satisfaction and Hiring Likelihood Correlate?')
 d_cj <- d_customer_journeys[d_customer_journeys$word.question_type == "satisfaction",]
@@ -59,3 +60,14 @@ d_ll <- d_lifelines[d_lifelines$word.question_type == "personal_desirability",]
 d_cj <- d_customer_journeys[d_customer_journeys$word.question_type == "satisfaction",]
 cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
          aggregate(d_ll, list(d_ll$word.plot_names), mean)$word.score)
+
+print('Do average of each plot of "Lifelines" Personal Desirability and "Customer Journeys" Personal Desirability Correlate?')
+d_ll <- d_lifelines[d_lifelines$word.question_type == "personal_desirability",]
+d_cj <- d_customer_journeys[d_customer_journeys$word.question_type == "personal_desirability",]
+cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
+         aggregate(d_ll, list(d_ll$word.plot_names), mean)$word.score)
+
+##############################   FIRST PERSON ANALYSES   #############################
+n_clusters <- length(table(d_first_person$cluster_labels))
+
+aggregate(d_first_person, list(d_first_person$word.cluster_labels), mean)

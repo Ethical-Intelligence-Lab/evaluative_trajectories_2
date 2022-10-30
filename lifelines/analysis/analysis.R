@@ -353,6 +353,33 @@ OrderSentimentDataframe <- function(data, n_plots, plot_names) {
     return(sentiment_df_sorted)
 }
 
+MakeSentimentBarPlot <- function(data, n_plots, plot_names) {
+    "
+    Plot the sentiment bar graph in order of ascending meaningfulness scores.
+    Input: data_long, n_plots, plot_names
+    Output: the sentiment bar graph by ascending meaningfulness scores
+    "
+
+    sentiment_df <- OrderSentimentDataframe(data, n_plots, plot_names)
+    sentiment_bar_plot <- ggplot(sentiment_df, aes(x = plot_names, y = mean)) +
+        geom_bar(position = "dodge", stat = "identity", fill = "darkorange") +
+        geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), width = .2,
+                      position = position_dodge(.9)) +
+        ggtitle("") + #"Mean Sentiment Scores by Ascending Meaningfulness Scores") +
+        xlab("Lifeline Plots") +
+        ylab("Mean Sentiment Score") +
+        theme(
+            plot.title = element_blank(), #element_text(color = "black", size=31, face="bold", hjust = 0.5),
+            text = element_text(color = "black", size = 25),
+            axis.title.y = element_text(color = "black", size = 30, face = "bold"),
+            axis.title.x = element_text(color = "black", size = 30, face = "bold"),
+            axis.text.x = element_blank(),
+            axis.ticks.x = element_blank()
+        )
+
+    return(sentiment_bar_plot)
+}
+
 
 ##================================================================================================================
 ##FUNCTIONS FOR WORD ANALYSIS##
@@ -442,7 +469,6 @@ GetMainEffects <- function(data, data_long, n_plots, plot_names, my_embeddings) 
     effect_mod <- lm(data = data, score ~ plot_type_n + (1 | subject_n))
     print(summary(effect_mod))
     print('-----------------------------------------------------')
-
 
 
     print('Which question type scored higher?')
@@ -1391,9 +1417,9 @@ data_long <- cbind(data_long, embeddings_avg, interestingness)
 data_plot_long <- ProcessForPlots(data_long, n_plots, plot_names) #num_rows = num_plots*num_questions
 dim(data_plot_long)
 
-data_long[, "sentiment_score"] <- sapply(data_long["word_gen"], CalculateSentiment, model_type = "ai")
+data_long[, "sentiment_score"] <- sapply(data_long["word"], CalculateSentiment, model_type = "ai")
 data_long$sentiment_score[is.na(data_long$sentiment_score)] <- 0
-data_long[, "is_word"] <- lapply(data_long["word_gen"], is.word)
+data_long[, "is_word"] <- lapply(data_long["word"], is.word)
 
 ## ========================================== (2) Plot Data and Save ==================================================
 "

@@ -907,7 +907,7 @@ dev.off()
 plot_files <- list.files(pattern = c("(.pdf|.png)"))
 file.move(plot_files, "./plots/analysis_plots", overwrite = TRUE)
 analysis_files <- list.files(pattern = c("word_analysis.csv|embeddings.csv|correlations.csv"))
-file.move(analysis_files, "data", overwrite = TRUE)
+file.move(analysis_files, "./data", overwrite = TRUE)
 
 ##=====##
 ## END ##

@@ -554,7 +554,7 @@ end_y_axis <- 10
 cutoff_age <- 45
 
 ### ----- Create equations
-data <- read.csv('./data/lifelines_cleaned.csv')
+data <- read.csv('./data/lifelines_cleaned_deg68.csv')
 
 # Create R equations of participant enjoyments
 create_equation <- function(eqn) {

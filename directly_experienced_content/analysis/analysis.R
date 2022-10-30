@@ -716,8 +716,8 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
 
     #-------------------------------------------------------------------------------------------------------------------
     p_value_stars_willing <- c()
-    fit_wts = ifelse(dat$picked_movie == TRUE, 6, 1)
-    if (no_kfold) {
+    fit_wts = ifelse(dat$picked_movie == TRUE, 7, 1)
+    if (no_kfold) {  # Just simple logistic regression
         results_raffle <- data.frame(matrix(NA, nrow = length(predictors), ncol = 1))
 
         for (i in 1:length(predictors)) {
@@ -786,11 +786,11 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
             print(paste('willing: median predictor result,', predictors[i], ': ', median(as.numeric(results_raffle[i,]), na.rm = TRUE)))
         }
     } else { # Train on each participant separately
-        results_raffle <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
+        results_raffle <- data.frame(matrix(NA, nrow = length(predictors), ncol = fold_amount))
         rownames(results_raffle) <- predictors
 
         for (i in 1:length(predictors)) {
-            for (j in 1:n_folds) {
+            for (j in 1:fold_amount) {
                 ss_results <- c()
                 truths <- c()
 
@@ -827,12 +827,15 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
 
     # Reorder predictors according to their significance
     t_results_raffle <- as.data.frame(t(results_raffle))
+
+    print(paste0("Mean F1 Score of all for fold amount ", fold_amount, ": ", mean(as.matrix(t_results_raffle))))
+
     colnames(t_results_raffle) <- predictors
     results_raffle_long <- gather(t_results_raffle, key = predictors, value = predictors_results, colnames(t_results_raffle)) #length(predictors)*n_folds
     willing_new_order <- with(results_raffle_long, reorder(predictors, predictors_results, median, na.rm = TRUE))
     results_raffle_long["willing_new_order"] <- willing_new_order
 
-    summary_willing <- Get_noise_ceiling(dat, "willing", n_folds)
+    summary_willing <- Get_noise_ceiling(dat, "willing", n_participants)
 
     #-------------------------------------------------------------------------------------------------------------------
     #-------------------------------------------------------------------------------------------------------------------
@@ -851,6 +854,7 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
         x$
         get_labels()
 
+    return(predictors_plot)
 
     # Loop through the predictors, comparing each to a null distribution
     # willing: One-sided Wilcox test
@@ -895,7 +899,7 @@ movies <- c('Knock at the Cabin', 'Dungeons and Dragons', 'She Said', 'I Wanna D
 plot_names <- genres
 n_plots <- length(genres)
 sentence_data = FALSE
-n_clusters <- 50
+n_clusters <- 27
 cluster_names_sorted <- c()
 
 # Read Data and Create Folder for Saving Files
@@ -958,7 +962,7 @@ data_plot_long <- ProcessForPlots(d_long, n_plots, plot_names)
 
 
 #### (2.1) MAKE BAR PLOT OF willing SCORES
-grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)
+xgrouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)
 plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot, data_plot_long) #the little customer journey icons
 
 pdf(file = paste0("./plots/analysis_plots/customer_journeys_bar_plot_", "k=", n_clusters, ".pdf"), width = 17, height = 8)
@@ -1022,6 +1026,11 @@ d_long <- CreateDataFeaturesDF(d_long)
 data_wt_PCs <- MakePCAFunction(d_long)
 
 
+d_for_comparison <- gather(dat, key = question_type, value = score, willing)
+d_for_comparison <- dplyr::select(d_for_comparison, subject, cluster_labels, question_type, score, sentiment_score) #rows = num_ss*num_plots*num_questions
+write.csv(data.frame(word = d_for_comparison), "./data/dat_for_comparison.csv", row.names = FALSE) #create word analysis csv for google colab code
+
+
 ##### (3.3) RUN PREDICTIVE ANALYSES
 
 # Get performance of each predictor and PCA-reduced feature using cross-validation.
@@ -1031,8 +1040,25 @@ pdf(file = "./plots/analysis_plots/predictions_wt_pcs_cv_plot.pdf", width = 17, 
 plot(cross_validation_analysis_wt_pcs)
 dev.off()
 
+cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE,
+                                                                                   random = TRUE, fold_amount = 3,
+                                                                                   perf_metric = "F1")
+pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_f1_", 3, ".pdf"), width = 17, height = 9)
+plot(cross_validation_analysis_wt_predictors_raffle)
+dev.off()
+
 # Cross Validation for Raffle
 if (FALSE) {
+    for (i in (2:20)) {
+        cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE,
+                                                                                           random = TRUE, fold_amount = i,
+                                                                                           perf_metric = "F1")
+        pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_f1_", i, ".pdf"), width = 17, height = 9)
+        plot(cross_validation_analysis_wt_predictors_raffle)
+        dev.off()
+    }
+
+
     cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE,
                                                                                        random = FALSE, fold_amount = 180,
                                                                                        perf_metric = "F1")
