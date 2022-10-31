@@ -144,14 +144,16 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
     Output: a boxplot of participant rating predictions with either principal components or predictors
     "
 
-    grouped_box_plot <- ggplot() +
+    grouped_box_plot <- ggplot(data = results_df, aes(x = x_order, y = results_order, fill = ques_type)) +
         scale_x_discrete() +
         geom_rect(aes(xmin = 0.2, xmax = Inf, ymin = sum_satisfaction["1st Qu."], ymax = sum_satisfaction["3rd Qu."]),
                   alpha = 1, fill = "gray60") + #"dodgerblue3") + # #56B4E9
         geom_rect(aes(xmin = 0.2, xmax = Inf, ymin = sum_pd["1st Qu."], ymax = sum_pd["3rd Qu."]),
                   alpha = 1, fill = "gray60") + #"forestgreen") + # #009E73
         geom_hline(yintercept = 0, color = "gray60") +
-        geom_boxplot(data = results_df, aes(x = x_order, y = results_order, fill = ques_type), outlier.shape = NA) +
+        geom_boxplot(outlier.shape = NA) +
+        stat_summary(fun = mean, geom = "point", shape = 20, size = 5, color = "black", aes(group = question_type), position = position_dodge(.75)) +
+        stat_summary(fun.data = mean_se, geom = "errorbar", color = "black", aes(group = question_type, width=0.5), position = position_dodge(.75), fun.args = list(mult = 1.96)) +  # mean-se is 1.96 * std err (https://stulp.gmw.rug.nl/ggplotworkshop/comparinggroupstatistics.html)
         ggtitle(paste0("Satisfaction and Desirability Predictions with ", x_labels)) +
         xlab(x_labels) +
         ylab("Prediction Performance\n(Cross-Validated Pearson's r)") +

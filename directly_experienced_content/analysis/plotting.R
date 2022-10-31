@@ -37,14 +37,6 @@ MakeGroupedBarPlot <- function(data_plot_long) {
 
 
 MakeGroupedBarPlotImages <- function(LifelinesPlot, data_plot_long) {
-    "
-    Make a plotter function that produces 'clean' (no labels) version of individual images
-    for the x-axis. Then, plot the images in order of ascending satisfaction scores,
-    which can be determined by the order in data_plot_long$plot_names[1:n].
-    Input: grouped_bar_plot, plot_names
-    Output: the plot labels for the grouped bar graph and the sentiment bar graph
-    "
-
     plot_images <- axis_canvas(LifelinesPlot, axis = 'x')
 
     sorted_cluster_names <- c(data_plot_long[, 'cluster_names'])

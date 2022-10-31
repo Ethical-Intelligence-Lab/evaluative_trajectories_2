@@ -255,12 +255,14 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
         box_label <- "Raffle Choice"
     }
     if (no_kfold) { y_label <- paste0("Prediction Accuracy\n(", y_axis, ")") }
-    grouped_box_plot <- ggplot() +
+    grouped_box_plot <- ggplot(data = results_df, aes(x = x_order, y = results_order, fill = ques_type)) +
         scale_x_discrete() +
-        #geom_rect(aes(xmin = 0.2, xmax = Inf, ymin = sum_willing["1st Qu."], ymax = sum_willing["3rd Qu."]),
-        #          alpha = 1, fill = "gray60") + #"dodgerblue3") + # #56B4E9
+        geom_rect(aes(xmin = 0.2, xmax = Inf, ymin = sum_willing["1st Qu."], ymax = sum_willing["3rd Qu."]),
+                  alpha = 1, fill = "gray60") + #"dodgerblue3") + # #56B4E9
         geom_hline(yintercept = 0, color = "gray60") +
-        geom_boxplot(data = results_df, aes(x = x_order, y = results_order, fill = ques_type), outlier.shape = NA) +
+        geom_boxplot(outlier.shape = NA) +
+        stat_summary(fun = mean, geom = "point", shape = 20, size = 5, color = "black", position = position_dodge(.75)) +
+        stat_summary(fun.data = mean_se, geom = "errorbar", color = "black", aes(group = question_type, width = 0.5), position = position_dodge(.75), fun.args = list(mult = 1.96)) +  # mean-se is 1.96 * std err (https://stulp.gmw.rug.nl/ggplotworkshop/comparinggroupstatistics.html)
         ggtitle(paste0("willing and Desirability Predictions with ", x_labels)) +
         xlab(x_labels) +
         ylab(y_label) +
@@ -621,7 +623,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, co
     t_results_willing <- as.data.frame(t(results_willing))
     colnames(t_results_willing) <- predictors
     results_willing_long <- gather(t_results_willing, key = predictors, value = predictors_results, colnames(t_results_willing)) #length(predictors)*n_folds
-    willing_new_order <- with(results_willing_long, reorder(predictors, predictors_results, median, na.rm = TRUE))
+    willing_new_order <- with(results_willing_long, reorder(predictors, predictors_results, mean, na.rm = TRUE))
     results_willing_long["willing_new_order"] <- willing_new_order
 
     summary_willing <- Get_noise_ceiling(dat, "willing", n_folds)
@@ -962,7 +964,7 @@ data_plot_long <- ProcessForPlots(d_long, n_plots, plot_names)
 
 
 #### (2.1) MAKE BAR PLOT OF willing SCORES
-xgrouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)
+grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)
 plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot, data_plot_long) #the little customer journey icons
 
 pdf(file = paste0("./plots/analysis_plots/customer_journeys_bar_plot_", "k=", n_clusters, ".pdf"), width = 17, height = 8)
@@ -1034,6 +1036,15 @@ write.csv(data.frame(word = d_for_comparison), "./data/dat_for_comparison.csv", 
 ##### (3.3) RUN PREDICTIVE ANALYSES
 
 # Get performance of each predictor and PCA-reduced feature using cross-validation.
+# Cross Validation on Whole dataset
+if (TRUE) {
+    if (sentence_data) { fname <- "./plots/analysis_plots_sentence/predictions_wt_predictors_cv_plot_sentence.pdf" } else { fname <- "./plots/analysis_plots/predictions_wt_predictors_cv_plot.pdf" }
+    cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(d_long, n_plots)
+    pdf(file = fname, width = 17, height = 9)
+    plot(cross_validation_analysis_wt_predictors)
+    dev.off()
+}
+
 n_after_exclusions <- dim(d_long)[1] / n_plots
 cross_validation_analysis_wt_pcs <- CrossValidationAnalysisWtPCs(data_wt_PCs, n_after_exclusions, n_plots)
 pdf(file = "./plots/analysis_plots/predictions_wt_pcs_cv_plot.pdf", width = 17, height = 9)
@@ -1106,15 +1117,6 @@ if (FALSE) {
                                                                                        perf_metric = "Accuracy")
     pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_accuracy_10.pdf"), width = 17, height = 9)
     plot(cross_validation_analysis_wt_predictors_raffle)
-    dev.off()
-}
-
-# Cross Validation on Whole dataset
-if (TRUE) {
-    if (sentence_data) { fname <- "./plots/analysis_plots_sentence/predictions_wt_predictors_cv_plot_sentence.pdf" } else { fname <- "./plots/analysis_plots/predictions_wt_predictors_cv_plot.pdf" }
-    cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(d_long, n_plots)
-    pdf(file = fname, width = 17, height = 9)
-    plot(cross_validation_analysis_wt_predictors)
     dev.off()
 }
 

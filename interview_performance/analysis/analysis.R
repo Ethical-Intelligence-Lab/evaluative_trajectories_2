@@ -679,7 +679,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
     t_results_hiring_likelihood <- as.data.frame(t(results_hiring_likelihood))
     colnames(t_results_hiring_likelihood) <- predictors
     results_hiring_likelihood_long <- gather(t_results_hiring_likelihood, key = predictors, value = predictors_results, colnames(t_results_hiring_likelihood)) #length(predictors)*n_folds
-    hiring_likelihood_new_order <- with(results_hiring_likelihood_long, reorder(predictors, predictors_results, median, na.rm = TRUE))
+    hiring_likelihood_new_order <- with(results_hiring_likelihood_long, reorder(predictors, predictors_results, mean, na.rm = TRUE))
     results_hiring_likelihood_long["hiring_likelihood_new_order"] <- hiring_likelihood_new_order
 
     # Get_noise_ceiling function
@@ -818,21 +818,20 @@ data_plot_long <- ProcessForPlots(d_long, n_plots, plot_names) #num_rows = num_p
 
 ## ========================================== (2) Plot Data and Save ==================================================
 
-
-#### (2.1) MAKE BAR PLOT OF HIRING LIKELIHOOD SCORES
-grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)
-plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot, plot_names) #the little interview performance icons
-
-pdf(file = "interview_performance_bar_plot.pdf", width = 17, height = 8)
-ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
-dev.off()
-
-
 "
 Create bar plot, word clouds, and sentiment plot
 "
 
-if (TRUE) {
+if (FALSE) {  ## Takes some time
+    #### (2.1) MAKE BAR PLOT OF HIRING LIKELIHOOD SCORES
+    grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)
+    plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot, plot_names) #the little interview performance icons
+
+    pdf(file = "interview_performance_bar_plot.pdf", width = 17, height = 8)
+    ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
+    dev.off()
+
+
     #### (2.2) MAKE WORD CLOUDS (WARNING: takes ~5 minutes; feel free to skip)
     MakeWordClouds(d_long, n_plots, plot_names) #make word cloud images
     arranged_word_clouds <- ArrangeWordClouds(d_long) #arrange word clouds into a grid
@@ -890,11 +889,12 @@ data_wt_PCs <- MakePCAFunction(score_features_df)
 ##### (3.3) RUN PREDICTIVE ANALYSES
 
 # Get performance of each predictor and PCA-reduced feature using cross-validation.
-cross_validation_analysis_wt_pcs <- CrossValidationAnalysisWtPCs(data_wt_PCs, d_long, n_after_exclusions, n_plots)
-pdf(file = "predictions_wt_pcs_cv_plot.pdf", width = 15, height = 9)
-cross_validation_analysis_wt_pcs
-dev.off()
-# errors pop up because I removed outliers
+if (FALSE) {
+    cross_validation_analysis_wt_pcs <- CrossValidationAnalysisWtPCs(data_wt_PCs, d_long, n_after_exclusions, n_plots)
+    pdf(file = "predictions_wt_pcs_cv_plot.pdf", width = 15, height = 9)
+    cross_validation_analysis_wt_pcs
+    dev.off()
+}
 
 cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(data_wt_PCs, d_long, n_after_exclusions, n_plots)
 pdf(file = "predictions_wt_predictors_cv_plot.pdf", width = 15, height = 9)

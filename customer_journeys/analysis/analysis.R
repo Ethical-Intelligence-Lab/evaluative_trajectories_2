@@ -961,7 +961,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots, tr
             t_results_satisfaction <- as.data.frame(t(results))
             colnames(t_results_satisfaction) <- predictors
             results_satisfaction_long <- gather(t_results_satisfaction, key = predictors, value = predictors_results, colnames(t_results_satisfaction)) #length(predictors)*n_folds
-            satisfaction_new_order <- with(results_satisfaction_long, reorder(predictors, predictors_results, median, na.rm = TRUE))
+            satisfaction_new_order <- with(results_satisfaction_long, reorder(predictors, predictors_results, mean, na.rm = TRUE))
             results_satisfaction_long["satisfaction_new_order"] <- satisfaction_new_order
 
             # Get_noise_ceiling function
@@ -971,7 +971,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots, tr
             t_results_pd <- as.data.frame(t(results))
             colnames(t_results_pd) <- predictors
             results_pd_long <- gather(t_results_pd, key = predictors, value = predictors_results, colnames(t_results_pd)) #length(predictors)*n_folds
-            pd_new_order <- with(results_pd_long, reorder(predictors, predictors_results, median, na.rm = TRUE))
+            pd_new_order <- with(results_pd_long, reorder(predictors, predictors_results, mean, na.rm = TRUE))
             results_pd_long["pd_new_order"] <- pd_new_order
             results_pd_long <- results_pd_long[order(match(results_pd_long[, "pd_new_order"], results_satisfaction_long[, "satisfaction_new_order"])),] #order by satisfaction scores
 
@@ -1189,7 +1189,7 @@ write.csv(data.frame(word = dat), "./data/dat.csv", row.names = FALSE) #create w
 score_features_df <- CreateDataFeaturesDF(d_long, features, n_after_exclusions)
 
 
-if (TRUE) {
+if (FALSE) {
     # Run regularized regression on all predictors
     ridge_regression_wt_predictors <- AnalyzeRidgeRegression(score_features_df)
 
