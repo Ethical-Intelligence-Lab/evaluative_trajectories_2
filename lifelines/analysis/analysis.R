@@ -1435,13 +1435,13 @@ ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
 dev.off()
 
 
-if (TRUE) {
+if (FALSE) {
     #### (2.2) MAKE WORD CLOUDS (WARNING: takes ~5 minutes; feel free to skip)
     MakeWordClouds(data_long, n_plots, plot_names) #make word cloud images
     arranged_word_clouds <- ArrangeWordClouds(data_long) #arrange word clouds into a grid
 
     pdf(file = "lifelines_word_clouds.pdf", width = 18, height = 8)
-    arranged_word_clouds
+    plot(arranged_word_clouds)
     dev.off()
 
 
@@ -1497,10 +1497,10 @@ data_wt_PCs <- MakePCAFunction(score_features_df)
 ##### (3.3) RUN PREDICTIVE ANALYSES
 
 # Get performance of each predictor and PCA-reduced feature using cross-validation.
-cross_validation_analysis_wt_pcs <- CrossValidationAnalysisWtPCs(data_wt_PCs, data_long, n_after_exclusions, n_plots)
-pdf(file = "predictions_wt_pcs_cv_plot.pdf", width = 17, height = 9)
-plot(cross_validation_analysis_wt_pcs)
-dev.off()
+#cross_validation_analysis_wt_pcs <- CrossValidationAnalysisWtPCs(data_wt_PCs, data_long, n_after_exclusions, n_plots)
+#pdf(file = "predictions_wt_pcs_cv_plot.pdf", width = 17, height = 9)
+#plot(cross_validation_analysis_wt_pcs)
+#dev.off()
 
 cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(data_wt_PCs, data_long, n_after_exclusions, n_plots)
 pdf(file = "predictions_wt_predictors_cv_plot.pdf", width = 16, height = 9)

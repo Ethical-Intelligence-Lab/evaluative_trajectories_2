@@ -174,7 +174,7 @@ GetRankings <- function(data, old_labs, new_labs) {
     set.seed(123)
     RankAggreg(feature_wide, length(new_labs))
     
-    # BruteAggreg(feature_wide, length(new_labs)) #this BruteAggreg() function is apparently preferred, but because we have more than 10 features and a large number of participants, R does not have enough memory to perform the calculation. 
+    #BruteAggreg(feature_wide, length(new_labs)) #this BruteAggreg() function is apparently preferred, but because we have more than 10 features and a large number of participants, R does not have enough memory to perform the calculation.
     # Source: https://www.rdocumentation.org/packages/RankAggreg/versions/0.6.6/topics/BruteAggreg ("This approach works for small problems only and should not be attempted if k is relatively large (k > 10)."); https://www.r-bloggers.com/2021/03/rank-order-analysis-in-r/ 
 }
 

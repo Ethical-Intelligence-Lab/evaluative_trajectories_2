@@ -1118,19 +1118,19 @@ d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment, model_
 d_long$sentiment_score[is.na(d_long$sentiment_score)] <- 0
 d_long[, "is_word"] <- lapply(d_long["word"], is.word)
 
+#### (2.1) MAKE BAR PLOT OF SATISFACTION SCORES
+grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)
+plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot, plot_names) #the little customer journey icons
+
+pdf(file = "customer_journeys_bar_plot.pdf", width = 17, height = 8)
+ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
+dev.off()
+
 ## ========================================== (2) Plot Data and Save ==================================================
 if (FALSE) {
     "
     Create bar plot, word clouds, and sentiment plot
     "
-
-    #### (2.1) MAKE BAR PLOT OF SATISFACTION SCORES
-    grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)
-    plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot, plot_names) #the little customer journey icons
-
-    pdf(file = "customer_journeys_bar_plot.pdf", width = 17, height = 8)
-    ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
-    dev.off()
 
 
     grouped_bar_plot_wtp <- MakeGroupedBarPlot(data_plot_long, wtp = TRUE)

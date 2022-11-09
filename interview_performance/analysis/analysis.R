@@ -439,7 +439,7 @@ MakePCAFunction <- function(score_features_df) {
     # Print, then save the features corrplot
     corrplot(my_PCA$Structure, method = "circle", mar = c(0, 0, 2, 0))
     mtext("Features Correlation Matrix \nover PCs", at = 1, line = 1, cex = 1.5)
-    pdf(file = "features_corrplot.pdf")
+    pdf(file = "./plots/analysis_plots/features_corrplot.pdf")
     corrplot(my_PCA$Structure, method = "circle", mar = c(0, 0, 4, 0))
     mtext("Features Correlation Matrix \nover PCs", at = 1, line = 1, cex = 1.5)
     dev.off()
@@ -822,21 +822,20 @@ data_plot_long <- ProcessForPlots(d_long, n_plots, plot_names) #num_rows = num_p
 Create bar plot, word clouds, and sentiment plot
 "
 
+#### (2.1) MAKE BAR PLOT OF HIRING LIKELIHOOD SCORES
+grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)
+plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot, plot_names) #the little interview performance icons
+
+pdf(file = "./plots/analysis_plots/interview_performance_bar_plot.pdf", width = 17, height = 8)
+ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
+dev.off()
+
 if (FALSE) {  ## Takes some time
-    #### (2.1) MAKE BAR PLOT OF HIRING LIKELIHOOD SCORES
-    grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)
-    plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot, plot_names) #the little interview performance icons
-
-    pdf(file = "interview_performance_bar_plot.pdf", width = 17, height = 8)
-    ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
-    dev.off()
-
-
     #### (2.2) MAKE WORD CLOUDS (WARNING: takes ~5 minutes; feel free to skip)
     MakeWordClouds(d_long, n_plots, plot_names) #make word cloud images
     arranged_word_clouds <- ArrangeWordClouds(d_long) #arrange word clouds into a grid
 
-    pdf(file = "interview_performance_word_clouds.pdf", width = 18, height = 8)
+    pdf(file = "./plots/analysis_plots/interview_performance_word_clouds.pdf", width = 18, height = 8)
     plot(arranged_word_clouds)
     dev.off()
 
@@ -845,7 +844,7 @@ if (FALSE) {  ## Takes some time
     sentiment_bar_plot <- MakeSentimentBarPlot(d_long, n_plots, plot_names, title = 'Hiring')
     sentiment_plot_images <- MakeGroupedBarPlotImages(sentiment_bar_plot, plot_names) #the little interview performance icons
 
-    pdf(file = "interview_performance_sentiment_plot.pdf", width = 17, height = 8)
+    pdf(file = "./plots/analysis_plots/interview_performance_sentiment_plot.pdf", width = 17, height = 8)
     ggdraw(insert_xaxis_grob(sentiment_bar_plot, sentiment_plot_images, position = "bottom"))
     dev.off()
 
@@ -891,13 +890,13 @@ data_wt_PCs <- MakePCAFunction(score_features_df)
 # Get performance of each predictor and PCA-reduced feature using cross-validation.
 if (FALSE) {
     cross_validation_analysis_wt_pcs <- CrossValidationAnalysisWtPCs(data_wt_PCs, d_long, n_after_exclusions, n_plots)
-    pdf(file = "predictions_wt_pcs_cv_plot.pdf", width = 15, height = 9)
+    pdf(file = "./plots/analysis_plots/predictions_wt_pcs_cv_plot.pdf", width = 15, height = 9)
     cross_validation_analysis_wt_pcs
     dev.off()
 }
 
 cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(data_wt_PCs, d_long, n_after_exclusions, n_plots)
-pdf(file = "predictions_wt_predictors_cv_plot.pdf", width = 15, height = 9)
+pdf(file = "./plots/analysis_plots/predictions_wt_predictors_cv_plot.pdf", width = 15, height = 9)
 cross_validation_analysis_wt_predictors
 dev.off()
 # same note above

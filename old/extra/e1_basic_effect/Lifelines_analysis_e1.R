@@ -181,7 +181,7 @@ MakeGroupedBarPlot <- function(data_plot_long) {
                      geom_errorbar(aes(ymin=score-sd, ymax=score+sd), width=.2,
                      position=position_dodge(.9)) +
                      ggtitle("Meaningfulness and Personal Desirability Scores by Ascending Meaningfulness Scores") +
-                     xlab("Lifeline Plots") + ylab("Scaled Rating") +
+                     xlab("Lifeline Plots") + ylab("Mean Rating") +
                      theme(
                           plot.title = element_text(size=20, face="bold", hjust = 0.5),
                           legend.title = element_text(size=15, face="bold"),

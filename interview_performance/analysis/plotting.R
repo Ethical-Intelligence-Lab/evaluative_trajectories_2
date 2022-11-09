@@ -6,12 +6,12 @@ MakeGroupedBarPlot <- function(data_plot_long) {
     "
 
     grouped_bar_plot <- ggplot(data_plot_long, aes(x = plot_names, y = score)) +
-        geom_bar(position = "dodge", stat = "identity", fill = "#56B4E9") +
+        geom_bar(position = "dodge", stat = "identity", fill = "#3c7ea3") +
         geom_errorbar(aes(ymin = score - sd, ymax = score + sd), width = .2,
                       position = position_dodge(.9)) +
         ggtitle("Summarizing the Hiring Likelihood of Different Interview Trajectories") +
         xlab("Interview Performance Plots") +
-        ylab("Hiring Likelihood") +
+        ylab("Mean Rating") +
         scale_y_continuous(breaks = seq(0, 100, 40)) +
         theme(
             plot.title = element_blank(), #element_text(color = "black", size=31, face="bold", hjust = 0.5),
@@ -105,20 +105,23 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
     Output: a boxplot of participant rating predictions with either principal components or predictors
     "
 
-    grouped_box_plot <- ggplot(data = results_df, aes(x = x_order, y = results_order, fill = ques_type)) +
+    grouped_box_plot <- ggplot(data = results_df, aes(x = x_order, y = results_order)) +
         scale_x_discrete() +
-        geom_rect(aes(xmin = 0.2, xmax = Inf, ymin = sum_hiring_likelihood["1st Qu."], ymax = sum_hiring_likelihood["3rd Qu."]),
-                  alpha = 1, fill = "gray60") + #"dodgerblue3") + # #56B4E9
         geom_hline(yintercept = 0, color = "gray60") +
-        geom_boxplot(outlier.shape = NA, fill = "#56B4E9") +
-        stat_summary(fun = mean, geom = "point", shape = 20, size = 5, color = "black", position = position_dodge(.75)) +
-        stat_summary(fun.data = mean_se, geom = "errorbar", color = "black", aes(group = question_type, width = 0.5), position = position_dodge(.75), fun.args = list(mult = 1.96)) +  # mean-se is 1.96 * std err (https://stulp.gmw.rug.nl/ggplotworkshop/comparinggroupstatistics.html)
+        stat_summary(fun = mean, geom = "point", color="#3c7ea3", shape = 20, size = 5, position = position_dodge(.75)) +
+        stat_summary(fun.data = mean_se, geom = "errorbar", color="#3c7ea3", aes(group = question_type, width = 0.5), position = position_dodge(.75), fun.args = list(mult = 1.96)) +  # mean-se is 1.96 * std err (https://stulp.gmw.rug.nl/ggplotworkshop/comparinggroupstatistics.html)
         ggtitle(paste0("Hiring Likelihood Predictions with ", x_labels)) +
         xlab(x_labels) +
         ylab("Prediction Performance\n(Cross-Validated Pearson's r)") +
         scale_y_continuous(breaks = round(seq(-1.20, 1.19, by = 0.2), 1)) +
+        scale_fill_manual(
+            name = "Judgment Type",
+            breaks = c("hiring_likelihood"),
+            labels = c("Hiring Likelihood"),
+            values = c("#3c7ea3"),
+            guide = guide_legend(title.position = "top")) +
         theme_bw() +
-    { if (x_labels == "Predictors")
+    if (x_labels == "Predictors") {
         theme(element_blank(),
               plot.title = element_blank(), #element_text(color = "black", size=32, face = "bold", hjust = 0.5),
               text = element_text(color = "black", size = 25),
@@ -128,7 +131,7 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
               legend.title = element_blank(), #element_text(color = "black", size=30),
               legend.position = "top",
               legend.title.align = 0.5)
-    else
+    } else {
         theme(element_blank(),
               plot.title = element_blank(), #element_text(color = "black", size=32, face = "bold", hjust = 0.5),
               text = element_text(color = "black", size = 25),
@@ -139,6 +142,7 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
               legend.position = "top",
               legend.title.align = 0.5)
     }
+
 
     return(grouped_box_plot)
 }

@@ -240,68 +240,6 @@ Get_noise_ceiling <- function(dat_long, question_type, n_ss) {
     return(store_summary)
 }
 
-
-CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, sum_willing, y_axis = "Pearson's r", no_kfold = FALSE) {
-    "
-    What this function does: creates a grouped box plot of the cross-validated prediction results
-    Inputs: results_df, x_order, results_order, ques_type, x_labels, sum_willing
-    Output: a boxplot of participant rating predictions with either principal components or predictors
-    "
-
-    y_label <- paste0("Prediction Accuracy\n(Cross-Validated\n", y_axis, ")")
-
-    box_label <- "Willingness to Buy"
-    if (y_axis != "Pearson's r") {
-        box_label <- "Raffle Choice"
-    }
-    if (no_kfold) { y_label <- paste0("Prediction Accuracy\n(", y_axis, ")") }
-    grouped_box_plot <- ggplot(data = results_df, aes(x = x_order, y = results_order, fill = ques_type)) +
-        scale_x_discrete() +
-        geom_rect(aes(xmin = 0.2, xmax = Inf, ymin = sum_willing["1st Qu."], ymax = sum_willing["3rd Qu."]),
-                  alpha = 1, fill = "gray60") + #"dodgerblue3") + # #56B4E9
-        geom_hline(yintercept = 0, color = "gray60") +
-        geom_boxplot(outlier.shape = NA) +
-        stat_summary(fun = mean, geom = "point", shape = 20, size = 5, color = "black", position = position_dodge(.75)) +
-        stat_summary(fun.data = mean_se, geom = "errorbar", color = "black", aes(group = question_type, width = 0.5), position = position_dodge(.75), fun.args = list(mult = 1.96)) +  # mean-se is 1.96 * std err (https://stulp.gmw.rug.nl/ggplotworkshop/comparinggroupstatistics.html)
-        ggtitle(paste0("willing and Desirability Predictions with ", x_labels)) +
-        xlab(x_labels) +
-        ylab(y_label) +
-        scale_y_continuous(breaks = round(seq(-1, 1, by = 0.2), 1)) +
-        scale_fill_manual(
-            name = "Judgment Type",
-            breaks = c("willing_results"),
-            labels = c(box_label),
-            values = c("#56B4E9"),
-            guide = guide_legend(title.position = "top")) +
-        theme_bw() +
-        if (x_labels == "Predictors") {
-            theme(element_blank(),
-                  plot.title = element_blank(), #element_text(color = "black", size=32, face = "bold", hjust = 0.5),
-                  text = element_text(color = "black", size = 25),
-                  axis.title.y = element_text(color = "black", size = 30, face = "bold"),
-                  axis.title.x = element_text(color = "black", size = 30, face = "bold"),
-                  axis.text.x = element_text(color = "black", angle = 60, vjust = 1, hjust = 1),
-                  legend.title = element_blank(), #element_text(color = "black", size=30),
-                  legend.text = element_text(color = "black", size = 30),
-                  legend.position = "top",
-                  legend.title.align = 0.5)
-        } else {
-            theme(element_blank(),
-                  plot.title = element_blank(), #element_text(color = "black", size=32, face = "bold", hjust = 0.5),
-                  text = element_text(color = "black", size = 25),
-                  axis.title.y = element_text(color = "black", size = 30, face = "bold"),
-                  axis.title.x = element_text(color = "black", size = 30, face = "bold", margin = margin(t = 20, r = 0, b = 0, l = 0)),
-                  axis.text.x = element_text(color = "black", size = 17.5),
-                  legend.title = element_blank(), #element_text(color = "black", size=30),
-                  legend.text = element_text(color = "black", size = 30),
-                  legend.position = "top",
-                  legend.title.align = 0.5) }
-
-
-    return(grouped_box_plot)
-}
-
-
 MakePCAFunction <- function(score_features_df) {
     "
     Perform mixed-effects regression based on PCA-reduced features of our predictors.
@@ -402,17 +340,13 @@ CrossValidationAnalysisWtPCs <- function(dat, n_ss, n_plots) {
     willing_new_order <- with(results_willing_long, reorder(principal_components, pcs_results, median, na.rm = TRUE))
     results_willing_long["willing_new_order"] <- willing_new_order
 
-    summary_willing <- Get_noise_ceiling(dat, "willing", n_ss)
-
-    #-------------------------------------------------------------------------------------------------------------------
-
     #3. Plotting
     pcs_results_ordered <- data.frame(pcs_order = results_willing_long$willing_new_order,
                                       willing_results = results_willing_long$pcs_results) #combine willing and pd results
     pcs_results_long <- gather(pcs_results_ordered, key = question_type, value = results, willing_results)
 
     # Make boxplot from CV_plotter function
-    pcs_plot <- CV_plotter(pcs_results_long, pcs_results_long$pcs_order, pcs_results_long$results, pcs_results_long$question_type, "Principal Components", summary_willing)
+    pcs_plot <- CV_plotter(pcs_results_long, pcs_results_long$pcs_order, pcs_results_long$results, pcs_results_long$question_type, "Principal Components")
 
     # Get the labels
     x_labs <- ggplot_build(pcs_plot)$layout$panel_params[[1]]$
@@ -511,6 +445,9 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, co
                     "1st Derivative", "1st Derivative\nPrime", "1st Derivative\nAscending", "1st Derivative\nDescending", "1st Derivative\nEnd",
                     "2nd Derivative", "2nd Derivative\nPrime", "2nd Derivative\nAscending", "2nd Derivative\nDescending", "2nd Derivative\nEnd")
 
+    predicted_willingness <- data.frame(matrix(ncol = length(predictors), nrow = dim(dat)[1]))
+    colnames(predicted_willingness) = predictors
+
     if (sentence_data) { predictors <- append(predictors, "Sentiment Score\n(Sentence)", after = 3) }
 
     if (colnames(dat)[10] != "Integral") {
@@ -523,25 +460,24 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, co
     folds2 <- rep(seq(1, n_plots), times = n_folds) #plot x subjects folds
     indeces <- seq(1, (n_plots * n_folds))
 
-    #-------------------------------------------------------------------------------------------------------------------
-
     # Train for and Predict willing
     if (genres_separate) {
         results_willing <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_plots))
     } else {
         results_willing <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
     }
+
     rownames(results_willing) <- predictors
 
     if (!random) {
         for (i in 1:length(predictors)) {
             if (genres_separate) { nn_folds <- n_plots } else { nn_folds <- n_folds }
-            for (j in 1:nn_folds) {
+            for (j in 1:nn_folds) {  # Each subject
                 ss_results <- c()
                 truths <- c()
 
                 if (genres_separate) { nn_ss <- n_folds } else { nn_ss <- n_plots }
-                for (k in 1:nn_ss) {  # Now
+                for (k in 1:nn_ss) {  # Each genre
                     if (genres_separate) {
                         trainIndeces <- indeces[(folds2 == j) & (folds != k)]
                         testIndeces <- indeces[(folds2 == j) & (folds == k)]
@@ -568,7 +504,9 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, co
                         next
                     } else {
                         fitpc <- lm(willing ~ get(predictors[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
-                        ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
+                        willing_predict <- predict(fitpc, dat)[testIndeces]
+                        predicted_willingness[8 * (j - 1) + k, predictors[i]] <- willing_predict
+                        ss_results <- c(ss_results, willing_predict)
                         truths <- c(truths, dat$willing[testIndeces])
                     }
                 }
@@ -626,8 +564,6 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, co
     willing_new_order <- with(results_willing_long, reorder(predictors, predictors_results, mean, na.rm = TRUE))
     results_willing_long["willing_new_order"] <- willing_new_order
 
-    summary_willing <- Get_noise_ceiling(dat, "willing", n_folds)
-
     #-------------------------------------------------------------------------------------------------------------------
     #-------------------------------------------------------------------------------------------------------------------
     #3. Plotting
@@ -636,7 +572,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, co
     predictors_results_long <- gather(predictors_results_ordered, key = question_type, value = results, willing_results)
 
     # Make boxplot from CV_plotter function
-    predictors_plot <- CV_plotter(predictors_results_long, predictors_results_long$predictors_order, predictors_results_long$results, predictors_results_long$question_type, "Predictors", summary_willing)
+    predictors_plot <- CV_plotter(predictors_results_long, predictors_results_long$predictors_order, predictors_results_long$results, predictors_results_long$question_type, "Predictors")
 
     # Get the labels
     x_labs <- ggplot_build(predictors_plot)$layout$panel_params[[1]]$
@@ -671,14 +607,22 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, co
         predictors_plot <- predictors_plot + ggplot2::annotate("text", x = willing_bottom_x + i - 1, y = willing_bottom_y, size = 8, label = p_value_stars_willing[[i]])
     }
 
-    return(predictors_plot)
+    return(list(predictors_plot, predicted_willingness))
 }
 
-CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, random = FALSE, fold_amount = 180, perf_metric = "F1") {
-    ## Check if willingness to buy values indicate with raffle choice
+CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, random = FALSE, fold_amount = 180, perf_metric = "F1", max_wtp = FALSE, predicted_willing = data.frame(), sample_all_ones = FALSE, weight = 7) {
     choices <- data.frame()
 
-    dat$picked_movie <- as.numeric(dat$genre == genres[match(dat$movie_choice, movies)])
+    pm <- as.numeric(dat$genre == genres[match(dat$movie_choice, movies)])
+    dat$picked_movie <- pm
+
+    if (dim(predicted_willing)[1] != 0) { predicted_willing$picked_movie <- pm }
+
+
+    maxs <- aggregate(dat$willing, by = list(dat$Unnamed..0), max)
+    maxs <- maxs[rep(seq_len(nrow(maxs)), each = 8),]
+
+    dat$max_willing <- as.numeric(dat$willing == maxs$x)
 
     # For each participant, find highest wtp value
     for (i in 1:n_subjects) {
@@ -718,13 +662,104 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
 
     #-------------------------------------------------------------------------------------------------------------------
     p_value_stars_willing <- c()
-    fit_wts = ifelse(dat$picked_movie == TRUE, 7, 1)
-    if (no_kfold) {  # Just simple logistic regression
+    fit_wts = ifelse(dat$picked_movie == TRUE, weight, 1)
+    if (max_wtp) {
+        fit_wts = ifelse(dat$max_willing == TRUE, weight, 1)
+
+        # Create fold_amount random partitions with equal class distribution
+        set.seed(1)
+        folds <- createFolds(factor(dat$max_willing), k = fold_amount, list = TRUE)
+
+        results_raffle <- data.frame(matrix(NA, nrow = length(predictors), ncol = fold_amount))
+        rownames(results_raffle) <- predictors
+
+        for (i in 1:length(predictors)) {
+            for (j in 1:fold_amount) {  # Number of folds
+                ss_results <- c()
+                truths <- c()
+                for (k in 1:length(folds[[j]])) {  # Predict each participant in fold
+                    trainIndeces <- folds[[j]]
+                    testIndeces <- folds[[j]][k]
+                    trainIndeces <- trainIndeces[trainIndeces != testIndeces]
+
+                    fitpc <- glm(max_willing ~ get(predictors[i]), data = dat, subset = trainIndeces, family = binomial, weights = fit_wts) #fit model on subset of train data
+
+                    probabilities <- fitpc %>% predict(dat[testIndeces,], type = "response")
+                    predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+
+                    ss_results <- c(ss_results, predicted.classes)
+                    truths <- c(truths, dat$max_willing[testIndeces])
+                }
+
+                cm <- confusionMatrix(as.factor(c(matrix(ss_results))), as.factor(c(truths)), mode = "everything", positive = "1")
+
+                if (perf_metric == "Accuracy") {
+                    score <- cm$overall[perf_metric]
+                } else {
+                    score <- cm$byClass[perf_metric]
+                }
+
+                if (is.na(score)) { score <- 0 }
+
+                results_raffle[i, j] <- score
+            }
+
+            print(paste('willing: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_raffle[i,]), na.rm = TRUE)))
+            print(paste('willing: median predictor result,', predictors[i], ': ', median(as.numeric(results_raffle[i,]), na.rm = TRUE)))
+        }
+
+    } else if (dim(predicted_willing)[1] != 0) {
+
+        # Create fold_amount random partitions with equal class distribution
+        set.seed(1)
+        folds <- createFolds(factor(predicted_willing$picked_movie), k = fold_amount, list = TRUE)
+
+        results_raffle <- data.frame(matrix(NA, nrow = length(predictors), ncol = fold_amount))
+        rownames(results_raffle) <- predictors
+
+        for (i in 1:length(predictors)) {
+            for (j in 1:fold_amount) {  # Number of folds
+                ss_results <- c()
+                truths <- c()
+                for (k in 1:length(folds[[j]])) {  # Predict each participant in fold
+                    trainIndeces <- folds[[j]]
+                    testIndeces <- folds[[j]][k]
+                    trainIndeces <- trainIndeces[trainIndeces != testIndeces]
+
+                    fitpc <- glm(picked_movie ~ get(predictors[i]), data = predicted_willing, subset = trainIndeces, family = binomial, weights = fit_wts) #fit model on subset of train data
+
+                    probabilities <- fitpc %>% predict(predicted_willing[testIndeces,], type = "response")
+                    predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+
+                    ss_results <- c(ss_results, predicted.classes)
+                    truths <- c(truths, predicted_willing$picked_movie[testIndeces])
+                }
+
+                cm <- confusionMatrix(as.factor(c(matrix(ss_results))), as.factor(c(truths)), mode = "everything", positive = "1")
+
+                if (perf_metric == "Accuracy") {
+                    score <- cm$overall[perf_metric]
+                } else {
+                    score <- cm$byClass[perf_metric]
+                }
+
+                if (is.na(score)) { score <- 0 }
+
+                results_raffle[i, j] <- score
+            }
+
+            print(paste('willing: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_raffle[i,]), na.rm = TRUE)))
+            print(paste('willing: median predictor result,', predictors[i], ': ', median(as.numeric(results_raffle[i,]), na.rm = TRUE)))
+        }
+
+    } else if (no_kfold) {  # Just simple logistic regression
         results_raffle <- data.frame(matrix(NA, nrow = length(predictors), ncol = 1))
 
         for (i in 1:length(predictors)) {
             # Just fit logistic regression model on all data
             fitpc <- glm(picked_movie ~ get(predictors[i]), data = dat, family = binomial, weights = fit_wts) #fit model on subset of train data
+            print(predictors[i])
+            print(summary(fitpc))
             probabilities <- fitpc %>% predict(dat, type = "response")
             predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
 
@@ -771,6 +806,7 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
                     truths <- c(truths, dat$picked_movie[testIndeces])
                 }
 
+                print(table(ss_results))
                 cm <- confusionMatrix(as.factor(c(matrix(ss_results))), as.factor(c(truths)), mode = "everything", positive = "1")
 
                 if (perf_metric == "Accuracy") {
@@ -787,6 +823,9 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
             print(paste('willing: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_raffle[i,]), na.rm = TRUE)))
             print(paste('willing: median predictor result,', predictors[i], ': ', median(as.numeric(results_raffle[i,]), na.rm = TRUE)))
         }
+    } else if (sample_all_ones) {
+        # Sample all ones and 10% of zeros:
+        print(0)
     } else { # Train on each participant separately
         results_raffle <- data.frame(matrix(NA, nrow = length(predictors), ncol = fold_amount))
         rownames(results_raffle) <- predictors
@@ -831,13 +870,12 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
     t_results_raffle <- as.data.frame(t(results_raffle))
 
     print(paste0("Mean F1 Score of all for fold amount ", fold_amount, ": ", mean(as.matrix(t_results_raffle))))
+    return(mean(as.matrix(t_results_raffle)));
 
     colnames(t_results_raffle) <- predictors
     results_raffle_long <- gather(t_results_raffle, key = predictors, value = predictors_results, colnames(t_results_raffle)) #length(predictors)*n_folds
-    willing_new_order <- with(results_raffle_long, reorder(predictors, predictors_results, median, na.rm = TRUE))
+    willing_new_order <- with(results_raffle_long, reorder(predictors, predictors_results, mean, na.rm = TRUE))
     results_raffle_long["willing_new_order"] <- willing_new_order
-
-    summary_willing <- Get_noise_ceiling(dat, "willing", n_participants)
 
     #-------------------------------------------------------------------------------------------------------------------
     #-------------------------------------------------------------------------------------------------------------------
@@ -849,14 +887,12 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
     # Make boxplot from CV_plotter function
     predictors_plot <- CV_plotter(predictors_results_long, predictors_results_long$predictors_order,
                                   predictors_results_long$results, predictors_results_long$question_type,
-                                  "Predictors", summary_willing, y_axis = paste0(perf_metric, " Score"), no_kfold = no_kfold)
+                                  "Predictors", y_axis = paste0(perf_metric, " Score"), no_kfold = no_kfold)
 
     # Get the labels
     x_labs <- ggplot_build(predictors_plot)$layout$panel_params[[1]]$
         x$
         get_labels()
-
-    return(predictors_plot)
 
     # Loop through the predictors, comparing each to a null distribution
     # willing: One-sided Wilcox test
@@ -905,7 +941,7 @@ n_clusters <- 27
 cluster_names_sorted <- c()
 
 # Read Data and Create Folder for Saving Files
-if (sentence_data) { fname <- './data/data_sentence.csv' } else { fname <- paste0('./data/data_long_cluster_', n_clusters, '.csv') }
+if (sentence_data) { fname <- './data/data_sentence.csv' } else { fname <- paste0('./data/data_long_cluster_27', '.csv') }
 
 d_long <- read.csv(fname)
 dir.create("plots/analysis_plots")
@@ -1037,34 +1073,64 @@ write.csv(data.frame(word = d_for_comparison), "./data/dat_for_comparison.csv", 
 
 # Get performance of each predictor and PCA-reduced feature using cross-validation.
 # Cross Validation on Whole dataset
-if (TRUE) {
-    if (sentence_data) { fname <- "./plots/analysis_plots_sentence/predictions_wt_predictors_cv_plot_sentence.pdf" } else { fname <- "./plots/analysis_plots/predictions_wt_predictors_cv_plot.pdf" }
-    cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(d_long, n_plots)
-    pdf(file = fname, width = 17, height = 9)
-    plot(cross_validation_analysis_wt_predictors)
+if (FALSE) {
+    n_after_exclusions <- dim(d_long)[1] / n_plots
+    cross_validation_analysis_wt_pcs <- CrossValidationAnalysisWtPCs(data_wt_PCs, n_after_exclusions, n_plots)
+    pdf(file = "./plots/analysis_plots/predictions_wt_pcs_cv_plot.pdf", width = 17, height = 9)
+    plot(cross_validation_analysis_wt_pcs)
     dev.off()
 }
 
-n_after_exclusions <- dim(d_long)[1] / n_plots
-cross_validation_analysis_wt_pcs <- CrossValidationAnalysisWtPCs(data_wt_PCs, n_after_exclusions, n_plots)
-pdf(file = "./plots/analysis_plots/predictions_wt_pcs_cv_plot.pdf", width = 17, height = 9)
-plot(cross_validation_analysis_wt_pcs)
+acc <- c()
+for (i in (2:10)) {
+    acc <- c(acc, CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE,
+                                            random = TRUE, fold_amount = i,
+                                            perf_metric = "F1"))
+}
+
+
+if (sentence_data) { fname <- "./plots/analysis_plots_sentence/predictions_wt_predictors_cv_plot_sentence.pdf" } else { fname <- "./plots/analysis_plots/predictions_wt_predictors_cv_plot.pdf" }
+cv_out <- CrossValidationAnalysisWtPredictors(d_long, n_plots)
+cv_plot <- cv_out[1]
+pdf(file = fname, width = 17, height = 9)
+plot(cv_plot[[1]])
 dev.off()
+
 
 cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE,
                                                                                    random = TRUE, fold_amount = 3,
-                                                                                   perf_metric = "F1")
-pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_f1_", 3, ".pdf"), width = 17, height = 9)
+                                                                                   perf_metric = "F1", max_wtp = FALSE,
+                                                                                   predicted_willing = cv_out[2][[1]])
+
+pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_f1_", 3, "_predict_from_willing.pdf"), width = 17, height = 9)
 plot(cross_validation_analysis_wt_predictors_raffle)
 dev.off()
 
+cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = TRUE,
+                                                                                   random = FALSE, fold_amount = 3,
+                                                                                   perf_metric = "F1")
+pdf(file = paste0("./plots/analysis_plots/raffle_nokfold_random_f1_", 3, ".pdf"), width = 17, height = 9)
+plot(cross_validation_analysis_wt_predictors_raffle)
+dev.off()
+
+
 # Cross Validation for Raffle
 if (FALSE) {
-    for (i in (2:20)) {
+
+    cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE,
+                                                                                       random = TRUE, fold_amount = 3,
+                                                                                       perf_metric = "F1", max_wtp = TRUE,
+                                                                                       weight = weight)
+
+    pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_f1_", 3, "_max_wtp_w2.pdf"), width = 17, height = 9)
+    plot(cross_validation_analysis_wt_predictors_raffle)
+    dev.off()
+
+    for (weight in (1:10)) {
         cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE,
-                                                                                           random = TRUE, fold_amount = i,
-                                                                                           perf_metric = "F1")
-        pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_f1_", i, ".pdf"), width = 17, height = 9)
+                                                                                           random = TRUE, fold_amount = 3,
+                                                                                           perf_metric = "F1", weight = weight)
+        pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_f1_w=", weight, ".pdf"), width = 17, height = 9)
         plot(cross_validation_analysis_wt_predictors_raffle)
         dev.off()
     }
