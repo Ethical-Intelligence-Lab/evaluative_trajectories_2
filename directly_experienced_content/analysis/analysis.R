@@ -610,6 +610,43 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, co
     return(list(predictors_plot, predicted_willingness))
 }
 
+simulate_f1_score <- function(dat) {
+    pm <- as.numeric(dat$genre == genres[match(dat$movie_choice, movies)])
+    n_participants <- dim(dat)[1] / n_plots
+
+
+    f1s <- c()
+    # Pick a movie randomly for each participant
+    for (i in 1:10000) {
+        choices <- replicate(dim(dat)[1], 0)
+        for (i in 1:n_participants) {
+            random_pick <- sample(1:8, 1)
+            choices[random_pick + ((i - 1) * 8)] <- 1
+        }
+
+        cm_r <- confusionMatrix(as.factor(choices), as.factor(pm), mode = "everything", positive = "1")
+        f1s <- append(f1s, cm_r$byClass['F1'])
+
+    }
+
+    print(mean(f1s))
+
+
+    print("1/8 Pick:")
+    cm_r <- confusionMatrix(as.factor(choices), as.factor(pm), mode = "everything", positive = "1")
+    print(cm_r)
+
+    print("All 0:")
+    cm_r <- confusionMatrix(as.factor(replicate(dim(dat)[1], 0)), as.factor(pm), mode = "everything", positive = "1")
+    print(cm_r)
+
+    print("All 1:")
+    cm_r <- confusionMatrix(as.factor(replicate(dim(dat)[1], 1)), as.factor(pm), mode = "everything", positive = "1")
+    print(cm_r)
+}
+
+#simulate_f1_score(d_long)
+
 CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, random = FALSE, fold_amount = 180, perf_metric = "F1", max_wtp = FALSE, predicted_willing = data.frame(), sample_all_ones = FALSE, weight = 7) {
     choices <- data.frame()
 
@@ -785,6 +822,11 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
         set.seed(1)
         folds <- createFolds(factor(dat$picked_movie), k = fold_amount, list = TRUE)
 
+
+        all_indices <- createFolds(factor(dat$picked_movie), k = 1, list = TRUE)[[1]]
+
+        # Train on all data instead of single fold with size n_ss / fold_amount
+
         results_raffle <- data.frame(matrix(NA, nrow = length(predictors), ncol = fold_amount))
         rownames(results_raffle) <- predictors
 
@@ -792,16 +834,14 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
             for (j in 1:fold_amount) {  # Number of folds
                 ss_results <- c()
                 truths <- c()
+
+                trainIndeces <- c(setdiff(c(all_indices), c(folds[[j]])))
+                fitpc <- glm(picked_movie ~ get(predictors[i]), data = dat, subset = trainIndeces, family = binomial, weights = fit_wts) #fit model on subset of train data
+
                 for (k in 1:length(folds[[j]])) {  # Predict each participant in fold
-                    trainIndeces <- folds[[j]]
                     testIndeces <- folds[[j]][k]
-                    trainIndeces <- trainIndeces[trainIndeces != testIndeces]
-
-                    fitpc <- glm(picked_movie ~ get(predictors[i]), data = dat, subset = trainIndeces, family = binomial, weights = fit_wts) #fit model on subset of train data
-
                     probabilities <- fitpc %>% predict(dat[testIndeces,], type = "response")
                     predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
-
                     ss_results <- c(ss_results, predicted.classes)
                     truths <- c(truths, dat$picked_movie[testIndeces])
                 }
@@ -868,9 +908,10 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
 
     # Reorder predictors according to their significance
     t_results_raffle <- as.data.frame(t(results_raffle))
+    cm <- colMeans(t_results_raffle)
 
     print(paste0("Mean F1 Score of all for fold amount ", fold_amount, ": ", mean(as.matrix(t_results_raffle))))
-    return(mean(as.matrix(t_results_raffle)));
+    print(paste0("Max F1 Score of all for fold amount ", fold_amount, ": ", max(cm)))
 
     colnames(t_results_raffle) <- predictors
     results_raffle_long <- gather(t_results_raffle, key = predictors, value = predictors_results, colnames(t_results_raffle)) #length(predictors)*n_folds
@@ -905,8 +946,8 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
         print("willing: --------------------------------------------------------------------------------------")
         for (i in x_labs) {
             print(paste0(i, " --------------------------------------------------------------------------------------"))
-            wilcox_test_wt_willing[[i]] <- wilcox.test(t_results_raffle[, i], y = rep(0.125, length(t_results_raffle[, i])), alternative = "greater",
-                                                       conf.int = TRUE)
+            wilcox_test_wt_willing[[i]] <- wilcox.test(t_results_raffle[, i], y = rep(0.222, length(t_results_raffle[, i])), alternative = "greater",
+                                                       conf.int = TRUE)  # Comparing with .222 (all 1's)
             p_value_stars_willing[i] <- stars.pval(wilcox_test_wt_willing[[i]]$"p.value") #get stars
 
             print(wilcox_test_wt_willing[[i]])
@@ -916,13 +957,13 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
 
     # Define heights of annotations
     willing_bottom_x <- 1.0 #x value for bottom stars
-    willing_bottom_y <- -1.0 #y value for bottom stars
+    willing_bottom_y <- 0 #y value for bottom stars
 
     for (i in 1:20) {
         predictors_plot <- predictors_plot + ggplot2::annotate("text", x = willing_bottom_x + i - 1, y = willing_bottom_y, size = 8, label = p_value_stars_willing[[i]])
     }
 
-    return(predictors_plot)
+    return(list(predictors_plot, mean(as.matrix(t_results_raffle)), max(cm)))
 }
 
 ##======##
@@ -1081,46 +1122,31 @@ if (FALSE) {
     dev.off()
 }
 
-acc <- c()
-for (i in (2:10)) {
-    acc <- c(acc, CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE,
-                                            random = TRUE, fold_amount = i,
-                                            perf_metric = "F1"))
+if (FALSE) {
+    if (sentence_data) { fname <- "./plots/analysis_plots_sentence/predictions_wt_predictors_cv_plot_sentence.pdf" } else { fname <- "./plots/analysis_plots/predictions_wt_predictors_cv_plot.pdf" }
+    cv_out <- CrossValidationAnalysisWtPredictors(d_long, n_plots)
+    cv_plot <- cv_out[1]
+    pdf(file = fname, width = 17, height = 9)
+    plot(cv_plot[[1]])
+    dev.off()
 }
 
 
-if (sentence_data) { fname <- "./plots/analysis_plots_sentence/predictions_wt_predictors_cv_plot_sentence.pdf" } else { fname <- "./plots/analysis_plots/predictions_wt_predictors_cv_plot.pdf" }
-cv_out <- CrossValidationAnalysisWtPredictors(d_long, n_plots)
-cv_plot <- cv_out[1]
-pdf(file = fname, width = 17, height = 9)
-plot(cv_plot[[1]])
+avg_f1s <- c()
+max_f1s <- c()
+results_list <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE,
+                                                                                   random = TRUE, fold_amount = 18,
+                                                                                   perf_metric = "F1", max_wtp = FALSE)
+pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_f1_", 18, ".pdf"), width = 17, height = 9)
+plot(results_list[[1]])
 dev.off()
 
-
-cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE,
-                                                                                   random = TRUE, fold_amount = 3,
-                                                                                   perf_metric = "F1", max_wtp = FALSE,
-                                                                                   predicted_willing = cv_out[2][[1]])
-
-pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_f1_", 3, "_predict_from_willing.pdf"), width = 17, height = 9)
-plot(cross_validation_analysis_wt_predictors_raffle)
-dev.off()
-
-cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = TRUE,
-                                                                                   random = FALSE, fold_amount = 3,
-                                                                                   perf_metric = "F1")
-pdf(file = paste0("./plots/analysis_plots/raffle_nokfold_random_f1_", 3, ".pdf"), width = 17, height = 9)
-plot(cross_validation_analysis_wt_predictors_raffle)
-dev.off()
+avg_f1s <- append(avg_f1s, results_list[[2]])
+max_f1s <- append(max_f1s, results_list[[3]])
 
 
 # Cross Validation for Raffle
 if (FALSE) {
-
-    cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE,
-                                                                                       random = TRUE, fold_amount = 3,
-                                                                                       perf_metric = "F1", max_wtp = TRUE,
-                                                                                       weight = weight)
 
     pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_f1_", 3, "_max_wtp_w2.pdf"), width = 17, height = 9)
     plot(cross_validation_analysis_wt_predictors_raffle)

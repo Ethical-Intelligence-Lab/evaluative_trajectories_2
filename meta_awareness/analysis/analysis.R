@@ -172,7 +172,14 @@ GetRankings <- function(data, old_labs, new_labs) {
     
     # Perform rank order analysis, using aggregation to find the optimal rank order 
     set.seed(123)
-    RankAggreg(feature_wide, length(new_labs))
+    RankAggreg(feature_wide, length(new_labs), verbose = TRUE)
+
+    # Order by mean ranking
+    agg_tbl <- feature_rankings %>% group_by(features) %>%
+   summarise(mean_ranking=mean(rankings),
+             .groups = 'drop')
+
+    print(agg_tbl[order(agg_tbl$mean_ranking),])
     
     #BruteAggreg(feature_wide, length(new_labs)) #this BruteAggreg() function is apparently preferred, but because we have more than 10 features and a large number of participants, R does not have enough memory to perform the calculation.
     # Source: https://www.rdocumentation.org/packages/RankAggreg/versions/0.6.6/topics/BruteAggreg ("This approach works for small problems only and should not be attempted if k is relatively large (k > 10)."); https://www.r-bloggers.com/2021/03/rank-order-analysis-in-r/ 

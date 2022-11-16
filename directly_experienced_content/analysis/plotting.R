@@ -15,10 +15,9 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
     if (no_kfold) { y_label <- paste0("Prediction Accuracy\n(", y_axis, ")") }
     grouped_box_plot <- ggplot(data = results_df, aes(x = x_order, y = results_order)) +
         scale_x_discrete() +
-        geom_hline(yintercept = 0, color = "gray60") +
         stat_summary(fun = mean, geom = "point", shape = 20, size = 5, color = "#3c7ea3", position = position_dodge(.75)) +
         stat_summary(fun.data = mean_se, geom = "errorbar", color = "#3c7ea3", aes(group = question_type, width = 0.5), position = position_dodge(.75), fun.args = list(mult = 1.96)) +  # mean-se is 1.96 * std err (https://stulp.gmw.rug.nl/ggplotworkshop/comparinggroupstatistics.html)
-        ggtitle(paste0("willing and Desirability Predictions with ", x_labels)) +
+        ggtitle(paste0("Willingness Predictions with ", x_labels)) +
         xlab(x_labels) +
         ylab(y_label) +
         ylim(0, 0.4) +
