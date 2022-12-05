@@ -27,7 +27,7 @@ pacman::p_load('data.table', #rename data frame columns
                'lmerTest', #used in conjunction with lme4; get p-values
                'robustHD', #for the standardize function
                'corrplot', #for corrplot()
-               'plotrix', #for  std.error
+               'plotrix', #for std.error()
                'psych', #for principal components analysis (PCA)
                'glmnet', #for ridge (L2) regression
                'lmtest', #for likelihood ratio test
@@ -38,7 +38,8 @@ pacman::p_load('data.table', #rename data frame columns
                'tidyr', #for gather(), which takes multiple columns and collapses them into key-value pairs
                'tidyverse', #used in conjunction with tidyr; contains dplyr, used for select(); load last because of conflict!
                'slam', #utility functions for sparse matrices 
-               'broom' #install separately if does not work 
+               'broom', #install separately if does not work
+               'vader' # Sentiment
 )
 
 source('../../tools/common_functions.R')
@@ -66,11 +67,9 @@ PerformExclusions <- function(data) {
     # Exclude those who gave the same answers to meaningfulness and personal desirability questions 
     meaning_cols <- data[, grep("meaning", colnames(data), value = TRUE)]
     meaning_dups <- meaning_cols[apply(meaning_cols, 1, function(x) length(unique(x[!is.na(x)])) == 1),]
-    data <- anti_join(data, meaning_dups, by = grep("meaning", colnames(data), value = TRUE))
 
     pd_cols <- data[, grep("preference", colnames(data), value = TRUE)]
     pd_dups <- pd_cols[apply(pd_cols, 1, function(x) length(unique(x[!is.na(x)])) == 1),]
-    data <- anti_join(data, pd_dups, by = grep("preference", colnames(data), value = TRUE))
 
     #(1) attention checks
     #round #1
@@ -246,32 +245,6 @@ Get_stats <- function(data, n_plots) {
 }
 
 ##================================================================================================================
-##FUNCTIONS FOR PLOTTING WORD CLOUDS##
-##================================================================================================================
-
-Get_word_stats <- function(data, n_plots) {
-    "
-    Group 'clean' words (only lowercase letters a-z) together into individual dataframes by plot type    
-    Input: data_long, n_plots 
-    Output: equations (individual words from each participant for each plot)
-    "
-
-    # Clean words 
-    word_clean <- word(tolower(data$word), 1) #make all words lowercase, and collect only the first word of a given sentence
-    word_gen <- gsub("[^a-z]", "", word_clean) #get rid of numbers and special characters, leaving only letters a-z
-
-    # Organize unique words by plot 
-    equations <- c()
-    for (i in 1:n_plots) {
-        equations[[i]] <- as.data.frame(table(word_gen[seq(i, length(word_gen), n_plots)]))
-    }
-
-    equations$word_gen <- word_gen
-
-    return(equations)
-}
-
-##================================================================================================================
 ##FUNCTIONS FOR PLOTTING SENTIMENT BAR PLOT##
 ##================================================================================================================
 
@@ -353,84 +326,7 @@ OrderSentimentDataframe <- function(data, n_plots, plot_names) {
     return(sentiment_df_sorted)
 }
 
-MakeSentimentBarPlot <- function(data, n_plots, plot_names) {
-    "
-    Plot the sentiment bar graph in order of ascending meaningfulness scores.
-    Input: data_long, n_plots, plot_names
-    Output: the sentiment bar graph by ascending meaningfulness scores
-    "
 
-    sentiment_df <- OrderSentimentDataframe(data, n_plots, plot_names)
-    sentiment_bar_plot <- ggplot(sentiment_df, aes(x = plot_names, y = mean)) +
-        geom_bar(position = "dodge", stat = "identity", fill = "darkorange") +
-        geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), width = .2,
-                      position = position_dodge(.9)) +
-        ggtitle("") + #"Mean Sentiment Scores by Ascending Meaningfulness Scores") +
-        xlab("Lifeline Plots") +
-        ylab("Mean Sentiment Score") +
-        theme(
-            plot.title = element_blank(), #element_text(color = "black", size=31, face="bold", hjust = 0.5),
-            text = element_text(color = "black", size = 25),
-            axis.title.y = element_text(color = "black", size = 30, face = "bold"),
-            axis.title.x = element_text(color = "black", size = 30, face = "bold"),
-            axis.text.x = element_blank(),
-            axis.ticks.x = element_blank()
-        )
-
-    return(sentiment_bar_plot)
-}
-
-
-##================================================================================================================
-##FUNCTIONS FOR WORD ANALYSIS##
-##================================================================================================================
-
-GetWordAnalysis <- function(data, n_plots) {
-    "
-    Export the list of dataframes of words into a csv file (for semantic analysis in Google Colab code)
-    Input: data_long, n_plots
-    Output: equations (a list of dataframes of cleaned words from Get_word_stats())
-    "
-
-    equations <- c()
-    for (i in 1:n_plots) {
-        equations[[i]] <- paste0(Get_word_stats(data, n_plots)[[i]]$Var1, collapse = ", ")
-    }
-
-    return(equations)
-}
-
-
-GetInterestingness <- function(data, n_plots) {
-    "
-    Group 'clean' words (only lowercase letters a-z) together into individual dataframes by plot type, 
-    then stem words to get the root/lemmatized words only. Calculate the length of each stemmed word 
-    to get the 'interestingness' predictor.
-    Input: data_long, n_plots 
-    Output: stemmed_words_df (dataframe of length of stemmed words from each participant for each plot)
-    "
-
-    # Clean words
-    word_clean <- word(tolower(data$word), 1) #make all words lowercase, and collect only the first word of a given sentence
-    word_gen <- gsub("[^a-z]", "", word_clean) #get rid of numbers and special characters, leaving only letters a-z
-
-    # Group words together into individual dataframes by plot type
-    equations <- c()
-    for (i in 1:n_plots) {
-        equations[[i]] <- word_gen[seq(i, length(word_gen), n_plots)]
-    }
-
-    # Stem words
-    stemmed_words <- c()
-    length_stemmed_words <- c()
-    for (i in 1:n_plots) {
-        stemmed_words[[i]] <- table(wordStem(equations[[i]]))
-        length_stemmed_words[[i]] <- length(stemmed_words[[i]])
-        stemmed_words_df <- data.frame(interestingness = unlist(length_stemmed_words))
-    }
-
-    return(stemmed_words_df)
-}
 
 
 ##================================================================================================================
@@ -476,25 +372,6 @@ GetMainEffects <- function(data, data_long, n_plots, plot_names, my_embeddings) 
     print(t_mod)
     print(paste('Means: ', unique(data$question_type), ': ', tapply(data$score_n, data$question_type, mean)))
     print(paste('SDs: ', unique(data$question_type), ': ', tapply(data$score_n, data$question_type, sd)))
-    print('-----------------------------------------------------')
-
-    print('Did sentiment scores vary depending on plot type?')
-    effect_mod <- lm(data = data, sentiment_score ~ plot_type_n + (1 | subject_n))
-    print(summary(effect_mod))
-    print('-----------------------------------------------------')
-
-    print('Do the sentiment scores correlate with meaningfulness ratings?')
-    meaning_corr <- cor.test(data$sentiment_score[data$question_type == "meaningfulness"],
-                             data$score_n[data$question_type == "meaningfulness"])
-    print('sentiment vs. meaningfulness:')
-    print(meaning_corr)
-    print('-----------------------------------------------------')
-
-    print('Do the sentiment scores correlate with personal desirability ratings?')
-    pd_corr <- cor.test(data$sentiment_score[data$question_type == "personal_desirability"],
-                        data$score_n[data$question_type == "personal_desirability"])
-    print('sentiment vs. personal desirability:')
-    print(pd_corr)
     print('-----------------------------------------------------')
 
     # Get the order of average meaningfulness scores
@@ -784,7 +661,7 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
                                      "PC3\nFluctuations, Embeddings,\nand Interestingness", "PC4\nIntegral, Sentiment,\nMax, and Min",
                                      "PC5\nNumber of Peaks\nand Extrema")
     results_meaning_long <- gather(t_results_meaning, key = principal_components, value = pcs_results, colnames(t_results_meaning)) #length(pcs)*n_folds
-    meaning_new_order <- with(results_meaning_long, reorder(principal_components, pcs_results, median, na.rm = TRUE))
+    meaning_new_order <- with(results_meaning_long, reorder(principal_components, pcs_results, mean, na.rm = TRUE))
     results_meaning_long["meaning_new_order"] <- meaning_new_order
 
     # Get_noise_ceiling function
@@ -821,7 +698,7 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
                                 "PC3\nFluctuations, Embeddings,\nand Interestingness", "PC4\nIntegral, Sentiment,\nMax, and Min",
                                 "PC5\nNumber of Peaks\nand Extrema")
     results_pd_long <- gather(t_results_pd, key = principal_components, value = pcs_results, colnames(t_results_pd)) #length(pcs)*n_folds
-    pd_new_order <- with(results_pd_long, reorder(principal_components, pcs_results, median, na.rm = TRUE))
+    pd_new_order <- with(results_pd_long, reorder(principal_components, pcs_results, mean, na.rm = TRUE))
     results_pd_long["pd_new_order"] <- pd_new_order
     results_pd_long <- results_pd_long[order(match(results_pd_long[, "pd_new_order"], results_meaning_long[, "meaning_new_order"])),] #order by meaningfulness scores
 
@@ -975,7 +852,7 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
 }
 
 
-CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
+CrossValidationAnalysisWtPredictors <- function(dat, n_ss, n_plots) {
     "
     Measure the performance of each of our predictors by doing cross-validated regressions, holding out 
     one participant for each cross-validation step. 
@@ -993,7 +870,11 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
     predictors <- c("Embeddings", "Interestingness", "Sentiment Score", "Maximum", "Minimum", "End Value", "Number of\nPeaks", "Number of\nValleys", "Number of\nExtrema", "Integral",
                     "1st Derivative", "1st Derivative\nPrime", "1st Derivative\nAscending", "1st Derivative\nDescending", "1st Derivative\nEnd",
                     "2nd Derivative", "2nd Derivative\nPrime", "2nd Derivative\nAscending", "2nd Derivative\nDescending", "2nd Derivative\nEnd")
-    setnames(data_wt_PCs, old = predictors_old, new = predictors)
+
+    if (colnames(d_long)[43] != "Minimum") {
+        setnames(dat, old = predictors_old, new = predictors)
+    }
+
 
 
     set.seed(1)
@@ -1032,11 +913,11 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
     t_results_meaning <- as.data.frame(t(results_meaning))
     colnames(t_results_meaning) <- predictors
     results_meaning_long <- gather(t_results_meaning, key = predictors, value = predictors_results, colnames(t_results_meaning)) #length(predictors)*n_folds
-    meaning_new_order <- with(results_meaning_long, reorder(predictors, predictors_results, median, na.rm = TRUE))
+    meaning_new_order <- with(results_meaning_long, reorder(predictors, predictors_results, mean, na.rm = TRUE))
     results_meaning_long["meaning_new_order"] <- meaning_new_order
 
     # Get_noise_ceiling function
-    summary_meaning <- Get_noise_ceiling(dat_long, "meaningfulness", n_ss)
+    summary_meaning <- Get_noise_ceiling(dat, "meaningfulness", n_ss)
 
     #-------------------------------------------------------------------------------------------------------------------
 
@@ -1068,12 +949,12 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
     t_results_pd <- as.data.frame(t(results_pd))
     colnames(t_results_pd) <- predictors
     results_pd_long <- gather(t_results_pd, key = predictors, value = predictors_results, colnames(t_results_pd)) #length(predictors)*n_folds
-    pd_new_order <- with(results_pd_long, reorder(predictors, predictors_results, median, na.rm = TRUE))
+    pd_new_order <- with(results_pd_long, reorder(predictors, predictors_results, mean, na.rm = TRUE))
     results_pd_long["pd_new_order"] <- pd_new_order
     results_pd_long <- results_pd_long[order(match(results_pd_long[, "pd_new_order"], results_meaning_long[, "meaning_new_order"])),] #order by meaningfulness scores
 
     # Get_noise_ceiling function
-    summary_pd <- Get_noise_ceiling(dat_long, "personal_desirability", n_ss)
+    summary_pd <- Get_noise_ceiling(dat, "personal_desirability", n_ss)
 
     #-------------------------------------------------------------------------------------------------------------------
 
@@ -1084,6 +965,8 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
     predictors_results_long <- gather(predictors_results_ordered, key = question_type, value = results, meaning_results, pd_results)
 
     # Make boxplot from CV_plotter function
+    predictors_results_long[predictors_results_long['question_type'] == 'meaning_results', 'question_type'] = "Meaningfulness"
+    predictors_results_long[predictors_results_long['question_type'] == 'pd_results', 'question_type'] = "Personal Desirability"
     predictors_plot <- CV_plotter(predictors_results_long, predictors_results_long$predictors_order, predictors_results_long$results, predictors_results_long$question_type, "Predictors", summary_meaning, summary_pd)
 
     # Get the labels
@@ -1474,25 +1357,25 @@ dat_final <- cbind(dat, sentiment_score = sentiment_scores[rep(seq_len(nrow(sent
 write.csv(data.frame(word = dat_final), "./data/d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
 
 # Get main statistical effects
-main_effects <- GetMainEffects(dat_final, data_long, n_plots, plot_names, my_embeddings)
+main_effects <- GetMainEffects(dat, data_long, n_plots, plot_names, my_embeddings)
 #See error: 486 not defined because of singularities; checked for perfect correlation but did not find any
 
 pdf(file = "linear_vs_quadratic_fit.pdf", width = 13, height = 6.5)
 plot(main_effects)
+main_effects
 dev.off()
 
 
 #### (3.2) RUN DESCRIPTIVE ANALYSES
 
 # Create a dataframe of features and subject scores 
-score_features_df <- CreateDataFeaturesDF(data_long, dat_final, features, n_after_exclusions, num_subjects_and_plots)
+d_long <- CreateDataFeaturesDF(data_long, dat_final, features, n_after_exclusions, num_subjects_and_plots)
 
 # Run regularized regression on all predictors
-ridge_regression_wt_predictors <- AnalyzeRidgeRegressionLifelines(score_features_df)
+#ridge_regression_wt_predictors <- AnalyzeRidgeRegressionLifelines(score_features_df)
 
 # Run mixed-effects regression on PCA-reduced features
-data_wt_PCs <- MakePCAFunction(score_features_df)
-
+#data_wt_PCs <- MakePCAFunction(score_features_df)
 
 ##### (3.3) RUN PREDICTIVE ANALYSES
 
@@ -1502,7 +1385,7 @@ data_wt_PCs <- MakePCAFunction(score_features_df)
 #plot(cross_validation_analysis_wt_pcs)
 #dev.off()
 
-cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(data_wt_PCs, data_long, n_after_exclusions, n_plots)
+cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(d_long, n_after_exclusions, n_plots)
 pdf(file = "predictions_wt_predictors_cv_plot.pdf", width = 16, height = 9)
 plot(cross_validation_analysis_wt_predictors)
 dev.off()

@@ -2,8 +2,8 @@ pacman::p_load('qdapDictionaries')
 pacman::p_load('sentiment.ai')
 
 # Run only first time if you are using this package::
-# install_sentiment.ai()
-#init_sentiment.ai()
+#install_sentiment.ai()
+init_sentiment.ai()
 
 CleanWord <- function(word) {
     word <- word(tolower(word), 1)

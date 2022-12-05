@@ -45,7 +45,7 @@ pacman::p_load('plotrix', #for standard error
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #set working directory to current directory
 #setwd("../e3_customer_journeys") #go one directory up, then to the e3_customer_journeys folder 
 #source("Lifelines_analysis_e3.R") #import e3 (customer journeys) script
-#setwd("../e4_evaluative_journeys") #go back to current directory
+#setwd("../evaluative_journeys") #go back to current directory
 
 
 # ============================================= DEFINE FUNCTIONS ============================================= #
@@ -60,11 +60,11 @@ PerformExclusions <- function(data) {
     "
     Excludes participants if they do not finish the survey, finished it too quickly (under 120 seconds), 
     gave duplicate answers, or failed important attention and comprehension checks.
-    Input: e4_data   #'lifelines_e4_data.csv'; num_rows = num_ss
+    Input: data   #'lifelines_data.csv'; num_rows = num_ss
     Output: data after it has been 'cleaned'
     "
     
-    # data <- e4_data 
+    # data <- data 
   
     # Exclude those who did not finish the survey
     data <- subset(data, (data$Finished == TRUE))
@@ -150,7 +150,7 @@ Preprocess <- function(data, n_plts, plt_names) {
     Output: dataframe with number of rows = n_subjects*n_plot_types 
     "
     
-    # data <- e4_data_clean 
+    # data <- data_clean 
     # n_plts <- n_plots 
     # plt_names <- plot_names
     
@@ -187,19 +187,19 @@ Preprocess <- function(data, n_plts, plt_names) {
 ##================================================================================================================
 
 
-Get_sentence_sentiment <- function(e4_dat_long, n_plts) {
+Get_sentence_sentiment <- function(dat_long, n_plts) {
     "
     Create funtion to get sentiment score means and standard errors for sentences by condition: eval or non-eval   
-    Input: e4_data_long, n_plots 
+    Input: data_long, n_plots 
     Output: average mean and standard error sentiment scores for sentences by condition, sorted by the same 27 lifelines  
             AND individual participant responses
     "
     
-    # e4_dat_long <- e4_data_long 
+    # dat_long <- data_long 
     # n_plts <- n_plots
   
     # Clean words 
-    condition_gen <- e4_dat_long$sentence_gen 
+    condition_gen <- dat_long$sentence_gen 
     condition_responses <- tolower(condition_gen) #make all words in each sentence lowercase 
     condition_clean <- gsub("[^[:alnum:][:space:]]", "", condition_responses) #sentence: keep only alphanumeric characters and spaces 
     
@@ -231,18 +231,18 @@ Get_sentence_sentiment <- function(e4_dat_long, n_plts) {
 }
 
 
-Get_word_sentiment <- function(e4_dat_long, n_plts) {
+Get_word_sentiment <- function(dat_long, n_plts) {
     "
     Create funtion to get sentiment score means and standard errors for words by condition: eval or non-eval   
-    Input: e4_data_long, n_plots 
+    Input: data_long, n_plots 
     Output: sentiment scores for words, sorted by the same 27 lifelines and individual participant responses
     " 
   
-    # e4_dat_long <- e4_data_long 
+    # dat_long <- data_long 
     # n_plts <- n_plots
     
     # Clean words 
-    condition_gen <- e4_dat_long$word_gen
+    condition_gen <- dat_long$word_gen
     condition_responses <- word(tolower(condition_gen), 1) #make all words lowercase, AND collect only the first word of a given sentence
     condition_clean <- gsub("[^a-z]", "", condition_responses) #get rid of numbers and special characters, leaving only letters a-z
     
@@ -271,24 +271,24 @@ Get_word_sentiment <- function(e4_dat_long, n_plts) {
 }
 
 
-Get_sentiment_scores <- function(e4_dat_long, plt_names, n_plts, e4_n_ss) {
+Get_sentiment_scores <- function(dat_long, plt_names, n_plts, n_ss) {
     "
     Calls Get_sentence_sentiment() and Get_word_sentiment()
     Get sentiment scores means and standard errors for each question type, sorted by plot type. 
-    Input: e4_data_long, plot_names, n_plots, e4_n_after_exclusions 
+    Input: data_long, plot_names, n_plots, n_after_exclusions 
     Output: data frame for average mean and standard error sentiment scores AND individual participant responses  
     " 
     
-    # e4_dat_long <- e4_data_long 
+    # dat_long <- data_long 
     # plt_names <- plot_names
     # n_plts <- n_plots
-    # e4_n_ss <- e4_n_after_exclusions
+    # n_ss <- n_after_exclusions
     
     # 1. Organize means and standard errors (for use in plotting)
     
     # Get sentiment scores means and standard errors for each question type, sorted by plot type. 
-    sentence_data <- Get_sentence_sentiment(e4_dat_long, n_plts)[[1]]
-    word_data <- Get_word_sentiment(e4_dat_long, n_plts)[[1]]
+    sentence_data <- Get_sentence_sentiment(dat_long, n_plts)[[1]]
+    word_data <- Get_word_sentiment(dat_long, n_plts)[[1]]
     
     sentiment_df <- data.frame(plot_names = plt_names, 
                                sentence_mean = unlist(sentence_data)[c(TRUE, FALSE)], sentence_sd = unlist(sentence_data)[c(FALSE, TRUE)], 
@@ -312,52 +312,57 @@ Get_sentiment_scores <- function(e4_dat_long, plt_names, n_plts, e4_n_ss) {
     # 2. Organize all sentiment scores for every subject, by plot type (for use in linear mixed effects regression)
     
     # Get sentiment scores  
-    all_sentence <- Get_sentence_sentiment(e4_dat_long, n_plts)[[2]]
-    all_word <- Get_word_sentiment(e4_dat_long, n_plts)[[2]]
+    all_sentence <- Get_sentence_sentiment(dat_long, n_plts)[[2]]
+    all_word <- Get_word_sentiment(dat_long, n_plts)[[2]]
     
     # Combine into one data frame 
     col_names <- c('plot_names', 'question_type', 'sentiment_score', 'subject') 
     
-    all_sentiment_df_long <- array(0, dim = c(nrow(e4_dat_long)*2, length(col_names))) #nrow(e4_dat_long)*2 = e4_n_after_exclusions*n_plots*2 questions  
+    all_sentiment_df_long <- array(0, dim = c(nrow(dat_long)*2, length(col_names))) #nrow(dat_long)*2 = n_after_exclusions*n_plots*2 questions  
     all_sentiment_df_long <- as.data.frame(all_sentiment_df_long, stringsAsFactors=FALSE)
     colnames(all_sentiment_df_long) <- col_names
     
     # Assign plot names 
-    all_sentiment_df_long[1] <- rep(plt_names, each = e4_n_ss) 
+    all_sentiment_df_long[1] <- rep(plt_names, each = n_ss) 
     
     # Assign conditions 
     all_sentiment_df_long[2] <- rep(c("sentence", "word"), 
-                               each = e4_n_ss*n_plts) 
+                               each = n_ss*n_plts) 
     
     # Assign values 
     all_sentiment_df_long[3] <- c(unlist(all_sentence), unlist(all_word)) #sentence score 
 
     # Assign subjects
-    all_sentiment_df_long[4] <- rep(1:e4_n_ss, times = n_plts)
+    all_sentiment_df_long[4] <- rep(1:n_ss, times = n_plts)
     
     # ----
     
     sentiment_data <- list(sentiment_df_long, all_sentiment_df_long)
+
+    vt <- var.test(sentiment_data[[2]][sentiment_data[[2]]$question_type == 'sentence', 'sentiment_score'],
+           sentiment_data[[2]][sentiment_data[[2]]$question_type == 'word', 'sentiment_score'])
+    t.test(sentiment_data[[2]][sentiment_data[[2]]$question_type == 'sentence', 'sentiment_score'],
+           sentiment_data[[2]][sentiment_data[[2]]$question_type == 'word', 'sentiment_score'], paired = TRUE)
     
     return(sentiment_data)
 }
 
 
-Get_sentiment_barplot <- function(e4_sentiment_data, dat_long, n_plts, plt_names) {
+Get_sentiment_barplot <- function(sentiment_data, dat_long, n_plts, plt_names) {
     "
     Calls OrderSentimentDataframe() from customer journeys study 
     Plot the sentiment bar graph for E4  
-    Input: e4_sentiment_df, data_long, n_plots, plot_names
+    Input: sentiment_df, data_long, n_plots, plot_names
     Output: the sentiment bar graph by ascending meaningfulness scores
     " 
   
-    # e4_sentiment_data <- e4_sentiment_df  
+    # sentiment_data <- sentiment_df  
     # dat_long <- data_long 
     # n_plts <- n_plots
     # plt_names <- plot_names
     
     # Get sentiment data 
-    sentiment_stats <- e4_sentiment_data[[1]] 
+    sentiment_stats <- sentiment_data[[1]] 
     sentiment_stats$plot_names <- as.factor(sentiment_stats$plot_names) 
     sentiment_stats_e3 <- OrderSentimentDataframe(dat_long, n_plts, plt_names)
     
@@ -466,19 +471,19 @@ PlotAxisLabels <- function(plt_names, my_equation, my_plot, plot_num) {
 }
 
 
-Get_word_clouds <- function(e4_dat_long, n_plts, plt_names) {
+Get_word_clouds <- function(dat_long, n_plts, plt_names) {
     "
     Create funtion to visualize word clouds     
-    Input: e4_data_long, n_plots, plot_names 
+    Input: data_long, n_plots, plot_names 
     Output: word clouds for participant words 
     " 
   
-    # e4_dat_long <- e4_data_long 
+    # dat_long <- data_long 
     # n_plts <- n_plots 
     # plt_names <- plot_names 
     
     # Clean words 
-    condition_gen <- e4_dat_long$word_gen
+    condition_gen <- dat_long$word_gen
     condition_responses <- word(tolower(condition_gen), 1) #make all words lowercase, AND collect only the first word of a given sentence
     condition_clean <- gsub("[^a-z]", "", condition_responses) #get rid of numbers and special characters, leaving only letters a-z
     
@@ -511,15 +516,15 @@ Get_word_clouds <- function(e4_dat_long, n_plts, plt_names) {
                                           ##FUNCTIONS FOR DATA ANALYSIS##
 ##================================================================================================================
 
-GetMainEffectsE4 <- function(e4_sentiment_data, dat_long, n_plts, plt_names) {
+GetMainEffectsE4 <- function(sentiment_data, dat_long, n_plts, plt_names) {
     "
     Calls OrderSentimentDataframe() from customer journeys study 
     Performs desired analysis: correlation between sentiment data of this (E4) study and the E3 customer journeys study   
-    Input: e4_sentiment_df, data_long, n_plots, plot_names  
+    Input: sentiment_df, data_long, n_plots, plot_names  
     Output: Correlation results 
     " 
     
-    # e4_sentiment_data <- e4_sentiment_df  
+    # sentiment_data <- sentiment_df  
     # dat_long <- data_long 
     # n_plts <- n_plots
     # plt_names <- plot_names
@@ -529,7 +534,7 @@ GetMainEffectsE4 <- function(e4_sentiment_data, dat_long, n_plts, plt_names) {
     # Correlation Analyses 
     
     # Get sentiment data 
-    sentiment_stats <- e4_sentiment_data[[1]] 
+    sentiment_stats <- sentiment_data[[1]] 
     sentiment_stats$plot_names <- as.factor(sentiment_stats$plot_names) 
     sentiment_stats_e3 <- OrderSentimentDataframe(dat_long, n_plts, plt_names)
     
@@ -557,7 +562,7 @@ GetMainEffectsE4 <- function(e4_sentiment_data, dat_long, n_plts, plt_names) {
     # Linear Regression Analyses 
     
     # Get sentiment data 
-    sentiment_stats_all <- e4_sentiment_data[[2]] 
+    sentiment_stats_all <- sentiment_data[[2]] 
     sentiment_stats_all[c(1, 2)] <- lapply(sentiment_stats_all[c(1, 2)], function(x) as.numeric(factor(x))) #change values to numeric (for lmer)
     sentiment_stats_all <- as.data.frame(sentiment_stats_all)
     
@@ -637,17 +642,17 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
 }
 
 
-CrossValidationAnalysisE4 <- function(e4_sentiment_data, dat_e3, dat_long, n_plts, plt_names, n_ss) {
+CrossValidationAnalysisE4 <- function(sentiment_data, dat_e3, dat_long, n_plts, plt_names, n_ss) {
   "
     Performs desired analysis: cross-validation between sentiment data of this (E4) study and 
                               the satisfaction and personal desirability judgments from the E3 customer journeys study; 
                               measures the performance of each of our predictors (words, sentences) by doing cross-validated regressions, holding out 
                               one participant for each cross-validation step.    
-    Input: e4_sentiment_df, data_wt_PCs (from e3), data_long (from e3), n_plots, plot_names, n_after_exclusions (from e3)  
+    Input: sentiment_df, data_wt_PCs (from e3), data_long (from e3), n_plots, plot_names, n_after_exclusions (from e3)  
     Output: cross-validation results 
     " 
     
-    # e4_sentiment_data <- e4_sentiment_df  
+    # sentiment_data <- sentiment_df  
     # dat_e3 <- data_wt_PCs #from e3 
     # dat_long <- data_long
     # n_plts <- n_plots
@@ -657,15 +662,15 @@ CrossValidationAnalysisE4 <- function(e4_sentiment_data, dat_e3, dat_long, n_plt
     # ------ 
     
     # Create new data frame with just the e3 judgments data and e4 sentiment predictors
-    sentiment_stats <- e4_sentiment_data[[1]] 
+    sentiment_stats <- sentiment_data[[1]] 
     sentiment_e4 <- sentiment_stats %>% #widen sentiment_stats (e4) 
       pivot_wider(
       names_from = question_type,
       values_from = c(mean, sd))
     
     subset_dat_e3 <- dat_e3[, c("plot_names", "satisfaction", "personal_desirability", "subject")] #extract only the relevant columns from e3 
-    subset_dat_e3$e4_sentence <- sentiment_e4$mean_sentence
-    subset_dat_e3$e4_word <- sentiment_e4$mean_word
+    subset_dat_e3$sentence <- sentiment_e4$mean_sentence
+    subset_dat_e3$word <- sentiment_e4$mean_word
     
     dat_combined <- subset_dat_e3 #rename 
     
@@ -673,7 +678,7 @@ CrossValidationAnalysisE4 <- function(e4_sentiment_data, dat_e3, dat_long, n_plt
     
     # Set up cross-validation analyses 
     set.seed(1) 
-    predictors <- c("e4_sentence", "e4_word")
+    predictors <- c("sentence", "word")
     n_folds <- n_ss
     folds <- cut(seq(1, nrow(dat_combined)), breaks = n_folds, labels = FALSE)
     folds2 <- rep(seq(1, n_plts), times = n_folds) #plot x subjects folds
@@ -878,7 +883,7 @@ CrossValidationAnalysisE4 <- function(e4_sentiment_data, dat_e3, dat_long, n_plt
     # Prettify x-tick labels 
     final_plot <- predictors_plot + 
       theme(axis.text.x = element_text(angle = 0, hjust = 0.5, color = "black")) + 
-      scale_x_discrete(breaks = c("e4_sentence", "e4_word"),
+      scale_x_discrete(breaks = c("sentence", "word"),
                        labels = c("Sentence Sentiment", "Word Sentiment"))
 
     return(final_plot)
@@ -893,7 +898,7 @@ CrossValidationAnalysisE4 <- function(e4_sentiment_data, dat_e3, dat_long, n_plt
 
 ##================================================================================================================
 # (1) Define Global Variables 
-# e4_conditions <- c("evaluative", "non-evaluative") 
+# conditions <- c("evaluative", "non-evaluative") 
 
 
 ##================================================================================================================
@@ -904,18 +909,19 @@ d_raw <- read.csv("data.csv")
 # Process Data  
 d <- PerformExclusions(d_raw) #num_rows = num_ss
 n_after_exclusions <- d$n_after_exclusions[1]
-e4_n_subjects_and_plots <- n_after_exclusions * n_plots
-e4_data_long <- Preprocess(e4_data_clean, n_plots, plot_names) #num_rows = num_ss*num_plots [to see data without exclusions, replace e4_data_clean with data]
+n_subjects_and_plots <- n_after_exclusions * 27
+n_plots <- 27
+data_long <- Preprocess(d, n_plots, plot_names) #num_rows = num_ss*num_plots [to see data without exclusions, replace data_clean with data]
 
 
 ##================================================================================================================
 # (3) Analyze Sentiment 
-e4_sentiment_df <- Get_sentiment_scores(e4_data_long, plot_names, n_plots, e4_n_after_exclusions) 
+sentiment_df <- Get_sentiment_scores(data_long, plot_names, n_plots, n_after_exclusions)
 
 
 # Plot Sentiment Bar Plot 
-sentiment_bar_raw <- Get_sentiment_barplot(e4_sentiment_df, data_long, n_plots, plot_names)[[1]] 
-sentiment_bar_icons <- Get_sentiment_barplot(e4_sentiment_df, data_long, n_plots, plot_names)[[2]] 
+sentiment_bar_raw <- Get_sentiment_barplot(sentiment_df, data_long, n_plots, plot_names)[[1]] 
+sentiment_bar_icons <- Get_sentiment_barplot(sentiment_df, data_long, n_plots, plot_names)[[2]] 
 sentiment_bar_e4 <- PlotAxisLabels(plot_names, my_equations, sentiment_bar_raw, sentiment_bar_icons)
 
 pdf(file = paste0("sentiment_barplot_e4.pdf"), width = 17, height = 8) 
@@ -924,7 +930,7 @@ dev.off()
 
 
 # Plot Word Clouds (TAKES A FEW MINUTES: word clouds are being saved to file)
-Get_word_clouds(e4_data_long, n_plots, plot_names)
+Get_word_clouds(data_long, n_plots, plot_names)
 
 
 ##================================================================================================================
@@ -932,14 +938,14 @@ Get_word_clouds(e4_data_long, n_plots, plot_names)
 
 
 # Get Main Effects (correlation and linear mixed-effects regression) 
-GetMainEffectsE4(e4_sentiment_df, data_long, n_plots, plot_names)
+GetMainEffectsE4(sentiment_df, data_long, n_plots, plot_names)
 
 
 # Perform Cross Validation Analysis E4 
 # (between sentiment data of this E4 study and the judgments from the E3 customer journeys study)  
-cross_validation_analysis_e4 <- CrossValidationAnalysisE4(e4_sentiment_df, data_wt_PCs, data_long, n_plots, plot_names, n_after_exclusions) 
+cross_validation_analysis_e4 <- CrossValidationAnalysisE4(sentiment_df, data_wt_PCs, data_long, n_plots, plot_names, n_after_exclusions) 
 
-pdf(file = "predictions_wt_e4_cv_plot.pdf", width = 10, height = 7)
+pdf(file = "predictions_wt_cv_plot.pdf", width = 10, height = 7)
   cross_validation_analysis_e4
 dev.off() 
 

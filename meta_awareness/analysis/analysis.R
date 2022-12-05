@@ -180,6 +180,7 @@ GetRankings <- function(data, old_labs, new_labs) {
              .groups = 'drop')
 
     print(agg_tbl[order(agg_tbl$mean_ranking),])
+    return( agg_tbl[order(agg_tbl$mean_ranking),] )
     
     #BruteAggreg(feature_wide, length(new_labs)) #this BruteAggreg() function is apparently preferred, but because we have more than 10 features and a large number of participants, R does not have enough memory to perform the calculation.
     # Source: https://www.rdocumentation.org/packages/RankAggreg/versions/0.6.6/topics/BruteAggreg ("This approach works for small problems only and should not be attempted if k is relatively large (k > 10)."); https://www.r-bloggers.com/2021/03/rank-order-analysis-in-r/ 
@@ -227,7 +228,38 @@ d <- PerformExclusions(d_raw) #num_rows = num_ss
 d_n_after_exclusions <- d$d_n_after_exclusions[1]
 
 # Perform rank order analysis 
-GetRankings(d, old_names, new_names) 
+rankings <- GetRankings(d, old_names, new_names) 
+
+true_ranking <- c('sentiment_score', 'end_value', 'd1_avg_unweight', 'integral', 'max', 'min', 'number_peaks', 'embeddings', 'number_valleys', 'interestingness', 'd2_avg_unweight', 'number_extrema')
+labels <- c('Sentiment Score', 'End Value', 'Slope', 'Area Under\nthe Line', 'Maximum', 'Minimum', 'Number of Peaks', 'Embeddings', 'Number of Valleys', 'Interestingness', 'Acceleration', 'Number of\nTotal Extrema')
+GetTrueRank <- function(x) {
+  return( which(x == true_ranking)[[1]] ); 
+}
+
+GetLabel <- function(x) {
+  return( labels[which(x == true_ranking)[[1]]] );
+}
+
+rankings$true_ranking <- sapply(rankings$features, GetTrueRank)
+rankings$labels <- sapply(rankings$features, GetLabel)
+rankings$ranking <- (1:12)
+
+plot <- ggplot(data = rankings, aes(x = ranking, y = true_ranking, size=24), asp=1) +        
+  geom_point(aes(size = 16), alpha = 0.2) +
+  xlab("Predicted Rank (Study 2)") + ylab("True Rank (Study 1)") + 
+  scale_x_continuous(breaks = seq(0, 12, by = 1)) +
+  scale_y_continuous(breaks = seq(0, 12, by = 1), minor_breaks = ) +
+  theme_bw(base_size = 28) +
+  geom_point() + coord_fixed() +
+  theme(legend.position = "none", axis.line = element_line(color='black'), panel.grid.minor = element_blank(), panel.border = element_blank()) +
+  geom_smooth(method = 'lm', se=T, size=2, alpha=0.2, color='black') + stat_cor(method = "pearson", label.x = 5, label.y = 12)
+
+plot
+
+ggsave("fig.png", plot = plot, width=30, height=30, units = "cm")
+
+## ================================= (4) Plot rankings ========================================
+
 
 ##==============================================================================================
                                              ##END##

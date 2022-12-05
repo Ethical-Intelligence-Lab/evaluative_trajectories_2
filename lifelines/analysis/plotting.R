@@ -9,10 +9,10 @@ MakeGroupedBarPlot <- function(data_plot_long) {
         geom_bar(position = "dodge", stat = "identity") +
         geom_errorbar(aes(ymin = score - sd, ymax = score + sd), width = .2,
                       position = position_dodge(.9)) +
-        ggtitle("") + #"Summarizing the Meaningfulness and Desirability of Different Life Trajectories") +
+        ggtitle("Summarizing the Meaningfulness and Desirability of Different Life Trajectories") +
         xlab("Lifeline Plots") +
         ylab("Mean Rating") +
-        # ylim(0, 100) +
+        scale_y_continuous(breaks = seq(0, 80, 40)) +
         theme(
             plot.title = element_blank(),
             legend.title = element_blank(),
@@ -26,10 +26,10 @@ MakeGroupedBarPlot <- function(data_plot_long) {
             axis.ticks.x = element_blank()
         ) +
         scale_fill_manual(
-            name = "", #"Judgment Type",
+            name = "Judgment Type",
             breaks = c("meaning_score_avg", "pd_score_avg"),
             labels = c("Meaningfulness", "Personal Desirability"),
-            values = c("#56B4E9", "#009E73"),
+            values = c("#800000", "#3c7ea3"),
             guide = guide_legend(title.position = "top")
         )
     return(grouped_bar_plot)
@@ -66,7 +66,7 @@ MakeGroupedBarPlotImages <- function(LifelinesPlot, plot_names) {
     # Assemble images in the order of data_plot_long$plot_names[1:27]
     plot_images <- axis_canvas(LifelinesPlot, axis = 'x')
 
-    for (i in 27) {
+    for (i in 1:27) {
         plot_images <- plot_images + draw_image(paste0(data_plot_long$plot_names[i], "_plot.png"), x = i - 0.5)
     }
 
@@ -475,25 +475,25 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
     Output: a boxplot of participant rating predictions with either principal components or predictors
     "
 
-    grouped_box_plot <- ggplot(data = results_df, aes(x = x_order, y = results_order, fill = ques_type, color = ques_type)) +
+    results_df[results_df['question_type'] == 'meaning_results', 'question_type'] = "Meaningfulness"
+    results_df[results_df['question_type'] == 'pd_results', 'question_type'] = "Personal Desirability"
+
+    grouped_box_plot <- ggplot(data = results_df, aes(x = x_order, y = results_order, fill = question_type, color = question_type)) +
         scale_colour_manual(values = c("#3c7ea3", "#800000")) +
         scale_x_discrete() +
         geom_hline(yintercept = 0, color = "gray60") +
-        stat_summary(fun = mean, geom = "point", shape = 20, size = 5, aes(group = ques_type, color=ques_type), position = position_dodge(.75)) +
-        stat_summary(fun.data = mean_se, geom = "errorbar", size=1.2, aes(group = ques_type, width=0.5, color=ques_type), position = position_dodge(.75), fun.args = list(mult = 1.96)) +  # mean-se is 1.96 * std err (https://stulp.gmw.rug.nl/ggplotworkshop/comparinggroupstatistics.html)
+        stat_summary(fun = mean, geom = "point", shape = 20, size = 5, aes(group = question_type, color=question_type), position = position_dodge(.75)) +
+        stat_summary(fun.data = mean_se, geom = "errorbar", size=1.2, aes(group = question_type, width=0.5, color=question_type), position = position_dodge(.75), fun.args = list(mult = 1.96)) +  # mean-se is 1.96 * std err (https://stulp.gmw.rug.nl/ggplotworkshop/comparinggroupstatistics.html)
         ggtitle(paste0("Meaningfulness and Desirability Predictions with ", x_labels)) +
         xlab(x_labels) +
         ylab("Prediction Performance\n(Cross Validated Pearson's r)") +
-        scale_y_continuous(breaks = round(seq(-1.20, 1.40, by = 0.2), 1)) +
+        scale_y_continuous(breaks = round(seq(-1, 1, by = 0.2), 1)) +
         scale_fill_manual(
-            name = "", #"Judgment Type",
-            breaks = c("meaning_results", "pd_results"),
-            labels = c("Meaningfulness", "Personal Desirability"),
-            values = c("#56B4E9", "#009E73"),
+            name = "question_type",
+            values = c("#4b9ecc", "#006b4e"),
             guide = guide_legend(title.position = "top")) +
         theme_bw() +
-        if (x_labels == "Predictors") {
-            theme(element_blank(),
+        theme(element_blank(),
                   plot.title = element_blank(), #element_text(color = "black", size=32, face = "bold", hjust = 0.5),
                   text = element_text(color = "black", size = 25),
                   axis.title.y = element_text(color = "black", size = 30, face = "bold"),
@@ -501,19 +501,8 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
                   axis.text.x = element_text(color = "black", angle = 60, vjust = 1, hjust = 1),
                   legend.title = element_blank(), #element_text(color = "black", size=30),
                   legend.text = element_text(color = "black", size = 30),
-                  legend.position = "top",
+                    legend.position = "top",
                   legend.title.align = 0.5)
-        } else {
-            theme(element_blank(),
-                  plot.title = element_blank(), #element_text(color = "black", size=32, face = "bold", hjust = 0.5),
-                  text = element_text(color = "black", size = 25),
-                  axis.title.y = element_text(color = "black", size = 30, face = "bold"),
-                  axis.title.x = element_text(color = "black", size = 30, face = "bold", margin = margin(t = 20, r = 0, b = 0, l = 0)),
-                  axis.text.x = element_text(color = "black", size = 20),
-                  legend.title = element_blank(), #element_text(color = "black", size=30),
-                  legend.text = element_text(color = "black", size = 30),
-                  legend.position = "top",
-                  legend.title.align = 0.5) }
 
     return(grouped_box_plot)
 }
