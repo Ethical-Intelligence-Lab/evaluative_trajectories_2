@@ -651,7 +651,8 @@ write.csv(df, 'featuresZ.csv')
 plot_experiment_figures <- FALSE
 
 
-# Individual plots 
+# Individual plots
+my_equations <- create_equations()
 if (plot_experiment_figures == TRUE) {
     my_comp_equations <- create_comp_equations()
     for (i in 1:length(my_comp_equations)) {
@@ -665,7 +666,6 @@ if (plot_experiment_figures == TRUE) {
         sapply(my_comp_equations_2[i], plotter, "Age", "Stress", c(start_age, end_age), c(0, end_y_axis))
         dev.off()
     }
-    my_equations <- create_equations()
     for (i in 1:length(my_equations)) {
         png(file = paste0(i, "_experimental_plots.png", ""))
         sapply(my_equations[i], plotter, "Age", "Happiness", c(start_age, end_age), c(0, end_y_axis))

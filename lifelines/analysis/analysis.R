@@ -350,23 +350,6 @@ GetMainEffects <- function(data, data_long, n_plots, plot_names, my_embeddings) 
     print(summary(effect_mod))
     print('-----------------------------------------------------')
 
-
-    print('Did meaningfulness scores vary depending on plot type?')
-    effect_mod <- lm(data = data[data['question_type'] == "meaningfulness",], score ~ plot_type_n + (1 | subject_n))
-    print(summary(effect_mod))
-    print('-----------------------------------------------------')
-
-    print('Did pd scores vary depending on plot type?')
-    effect_mod <- lm(data = data[data['question_type'] == "personal_desirability",], score ~ plot_type_n + (1 | subject_n))
-    print(summary(effect_mod))
-    print('-----------------------------------------------------')
-
-    print('Did all scores vary depending on plot type?')
-    effect_mod <- lm(data = data, score ~ plot_type_n + (1 | subject_n))
-    print(summary(effect_mod))
-    print('-----------------------------------------------------')
-
-
     print('Which question type scored higher?')
     t_mod <- t.test(data$score_n ~ data$question_type, paired = TRUE)
     print(t_mod)

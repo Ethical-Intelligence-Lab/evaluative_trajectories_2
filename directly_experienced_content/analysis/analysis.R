@@ -795,8 +795,6 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
         for (i in 1:length(predictors)) {
             # Just fit logistic regression model on all data
             fitpc <- glm(picked_movie ~ get(predictors[i]), data = dat, family = binomial, weights = fit_wts) #fit model on subset of train data
-            print(predictors[i])
-            print(summary(fitpc))
             probabilities <- fitpc %>% predict(dat, type = "response")
             predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
 
@@ -846,7 +844,6 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
                     truths <- c(truths, dat$picked_movie[testIndeces])
                 }
 
-                print(table(ss_results))
                 cm <- confusionMatrix(as.factor(c(matrix(ss_results))), as.factor(c(truths)), mode = "everything", positive = "1")
 
                 if (perf_metric == "Accuracy") {
@@ -970,6 +967,9 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
 ## MAIN ##
 ##======##
 
+oldw <- getOption("warn")
+options(warn = -1)
+
 # Define global variables
 genres <- c('Horror', 'Adventure', 'Drama', 'Biography', 'Action', 'Fantasy', 'SciFi', 'Animation')
 movies <- c('Knock at the Cabin', 'Dungeons and Dragons', 'She Said', 'I Wanna Dance With Somebody',
@@ -1048,42 +1048,13 @@ pdf(file = paste0("./plots/analysis_plots/customer_journeys_bar_plot_", "k=", n_
 ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
 dev.off()
 
-
-## ========================================== (2) Plot Data and Save ==================================================
-
-if (FALSE) {
-    "
-    Create bar plot, word clouds, and sentiment plot
-    "
-    #### (2.2) MAKE WORD CLOUDS (WARNING: takes ~5 minutes; feel free to skip)
-    MakeWordClouds(d_long, n_plots, plot_names) #make word cloud images
-    arranged_word_clouds <- ArrangeWordClouds() #arrange word clouds into a grid
-
-    pdf(file = "./plots/analysis_plots/customer_journeys_word_clouds.pdf", width = 18, height = 8)
-    plot(arranged_word_clouds)
-    dev.off()
-
-    #### (2.3) MAKE PLOT OF SENTIMENT SCORES, ORDERED BY willing SCORES
-    sentiment_bar_plot <- MakeSentimentBarPlot(d_long, n_plots, plot_names)
-    sentiment_plot_images <- MakeGroupedBarPlotImages(sentiment_bar_plot, plot_names) #the little customer journey icons
-
-    pdf(file = "./plots/analysis_plots/customer_journeys_sentiment_plot.pdf", width = 17, height = 8)
-    ggdraw(insert_xaxis_grob(sentiment_bar_plot, sentiment_plot_images, position = "bottom"))
-    dev.off()
-
-    #### (2.4) MAKE FREQUENCY PLOTS FOR TOPIC MODELING
-    #topic_modeling <- TopicModeling(d_long, n_plots, plot_names)
-
-}
-
-## ============================================== (3) Analysis =====================================================
+## ============================================== (2) Analysis =====================================================
 
 "
 Get main statistical effects, and run descriptive and predictive analyses
 "
 
-#### (3.1) GET MAIN EFFECTS
-
+#### GET MAIN EFFECTS
 if (sentence_data) {
     d_long[, "sentiment_score_sentence"] <- sapply(d_long["sentence"], CalculateSentiment, model_type = 'ai', is_sentence = TRUE)
 }
@@ -1093,44 +1064,25 @@ d_long[, "is_word"] <- lapply(d_long["word"], is.word)
 if (sentence_data) { fname <- "./data/d_long_sentence.csv" } else { fname <- "./data/d_long.csv" }
 write.csv(data.frame(word = d_long), fname, row.names = FALSE) #create word analysis csv for google colab code
 
+#### RUN DESCRIPTIVE ANALYSES
 GetMainEffects(d_long, n_plots, plot_names, my_embeddings)
-
-#### (3.2) RUN DESCRIPTIVE ANALYSES
 
 # Create a dataframe of features and subject scores
 dat <- d_long
 d_long <- CreateDataFeaturesDF(d_long)
-
-# Run mixed-effects regression on PCA-reduced features
-data_wt_PCs <- MakePCAFunction(d_long)
-
 
 d_for_comparison <- gather(dat, key = question_type, value = score, willing)
 d_for_comparison <- dplyr::select(d_for_comparison, subject, cluster_labels, question_type, score, sentiment_score) #rows = num_ss*num_plots*num_questions
 write.csv(data.frame(word = d_for_comparison), "./data/dat_for_comparison.csv", row.names = FALSE) #create word analysis csv for google colab code
 
 
-##### (3.3) RUN PREDICTIVE ANALYSES
-
-# Get performance of each predictor and PCA-reduced feature using cross-validation.
-# Cross Validation on Whole dataset
-if (FALSE) {
-    n_after_exclusions <- dim(d_long)[1] / n_plots
-    cross_validation_analysis_wt_pcs <- CrossValidationAnalysisWtPCs(data_wt_PCs, n_after_exclusions, n_plots)
-    pdf(file = "./plots/analysis_plots/predictions_wt_pcs_cv_plot.pdf", width = 17, height = 9)
-    plot(cross_validation_analysis_wt_pcs)
-    dev.off()
-}
-
-if (FALSE) {
-    if (sentence_data) { fname <- "./plots/analysis_plots_sentence/predictions_wt_predictors_cv_plot_sentence.pdf" } else { fname <- "./plots/analysis_plots/predictions_wt_predictors_cv_plot.pdf" }
-    cv_out <- CrossValidationAnalysisWtPredictors(d_long, n_plots)
-    cv_plot <- cv_out[1]
-    pdf(file = fname, width = 17, height = 9)
-    plot(cv_plot[[1]])
-    dev.off()
-}
-
+##### RUN PREDICTIVE ANALYSES
+if (sentence_data) { fname <- "./plots/analysis_plots_sentence/predictions_wt_predictors_cv_plot_sentence.pdf" } else { fname <- "./plots/analysis_plots/predictions_wt_predictors_cv_plot.pdf" }
+cv_out <- CrossValidationAnalysisWtPredictors(d_long, n_plots)
+cv_plot <- cv_out[1]
+pdf(file = fname, width = 17, height = 9)
+plot(cv_plot[[1]])
+dev.off()
 
 avg_f1s <- c()
 max_f1s <- c()
@@ -1144,122 +1096,7 @@ dev.off()
 avg_f1s <- append(avg_f1s, results_list[[2]])
 max_f1s <- append(max_f1s, results_list[[3]])
 
-
-# Cross Validation for Raffle
-if (FALSE) {
-
-    pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_f1_", 3, "_max_wtp_w2.pdf"), width = 17, height = 9)
-    plot(cross_validation_analysis_wt_predictors_raffle)
-    dev.off()
-
-    for (weight in (1:10)) {
-        cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE,
-                                                                                           random = TRUE, fold_amount = 3,
-                                                                                           perf_metric = "F1", weight = weight)
-        pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_f1_w=", weight, ".pdf"), width = 17, height = 9)
-        plot(cross_validation_analysis_wt_predictors_raffle)
-        dev.off()
-    }
-
-
-    cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE,
-                                                                                       random = FALSE, fold_amount = 180,
-                                                                                       perf_metric = "F1")
-    pdf(file = "./plots/analysis_plots/raffle_kfold_f1.pdf", width = 17, height = 9)
-    plot(cross_validation_analysis_wt_predictors_raffle)
-    dev.off()
-
-    cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE,
-                                                                                       random = FALSE, fold_amount = 180,
-                                                                                       perf_metric = "Balanced Accuracy")
-    pdf(file = "./plots/analysis_plots/raffle_kfold_balanced_acc.pdf", width = 17, height = 9)
-    plot(cross_validation_analysis_wt_predictors_raffle)
-    dev.off()
-
-    cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = TRUE,
-                                                                                       random = FALSE, fold_amount = 180,
-                                                                                       perf_metric = "F1")
-    pdf(file = "./plots/analysis_plots/raffle_nokfold_f1.pdf", width = 17, height = 9)
-    plot(cross_validation_analysis_wt_predictors_raffle)
-    dev.off()
-
-    cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = TRUE,
-                                                                                       random = FALSE, fold_amount = 180,
-                                                                                       perf_metric = "Balanced Accuracy")
-    pdf(file = "./plots/analysis_plots/raffle_nokfold_balanced_accuracy.pdf", width = 17, height = 9)
-    plot(cross_validation_analysis_wt_predictors_raffle)
-    dev.off()
-
-    cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE,
-                                                                                       random = TRUE, fold_amount = 10,
-                                                                                       perf_metric = "Balanced Accuracy")
-    pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_balanced_10.pdf"), width = 17, height = 9)
-    plot(cross_validation_analysis_wt_predictors_raffle)
-    dev.off()
-
-    cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE,
-                                                                                       random = TRUE, fold_amount = 10,
-                                                                                       perf_metric = "F1")
-    pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_f1_10.pdf"), width = 17, height = 9)
-    plot(cross_validation_analysis_wt_predictors_raffle)
-    dev.off()
-
-    cross_validation_analysis_wt_predictors_raffle <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE,
-                                                                                       random = TRUE, fold_amount = 10,
-                                                                                       perf_metric = "Accuracy")
-    pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_accuracy_10.pdf"), width = 17, height = 9)
-    plot(cross_validation_analysis_wt_predictors_raffle)
-    dev.off()
-}
-
-# Cross Validation on Whole dataset, with randomized folds
-if (FALSE) {
-    #d_long <- d_long[d_long$word_tag == "ADJ",]
-    if (sentence_data) { fname <- "./plots/analysis_plots_sentence/predictions_wt_predictors_cv_plot_sentence_random.pdf" } else { fname <- "./plots/analysis_plots/predictions_wt_predictors_cv_plot_random.pdf" }
-    cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(d_long, n_plots, n_plots = 1, random = TRUE)
-    pdf(file = fname, width = 17, height = 9)
-    plot(cross_validation_analysis_wt_predictors)
-    dev.off()
-}
-
-# Cross Validation on Whole dataset, with training on each genre separately
-if (TRUE) {
-    #d_long <- d_long[d_long$word_tag == "ADJ",]
-    if (sentence_data) { fname <- "./plots/analysis_plots_sentence/predictions_wt_predictors_cv_plot_sentence_genres_separate.pdf" } else { fname <- "./plots/analysis_plots/predictions_wt_predictors_cv_plot_genres_separate.pdf" }
-    cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(d_long, n_plots, random = FALSE, genres_separate = TRUE)
-    pdf(file = fname, width = 17, height = 9)
-    plot(cross_validation_analysis_wt_predictors)
-    dev.off()
-}
-
-
-if (FALSE) {
-    # Cross Validation on Whole dataset, random & ONLY WITH ADJ
-    if (sentence_data) { fname <- "./plots/analysis_plots_sentence/predictions_wt_predictors_cv_plot_sentence_random_adj_nohorror.pdf" } else { fname <- "./plots/analysis_plots/predictions_wt_predictors_cv_plot_random_adj_nohorror.pdf" }
-    p <- d_long[d_long$word_tag == "ADJ",]
-    p <- p[p$genre != 1,]
-    cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(p, n_plots = 1, random = TRUE)
-    pdf(file = fname, width = 17, height = 9)
-    plot(cross_validation_analysis_wt_predictors)
-    dev.off()
-}
-
-
-# Cross Validation on each genre separately
-if (FALSE) {
-    for (genre in genres) {
-        cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(d_long[d_long$genre == genre,], 1, TRUE)
-        if (sentence_data) {
-            fname <- paste0("predictions_wt_predictors_cv_plot_", genre, '_sentence', ".pdf")
-        } else {
-            fname <- paste0("predictions_wt_predictors_cv_plot_", genre, ".pdf")
-        }
-
-        pdf(file = fname, width = 17, height = 9)
-        plot(cross_validation_analysis_wt_predictors)
-        dev.off()
-    }
-}
+options(warn = oldw)
 
 ##=====##
 ## END ##
