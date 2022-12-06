@@ -5,7 +5,7 @@ Julian De Freitas, Pechthida Kim, Tomer Ullman
 * For topic modelling, install 'gsl' (If you use homebrew, execute `brew install gsl`)
 * Create a virtual Python environment (preferably version 3.9)
 * Install requirements: `pip install -r requirements.txt`
-* Setup sentiment.ai (https://benwiseman.github.io/sentiment.ai/#Installation__Setup)
+* Setup sentiment.ai (For more information: https://benwiseman.github.io/sentiment.ai/#Installation__Setup)
 * Run `tools/Lifelines_Generate_Plots.R`, since we will use the variables generated here in the other analyses.
 
 ### For Analyses Comparing Different Studies:
@@ -33,3 +33,9 @@ Julian De Freitas, Pechthida Kim, Tomer Ullman
 
 ### Study S2 - Meaningfulness of a Life
 * Run `lifelines/analysis/analysis.R`
+
+------------
+
+## Troubleshooting
+* If you run into this error while setting up sentiment.ai: `‘~/.virtualenvs/r-sentiment-ai/bin/python’ was not built with a shared library.
+reticulate can only bind to copies of Python built with ‘--enable-shared’.`, install pyenv and run `$ env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install 3.8.10`
