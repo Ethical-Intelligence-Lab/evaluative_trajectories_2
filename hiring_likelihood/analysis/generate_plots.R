@@ -1,11 +1,7 @@
 # Julian De Freitas and Pechthida Kim
 # This code is structured as follows: 
 # Define a bunch of functions (imported from Lifelines_Generate_Plots), then call them. 
-# Skip to 'main script' section for the flow of calls.  
-
-# Clear workspace
-# rm(list = ls()) 
-
+# Skip to 'main script' section for the flow of calls.
 
 ## Plot functions 
 plotter <- function(equation, x_label, y_label, x_range, y_range) {
@@ -28,8 +24,6 @@ source2 <- function(file, start, end, ...) {
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #set working directoy to current directory
 setwd("..") #go one directory up
 source2("../tools/Lifelines_Generate_Plots.R", 0, 545) #only get the defined functions and standardized features data frame
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #go back to current directory
-
 
 ## -------------------------------------------------------------------------------------------------------------
                                                 # MAIN SCRIPT
