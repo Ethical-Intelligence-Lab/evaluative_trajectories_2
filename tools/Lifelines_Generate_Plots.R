@@ -885,8 +885,8 @@ for (plot in plot_array) {
     dev.off()
 }
 
-dir.create("e2_early_cutoffs/lifeline_plots", recursive = TRUE)
+dir.create("early_cutoffs/lifeline_plots", recursive = TRUE)
 files_2 <- c("early_cutoff_plots.pdf", "d1_cutoff_plots.pdf", "d2_cutoff_plots.pdf", "featuresZ_early_cutoff.csv")
-file.move(files_2, "e2_early_cutoffs/lifeline_plots", overwrite = TRUE)
+file.move(files_2, "early_cutoffs/lifeline_plots", overwrite = TRUE)
 
 ## END -------------------------------------------------------------------------------------------------------------------
