@@ -20,8 +20,7 @@ Julian De Freitas, Pechthida Kim, Tomer Ullman
 * Run `meta_awareness/analysis/analysis.R`
 
 ### Study 3 - Hiring Likelihood:
-* First, it is necessary to run `hiring_likelihood/analysis/generate_plots.R`
-* Finally, run `hiring_likelihood/analysis/analysis.R`
+* Run `hiring_likelihood/analysis/analysis.R`
 
 ### Study 4 - Directly Experienced Content:
 * Run `directly_experienced_content/analysis/analysis.R`
