@@ -23,7 +23,7 @@ Julian De Freitas, Pechthida Kim, Tomer Ullman
 * First, it is necessary to run `hiring_likelihood/analysis/generate_plots.R`
 * Finally, run `hiring_likelihood/analysis/analysis.R`
 
-### Study 4 - Directly Experienced content:
+### Study 4 - Directly Experienced Content:
 * Run `directly_experienced_content/analysis/analysis.R`
 
     #### Other Analysis Files
