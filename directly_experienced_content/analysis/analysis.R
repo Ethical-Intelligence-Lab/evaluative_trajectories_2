@@ -176,68 +176,6 @@ CreateDataFeaturesDF <- function(data) {
 
 }
 
-Get_noise_ceiling <- function(dat_long, question_type, n_ss) {
-    "
-    Find correlation values between two randomly sample halves of the data,
-    correct with the Spearman-Brown Prophecy formula (defined above), and put into a list.
-    Input: data_long, question type ('willing' or 'personal_desirability')
-    Output: summary of the correlation results, to be used to plot noise ceiling (25th and 75th percentiles)
-    "
-
-    # Convert "willing" into numeric
-    dat_long[, c("willing")] <- sapply(dat_long[, c("willing")], as.numeric)
-
-    # Filter the scores using the "genre" column, and put into a list
-    list_of_question <- c()
-    for (i in plot_names) {
-        list_of_question[i] <- subset(dat_long, dat_long$genre == i)['willing']
-    }
-
-    # Convert to data frame
-    df_of_question <- data.frame(list_of_question)
-
-    # Find correlation values between two randomly-sampled halves of the data,
-    # correct with the Spearman-Brown Prophecy formula (defined above), and put into a list.
-
-    # Divide number of participants in half
-    half_n_ss <- n_ss / 2
-
-    # If even number of participants:
-    if (half_n_ss == round(half_n_ss)) {
-        coded <- c(rep(1, half_n_ss), rep(2, half_n_ss))
-    }
-
-    # If odd number of participants:
-    if (half_n_ss != round(half_n_ss)) {
-        coded <- c(rep(1, half_n_ss + 0.5), rep(2, half_n_ss - 0.5))
-    }
-
-    # Create a list to store the simulations
-    sims <- 1000
-    store <- rep(NA, sims)
-    set.seed(2)
-
-    # Perform 1000 correlations
-    for (i in 1:sims) {
-
-        # Get random samples
-        rand_assign <- sample(coded, n_ss, FALSE) #randomly assign rows as either 1 or 2
-        assign_1 <- df_of_question[rand_assign == 1,] #random sample 1
-        assign_2 <- df_of_question[rand_assign == 2,] #random sample 2
-        means_1 <- colMeans(assign_1) #get the means of random sample 1
-        means_2 <- colMeans(assign_2) #get the means of random sample 2
-
-        # Perform correlations on the means of both random samples
-        store[i] <- cor(means_1, means_2)
-    }
-
-    # Apply Spearman-Brown correction: cor_value_adj <- (2 * cor_value) / (1 + cor_value)
-    corrected_store <- Get_spearman_brown_correction(store)
-    store_summary <- summary(corrected_store)
-
-    return(store_summary)
-}
-
 MakePCAFunction <- function(score_features_df) {
     "
     Perform mixed-effects regression based on PCA-reduced features of our predictors.

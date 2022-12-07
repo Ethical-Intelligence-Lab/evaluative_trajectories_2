@@ -334,71 +334,6 @@ CreateDataFeaturesDF <- function(data, dat_final, features_df, n_after_exclusion
 }
 
 
-Get_noise_ceiling <- function(dat_long, question_type, n_ss) {
-    "
-    Find correlation values between two randomly sample halves of the data, 
-    correct with the Spearman-Brown Prophecy formula (defined above), and put into a list.
-    Input: data_long, question type ('hiring_likelihood')
-    Output: summary of the correlation results, to be used to plot noise ceiling (25th and 75th percentiles)
-    "
-
-    # Convert "hiring_likelihood" column to numeric
-    dat_long[, "hiring_likelihood"] <- sapply(dat_long[, "hiring_likelihood"], as.numeric)
-
-    # Filter the scores using the "subject" column, and put into a list
-    list_of_question <- c()
-    for (i in plot_names) {
-        list_of_question[i] <- dat_long %>%
-            filter(plot_names == i) %>%
-            select(question_type)
-    }
-
-    # Convert to data frame 
-    df_of_question <- data.frame(list_of_question)
-
-    # Find correlation values between two randomly-sampled halves of the data, 
-    # correct with the Spearman-Brown Prophecy formula (defined above), and put into a list. 
-
-    # Divide number of participants in half 
-    half_n_ss <- n_ss / 2
-
-    # If even number of participants:  
-    if (half_n_ss == round(half_n_ss)) {
-        coded <- c(rep(1, half_n_ss), rep(2, half_n_ss))
-    }
-
-    # If odd number of participants: 
-    if (half_n_ss != round(half_n_ss)) {
-        coded <- c(rep(1, half_n_ss + 0.5), rep(2, half_n_ss - 0.5))
-    }
-
-    # Create a list to store the simulations 
-    sims <- 1000
-    store <- rep(NA, sims)
-    set.seed(2)
-
-    # Perform 1000 correlations 
-    for (i in 1:sims) {
-
-        # Get random samples
-        rand_assign <- sample(coded, n_ss, FALSE) #randomly assign rows as either 1 or 2
-        assign_1 <- df_of_question[rand_assign == 1,] #random sample 1
-        assign_2 <- df_of_question[rand_assign == 2,] #random sample 2
-        means_1 <- colMeans(assign_1) #get the means of random sample 1
-        means_2 <- colMeans(assign_2) #get the means of random sample 2
-
-        # Perform correlations on the means of both random samples
-        store[i] <- cor(means_1, means_2)
-    }
-
-    # Apply Spearman-Brown correction: cor_value_adj <- (2 * cor_value) / (1 + cor_value) 
-    corrected_store <- Get_spearman_brown_correction(store)
-    store_summary <- summary(corrected_store)
-
-    return(store_summary)
-}
-
-
 MakePCAFunction <- function(score_features_df) {
     "
     Perform mixed-effects regression based on PCA-reduced features of our predictors. 
@@ -499,9 +434,6 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
     hiring_likelihood_new_order <- with(results_hiring_likelihood_long, reorder(principal_components, pcs_results, median, na.rm = TRUE))
     results_hiring_likelihood_long["hiring_likelihood_new_order"] <- hiring_likelihood_new_order
 
-    # Get_noise_ceiling function
-    summary_hiring_likelihood <- Get_noise_ceiling(dat_long, "hiring_likelihood", n_ss)
-
     #-------------------------------------------------------------------------------------------------------------------
 
     #2. Plotting 
@@ -510,7 +442,7 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
     pcs_results_long <- gather(pcs_results_ordered, key = question_type, value = results, hiring_likelihood_results)
 
     # Make boxplot from CV_plotter function
-    pcs_plot <- CV_plotter(pcs_results_long, pcs_results_long$pcs_order, pcs_results_long$results, pcs_results_long$question_type, "Principal Components", summary_hiring_likelihood)
+    pcs_plot <- CV_plotter(pcs_results_long, pcs_results_long$pcs_order, pcs_results_long$results, pcs_results_long$question_type, "Principal Components")
 
     # Get the labels (in order)
     x_labs <- ggplot_build(pcs_plot)$layout$panel_params[[1]]$
@@ -662,9 +594,6 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
     hiring_likelihood_new_order <- with(results_hiring_likelihood_long, reorder(predictors, predictors_results, mean, na.rm = TRUE))
     results_hiring_likelihood_long["hiring_likelihood_new_order"] <- hiring_likelihood_new_order
 
-    # Get_noise_ceiling function
-    summary_hiring_likelihood <- Get_noise_ceiling(dat_long, "hiring_likelihood", n_ss)
-
     #-------------------------------------------------------------------------------------------------------------------
 
     #2. Plotting 
@@ -673,7 +602,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
     predictors_results_long <- gather(predictors_results_ordered, key = question_type, value = results, hiring_likelihood_results)
 
     # Make boxplot from CV_plotter function
-    predictors_plot <- CV_plotter(predictors_results_long, predictors_results_long$predictors_order, predictors_results_long$results, predictors_results_long$question_type, "Predictors", summary_hiring_likelihood)
+    predictors_plot <- CV_plotter(predictors_results_long, predictors_results_long$predictors_order, predictors_results_long$results, predictors_results_long$question_type, "Predictors")
 
     # Get the labels
     x_labs <- ggplot_build(predictors_plot)$layout$panel_params[[1]]$
@@ -853,7 +782,7 @@ write.csv(data.frame(word = d_long), "./data/d_long.csv", row.names = FALSE) #cr
 write.csv(data.frame(word = dat), "./data/dat.csv", row.names = FALSE) #create word analysis csv for google colab code
 
 main_effects <- GetMainEffects(dat, n_plots, plot_names, my_embeddings)
-#pdf(file = "linear_vs_quadratic_fit.pdf", width = 13, height = 6.5)
+pdf(file = "linear_vs_quadratic_fit.pdf", width = 13, height = 6.5)
 #plot(main_effects)
 #dev.off()
 

@@ -98,7 +98,7 @@ MakeGroupedBarPlotImages <- function(LifelinesPlot, plot_names) {
 }
 
 
-CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, sum_hiring_likelihood) {
+CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels) {
     "
     What this function does: creates a box plot of the cross-validated prediction results
     Inputs: results_df, x_order, results_order, ques_type, x_labels, sum_hiring_likelihood
