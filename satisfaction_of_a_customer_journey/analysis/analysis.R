@@ -5,9 +5,9 @@
 
 ## Import libraries
 if (!require(pacman)) { install.packages("pacman") }
-pacman::p_load('data.table', #rename data frame columns 
+pacman::p_load('data.table', #rename data frame columns
                'ggplot2', #plot stuff
-               'ggpubr', #customize plots 
+               'ggpubr', #customize plots
                'gtools', #sorts files and places them into numerical order
                'cowplot', #reads image files into R; add images as x-axis labels
                'magick', #image processing
@@ -19,10 +19,9 @@ pacman::p_load('data.table', #rename data frame columns
                'gridGraphics', #make grids
                'gridExtra', #make grids
                'sentimentr', #sentiment analysis
-               'tm', #text mining 
-               'wordcloud', #visualize wordclouds for topic models 
-               'topicmodels', #fitting topic models 
-               'ldatuning', #find number of topics in topic models 
+               'tm', #text mining
+               'wordcloud', #visualize wordclouds for topic models
+               #'ldatuning', #find number of topics in topic models
                'lme4', #run mixed effects linear regression
                'lmerTest', #used in conjunction with lme4; get p-values
                'robustHD', #for the standardize function
@@ -31,15 +30,12 @@ pacman::p_load('data.table', #rename data frame columns
                'psych', #for principal components analysis (PCA)
                'glmnet', #for ridge (L2) regression
                'lmtest', #for likelihood ratio test
-               # 'filesstrings', #create and move files
-               'multicon', #for split-half correlations
                'recipes', #for feature engineering
                'caret', #for automating tuning process
                'tidyr', #for gather(), which takes multiple columns and collapses them into key-value pairs
                'tidyverse', #used in conjunction with tidyr; contains dplyr, used for select(); load last because of conflict!
-               'slam', #utility functions for sparse matrices 
-               'broom', #install separately if does not work
-               'vader' # Sentiment
+               'slam', #utility functions for sparse matrices
+               'broom' #install separately if does not work
 )
 
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #set working directory to current directory

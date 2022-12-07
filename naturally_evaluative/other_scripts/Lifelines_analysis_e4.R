@@ -29,10 +29,6 @@ pacman::p_load('plotrix', #for standard error
                'lmerTest', #used in conjunction with lme4; get p-values
                'robustHD', #for the standardize function
                'corrplot', #for corrplot()
-               # 'psych', #for principal components analysis (PCA)
-               # 'multicon', #for split-half correlations 
-               # 'recipes', #for feature engineering
-               # 'caret', #for automating tuning process
                'tidyr', #for gather(), which takes multiple columns and collapses them into key-value pairs
                'tidyverse', #used in conjunction with tidyr; contains dplyr, used for select(); load last because of conflict!
                'slam', #utility functions for sparse matrices 

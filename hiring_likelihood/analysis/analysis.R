@@ -21,8 +21,7 @@ pacman::p_load('ggplot2', #plot stuff
                'sentimentr', #sentiment analysis
                'tm', #text mining 
                'wordcloud', #visualize wordclouds for topic models 
-               'topicmodels', #fitting topic models 
-               'ldatuning', #find number of topics in topic models 
+               #'ldatuning', #find number of topics in topic models 
                'lme4', #run mixed effects linear regression
                'lmerTest', #used in conjunction with lme4; get p-values
                'robustHD', #for the standardize function
@@ -31,8 +30,6 @@ pacman::p_load('ggplot2', #plot stuff
                'psych', #for principal components analysis (PCA)
                'glmnet', #for ridge (L2) regression
                'lmtest', #for likelihood ratio test
-               # 'filesstrings', #create and move files
-               'multicon', #for split-half correlations 
                'recipes', #for feature engineering
                'caret', #for automating tuning process
                'tidyr', #for gather(), which takes multiple columns and collapses them into key-value pairs
