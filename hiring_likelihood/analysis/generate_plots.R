@@ -4,7 +4,18 @@
 # Skip to 'main script' section for the flow of calls.  
 
 # Clear workspace
-rm(list = ls()) 
+# rm(list = ls()) 
+
+
+## Plot functions 
+plotter <- function(equation, x_label, y_label, x_range, y_range) {
+    #dev.new(width = 8, height = 6, noRStudioGD = TRUE)
+    my_plot <- plot(equation, lwd = 30, xlim = x_range, ylim = y_range, main = "",
+                    xlab = x_label, ylab = y_label, col = "firebrick3", cex.lab = 1.5, cex.axis = 1.5)
+
+    return(my_plot)
+}
+
 
 # Read in Lifelines_Generate_Plots.R  
 source2 <- function(file, start, end, ...) {
@@ -24,10 +35,17 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #go back to current 
                                                 # MAIN SCRIPT
 ## -------------------------------------------------------------------------------------------------------------
 
-## (1) Define and Save Standardized Features Data Frame 
-df <- z_scorer(features)
-write.csv(df, 'featuresZ.csv')
+# Z-score
+# The diff. features have different scales, so we standardize them to same z scale, and save as featuresZ
+z_scorer <- function(data) {
+    df <- (data - rowMeans(data)) / (rowSds(as.matrix(data)))[row(data)] ##calculating Z score
+    is.nan.data.frame <- function(x) ##replacing NaN values with 0 (zero), part 1
+        do.call(cbind, lapply(x, is.nan))
 
+    df[is.nan(df)] <- 0 ##replacing NaN values with 0 (zero), part 2
+
+    return(df)
+}
 
 ## (2) Plot the functions
 plot_experiment_figures <- TRUE
