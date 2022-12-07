@@ -1028,7 +1028,14 @@ d_long <- cbind(d_long, embeddings_avg)
 d_long <- cbind(d_long, interestingness)
 data_plot_long = NULL
 
-d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment, model_type = 'ai')
+calculate_sentiment <- FALSE
+if(calculate_sentiment) {
+    d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment, model_type = 'ai')
+    write.csv(data.frame(sentiment_score = d_long[, "sentiment_score"]), "./data/sentiment_scores.csv", row.names = FALSE)
+} else {
+    d_long[, "sentiment_score"] <- read.csv('./data/sentiment_scores.csv')
+}
+
 d_long$sentiment_score[is.na(d_long$sentiment_score)] <- 0
 
 

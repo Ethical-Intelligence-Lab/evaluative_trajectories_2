@@ -38,8 +38,7 @@ pacman::p_load('data.table', #rename data frame columns
                'tidyr', #for gather(), which takes multiple columns and collapses them into key-value pairs
                'tidyverse', #used in conjunction with tidyr; contains dplyr, used for select(); load last because of conflict!
                'slam', #utility functions for sparse matrices 
-               'broom', #install separately if does not work
-               'vader' # Sentiment
+               'broom' #install separately if does not work
 )
 
 source('../../tools/common_functions.R')
@@ -1283,7 +1282,14 @@ data_long <- cbind(data_long, embeddings_avg, interestingness)
 data_plot_long <- ProcessForPlots(data_long, n_plots, plot_names) #num_rows = num_plots*num_questions
 dim(data_plot_long)
 
-data_long[, "sentiment_score"] <- sapply(data_long["word"], CalculateSentiment, model_type = "ai")
+calculate_sentiment <- FALSE
+if(calculate_sentiment) {
+    data_long[, "sentiment_score"] <- sapply(data_long["word"], CalculateSentiment, model_type = 'ai')
+    write.csv(data.frame(sentiment_score = data_long[, "sentiment_score"]), "./data/sentiment_scores.csv", row.names = FALSE)
+} else {
+    data_long[, "sentiment_score"] <- read.csv('./data/sentiment_scores.csv')
+}
+
 data_long$sentiment_score[is.na(data_long$sentiment_score)] <- 0
 data_long[, "is_word"] <- lapply(data_long["word"], is.word)
 
@@ -1353,20 +1359,6 @@ dev.off()
 
 # Create a dataframe of features and subject scores 
 d_long <- CreateDataFeaturesDF(data_long, dat_final, features, n_after_exclusions, num_subjects_and_plots)
-
-# Run regularized regression on all predictors
-#ridge_regression_wt_predictors <- AnalyzeRidgeRegressionLifelines(score_features_df)
-
-# Run mixed-effects regression on PCA-reduced features
-#data_wt_PCs <- MakePCAFunction(score_features_df)
-
-##### (3.3) RUN PREDICTIVE ANALYSES
-
-# Get performance of each predictor and PCA-reduced feature using cross-validation.
-#cross_validation_analysis_wt_pcs <- CrossValidationAnalysisWtPCs(data_wt_PCs, data_long, n_after_exclusions, n_plots)
-#pdf(file = "predictions_wt_pcs_cv_plot.pdf", width = 17, height = 9)
-#plot(cross_validation_analysis_wt_pcs)
-#dev.off()
 
 cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(d_long, n_after_exclusions, n_plots)
 pdf(file = "predictions_wt_predictors_cv_plot.pdf", width = 16, height = 9)

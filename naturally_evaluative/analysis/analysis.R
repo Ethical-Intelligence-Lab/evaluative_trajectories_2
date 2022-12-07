@@ -28,8 +28,8 @@ pacman::p_load('plotrix', #for standard error
                'tidyverse', #used in conjunction with tidyr; contains dplyr, used for select(); load last because of conflict!
                'slam', #utility functions for sparse matrices 
                'broom', #install separately if does not work 
-               'filesstrings', #create and move files
-               'sentiment.ai'
+               'filesstrings' #create and move files
+               #'sentiment.ai'
 )
 
 PerformExclusions <- function(data) {
@@ -563,14 +563,17 @@ CrossValidationAnalysis <- function(sentiment_data, dat_long, n_plts, plt_names,
     names(dat_s1)[names(dat_s1) == "word.subject"] <- "subject"
 
     subset_dat_s1 <- dat_s1[, c("plot_names", "satisfaction", "personal_desirability", "subject")] #extract only the relevant columns from e3
-    subset_dat_s1$sentence <- sentiment_e4$mean_sentence
-    subset_dat_s1$word <- sentiment_e4$mean_word
 
-    dat_combined <- subset_dat_s1 #rename 
+    for( plot_name in sentiment_e4[is.na(sentiment_e4$mean_sentence), 'plot_names']) {
+        subset_dat_s1[subset_dat_s1$plot_names == plot_name, 'sentence'] <- sentiment_e4[!is.na(sentiment_e4$mean_sentence) & (sentiment_e4$plot_names == plot_name), 'mean_sentence']
+        subset_dat_s1[subset_dat_s1$plot_names == plot_name, 'word'] <- sentiment_e4[is.na(sentiment_e4$mean_sentence) & (sentiment_e4$plot_names == plot_name), 'mean_word']
+    }
 
-    # ------ 
+    dat_combined <- subset_dat_s1 #rename
 
-    # Set up cross-validation analyses 
+    # ------
+
+    # Set up cross-validation analyses
     set.seed(1)
     predictors <- c("sentence", "word")
     n_folds <- dim(dat_long)[1] / n_plts
@@ -604,7 +607,7 @@ CrossValidationAnalysis <- function(sentiment_data, dat_long, n_plts, plt_names,
         print(paste('satisfaction: median predictor result,', predictors[i], ': ', median(as.numeric(results_satisfaction[i,]), na.rm = TRUE)))
     }
 
-    # Reorder predictors according to their significance 
+    # Reorder predictors according to their significance
     t_results_satisfaction <- as.data.frame(t(results_satisfaction))
     colnames(t_results_satisfaction) <- predictors
     results_satisfaction_long <- gather(t_results_satisfaction, key = predictors, value = predictors_results, colnames(t_results_satisfaction)) #length(predictors)*n_folds
@@ -616,7 +619,7 @@ CrossValidationAnalysis <- function(sentiment_data, dat_long, n_plts, plt_names,
 
     #-------------------------------------------------------------------------------------------------------------------
 
-    #2. Personal Desirability 
+    #2. Personal Desirability
     results_pd <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
     rownames(results_pd) <- predictors
 
@@ -640,7 +643,7 @@ CrossValidationAnalysis <- function(sentiment_data, dat_long, n_plts, plt_names,
         print(paste('personal desirability: median predictor result,', predictors[i], ': ', median(as.numeric(results_pd[i,]), na.rm = TRUE)))
     }
 
-    # Reorder predictors according to their significance 
+    # Reorder predictors according to their significance
     t_results_pd <- as.data.frame(t(results_pd))
     colnames(t_results_pd) <- predictors
     results_pd_long <- gather(t_results_pd, key = predictors, value = predictors_results, colnames(t_results_pd)) #length(predictors)*n_folds
@@ -653,7 +656,7 @@ CrossValidationAnalysis <- function(sentiment_data, dat_long, n_plts, plt_names,
 
     #-------------------------------------------------------------------------------------------------------------------
 
-    #3. Plotting 
+    #3. Plotting
     predictors_results_ordered <- data.frame(predictors_order = results_satisfaction_long$satisfaction_new_order,
                                              satisfaction_results = results_satisfaction_long$predictors_results,
                                              pd_results = results_pd_long$predictors_results) #combine satisfaction and pd results
@@ -667,8 +670,8 @@ CrossValidationAnalysis <- function(sentiment_data, dat_long, n_plts, plt_names,
         x$
         get_labels()
 
-    # Perform Wilcoxon tests and get stars for significance 
-    # Define empty lists 
+    # Perform Wilcoxon tests and get stars for significance
+    # Define empty lists
     wilcox_test_1_wt_satisfaction <- c()
     wilcox_test_2_wt_satisfaction <- c()
     p_value_stars_1_satisfaction <- c()
@@ -736,26 +739,26 @@ CrossValidationAnalysis <- function(sentiment_data, dat_long, n_plts, plt_names,
         print(wilcox_test_2_wt_pd[[i]])
     }
 
-    # Define heights of annotations 
-    bottom_y <- -1.05 #y value for all bottom stars 
+    # Define heights of annotations
+    bottom_y <- -1.05 #y value for all bottom stars
 
     satisfaction_color <- "#56B4E9"
-    satisfaction_bottom_x <- 1.19 #x value for bottom stars 
-    satisfaction_top_x <- satisfaction_bottom_x + 0.5 #x value for top stars 
-    satisfaction_top_y <- 1.37 #y value for top stars 
-    satisfaction_bracket_y <- 1.27 #y value for top bracket  
-    satisfaction_bracket_start <- 1.24 #x starting point for top bracket 
-    satisfaction_bracket_end <- 2.15 #x ending point for top bracket 
+    satisfaction_bottom_x <- 1.19 #x value for bottom stars
+    satisfaction_top_x <- satisfaction_bottom_x + 0.5 #x value for top stars
+    satisfaction_top_y <- 1.37 #y value for top stars
+    satisfaction_bracket_y <- 1.27 #y value for top bracket
+    satisfaction_bracket_start <- 1.24 #x starting point for top bracket
+    satisfaction_bracket_end <- 2.15 #x ending point for top bracket
 
     pd_color <- "#009E73"
-    pd_bottom_x <- 0.813 #x value for bottom stars 
-    pd_top_x <- pd_bottom_x + 0.5 #x value for top stars 
-    pd_top_y <- 1.14 #y value for top stars 
-    pd_bracket_y <- 1.05 #y value for top bracket  
-    pd_bracket_start <- 0.85 #x starting point for top bracket 
-    pd_bracket_end <- 1.8 #x ending point for top bracket 
+    pd_bottom_x <- 0.813 #x value for bottom stars
+    pd_top_x <- pd_bottom_x + 0.5 #x value for top stars
+    pd_top_y <- 1.14 #y value for top stars
+    pd_bracket_y <- 1.05 #y value for top bracket
+    pd_bracket_start <- 0.85 #x starting point for top bracket
+    pd_bracket_end <- 1.8 #x ending point for top bracket
 
-    # Add to the plot: stars indicating significance 
+    # Add to the plot: stars indicating significance
     predictors_plot <- predictors_plot +
 
         # One-sided Wilcox test
@@ -776,7 +779,7 @@ CrossValidationAnalysis <- function(sentiment_data, dat_long, n_plts, plt_names,
 
     #-------------------------------------------------------------------------------------------------------------------
 
-    # Prettify x-tick labels 
+    # Prettify x-tick labels
     final_plot <- predictors_plot +
         theme(axis.text.x = element_text(angle = 0, hjust = 0.5, color = "black")) +
         scale_x_discrete(breaks = c("sentence", "word"),
@@ -798,7 +801,7 @@ d_s1 <- read.csv("../../satisfaction_of_a_customer_journey/analysis/data/dat.csv
 d_s1_mean <- aggregate(d_s1, list(d_s1$word.plot_names), mean)
 d_s1_order <- d_s1_mean[order(d_s1_mean$word.sentiment_score), ]
 
-# Process Data  
+# Process Data
 d <- PerformExclusions(d_raw) #num_rows = num_ss
 n_after_exclusions <- d$n_after_exclusions[1]
 n_subjects_and_plots <- n_after_exclusions * 27
@@ -808,7 +811,16 @@ data_long <- Preprocess(d, n_plots, plot_names) #num_rows = num_ss*num_plots [to
 
 ##================================================================================================================
 # Analyze Sentiment
-sentiment_df <- Get_sentiment_scores(data_long, plot_names, n_plots, n_after_exclusions)
+calculate_sentiment <- FALSE
+if(calculate_sentiment) {
+    sentiment_df <- Get_sentiment_scores(data_long, plot_names, n_plots, n_after_exclusions)
+    write.csv(sentiment_df[[1]], "./data/sentiment_scores_1.csv")
+    write.csv(sentiment_df[[2]], "./data/sentiment_scores_2.csv")
+} else {
+    sentiment_df <- list(read.csv("./data/sentiment_scores_1.csv"),
+                         read.csv("./data/sentiment_scores_2.csv"))
+}
+
 
 
 # Plot Sentiment Bar Plot 
@@ -816,7 +828,7 @@ sentiment_bar_list <- Get_sentiment_barplot(sentiment_df, n_plots, plot_names, d
 sentiment_bar_e4 <- PlotAxisLabels(plot_names, my_equations, sentiment_bar_list[[1]], sentiment_bar_list[[2]])
 
 pdf(file = paste0("sentiment_barplot.pdf"), width = 17, height = 8)
-ggdraw(insert_xaxis_grob(sentiment_bar_raw, sentiment_bar_e4, position = "bottom"))
+ggdraw(insert_xaxis_grob(sentiment_bar_list[[1]], sentiment_bar_e4, position = "bottom"))
 dev.off()
 
 
@@ -858,5 +870,3 @@ file.move(plot_files, "analysis_plots", overwrite = TRUE)
 ##=====##
 ## END ##
 ##=====##
-
-

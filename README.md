@@ -3,10 +3,12 @@ Julian De Freitas, Pechthida Kim, Tomer Ullman
 
 ## Instructions
 * For topic modelling, install 'gsl' (If you use homebrew, execute `brew install gsl`)
-* Create a virtual Python environment (preferably version 3.9)
-* Install requirements: `pip install -r requirements.txt`
-* Setup sentiment.ai (For more information: https://benwiseman.github.io/sentiment.ai/#Installation__Setup)
 * Run `tools/Lifelines_Generate_Plots.R`, since we will use the variables generated here in the other analyses.
+* Steps below are only required if you want to run clustering code:
+  * Create a virtual Python environment
+  * Install requirements: `pip install -r requirements.txt`
+<br><br>
+* This step is only needed if you want to re-run sentiment analysis (not required for main analyses): Setup sentiment.ai (For more information: https://benwiseman.github.io/sentiment.ai/#Installation__Setup)
 
 ### For Analyses Comparing Different Studies:
 * Run `between_experiment_analyses/analysis.R`
