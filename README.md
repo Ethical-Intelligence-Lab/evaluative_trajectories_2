@@ -7,6 +7,7 @@ Julian De Freitas, Pechthida Kim, Tomer Ullman
 * Steps below are only required if you want to run clustering code:
   * Create a virtual Python environment
   * Install requirements: `pip install -r requirements.txt`
+  * Run `python -m spacy download en_core_web_sm`
 <br><br>
 * This step is only needed if you want to re-run sentiment analysis (not required for main analyses): Setup sentiment.ai (For more information: https://benwiseman.github.io/sentiment.ai/#Installation__Setup)
 
