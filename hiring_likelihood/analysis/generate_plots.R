@@ -74,7 +74,6 @@ if(plot_experiment_figures == TRUE) {
   dir.create("interview_performance_plots")
   plot_individuals <- c(list.files(pattern = ".png"))
   file.move(plot_individuals, "interview_performance_plots", overwrite = TRUE)
-  file.move('featuresZ.csv', "interview_performance_plots", overwrite = TRUE)
 }
 
 
