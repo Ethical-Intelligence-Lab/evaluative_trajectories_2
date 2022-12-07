@@ -74,8 +74,10 @@ PerformExclusions <- function(data) {
             (data$att_check_3_2 %% 10 == 0) &
             (data$att_check_3_1 == 15))), 0, 1)
 
-    print(paste('percentage excluded, attention checks: ',
-                table(data$attention_check)[2] / n_before_exclusions))
+    print(paste('Recruited: ',
+                n_before_exclusions))
+    print(paste('Number excluded, attention checks: ',
+                table(data$attention_check)[2]))
 
     # Perform comprehension checks
     data$attention_check2 <- ifelse((data$comp_check_1 == 80 &
@@ -99,16 +101,16 @@ PerformExclusions <- function(data) {
             (data$comp_check_9 == 'Indicate how likely it was that you would hire the candidate')
         )), 0, 1)
 
-    print(paste('percentage excluded, comprehension checks: ',
-                table(data$comp_check)[2] / n_before_exclusions))
+    print(paste('Number excluded, comprehension checks: ',
+                table(data$comp_check)[2]))
 
     # Exclude those who failed either attention or comprehension checks
     data <- subset(data, (data$attention_check == 0) & (data$comp_check == 0))
 
     # Number of subjects after exclusions
     n_after_exclusions <- dim(data)[1] #140
-    print(paste('total percentage excluded, comprehension checks: ',
-                (n_before_exclusions - n_after_exclusions) / n_before_exclusions))
+    print(paste('total number excluded, comprehension checks: ',
+                n_before_exclusions - n_after_exclusions))
 
     data$n_after_exclusions <- n_after_exclusions
 
@@ -278,34 +280,15 @@ OrderSentimentDataframe <- function(data, n_plots, plot_names) {
 ##FUNCTIONS FOR ANALYSIS##
 ##================================================================================================================
 GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
-    "
-    This function gets various correlations and main effects of the participant data.
-    Input: This function takes as input a dataframe with rows = num_ss*num_plots*num_questions.
-          (dat_final, data_long, data_plot_long, data_plot_long, n_plots, plot_names, my_embeddings) 
-    Output: various correlation and linear regression results; also, linear and spline plots ordered by hiring likelihood scores
-    "
-
-    # 1. Question & Plot Types
-
     data$plot_type_n <- as.numeric(factor(data$plot_names)) #create numeric version of plot_names
     data$score_n <- as.numeric(data$score) #create numeric version of score (which are characters)
     data$question_type_n <- as.numeric(factor(data$question_type, levels = unique(data$question_type)))
     data$subject_n <- as.numeric(factor(data$subject))
 
-    print('Did hiring likelihood scores vary depending on plot type?')
+    print('*-*-*-*-*-*-*-*-* Did hiring likelihood scores vary depending on plot type? *-*-*-*-*-*-*-*-*')
     effect_mod <- lm(data = data[data['question_type'] == "hiring_likelihood",], score ~ plot_type_n + subject_n)
     print(summary(effect_mod))
     print('-----------------------------------------------------')
-
-
-    # print('Regress hiring likelihood on embeddings: ')
-    # hiring_likelihood_embedding_df <- cbind(hiring_likelihood = data_long$hiring_likelihood, my_embeddings[2:513])
-    # hiring_likelihood_embedding_lm <- lm(hiring_likelihood ~ ., data = hiring_likelihood_embedding_df)
-    #print('hiring likelihood vs. embeddings:')
-    #print(summary(hiring_likelihood_embedding_lm))
-    # Error: 486 not defined because of singularities
-    # I checked for multicollinearity with cor(my_embeddings[2:513]) but did not find any perfect correlations 
-    # (except for of course the correlation of a given variable with itself, which had a coefficient of 1).
 
     return()
 
@@ -319,7 +302,7 @@ CreateDataFeaturesDF <- function(data, dat_final, features_df, n_after_exclusion
     Output: score_features_df (which contains all of the predictors and participant scores)
     "
 
-    score_features_df <- cbind(data, sentiment_score = data$sentiment_score,
+    score_features_df <- cbind(data,
                                as.data.frame(do.call("rbind", replicate(n_after_exclusions, standardize(features_df), simplify = FALSE))))
     score_features_df["hiring_likelihood"] <- as.data.frame(apply(score_features_df["hiring_likelihood"], 2, as.numeric))
     score_features_df["subject"] <- as.data.frame(apply(score_features_df["subject"], 2, as.numeric))
@@ -527,12 +510,7 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
 
 
 CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
-    "
-    Measure the performance of each of our predictors by doing cross-validated regressions, holding out 
-    one participant for each cross-validation step. 
-    Input: data_wt_PCs, data_long, n_after_exclusions, n_plots 
-    Output: relative importance of individual predictors and its graph
-    "
+    print("Running cross validation...")
 
     # dat <- data_wt_PCs 
     # dat_long <- data_long
@@ -584,7 +562,6 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
         }
 
         print(paste('hiring likelihood: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_hiring_likelihood[i,]), na.rm = TRUE)))
-        print(paste('hiring likelihood: median predictor result,', predictors[i], ': ', median(as.numeric(results_hiring_likelihood[i,]), na.rm = TRUE)))
     }
 
     # Reorder predictors according to their significance 
@@ -656,6 +633,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
 
     #-------------------------------------------------------------------------------------------------------------------
 
+    print(predictors_plot)
     return(predictors_plot)
 }
 
@@ -732,10 +710,6 @@ d_long[, "is_word"] <- lapply(d_long["word_gen"], is.word)
 data_plot_long <- ProcessForPlots(d_long, n_plots, plot_names) #num_rows = num_plots*num_questions
 
 ## ========================================== (2) Plot Data and Save ==================================================
-
-"
-Create bar plot, word clouds, and sentiment plot
-"
 
 #### (2.1) MAKE BAR PLOT OF HIRING LIKELIHOOD SCORES
 grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)

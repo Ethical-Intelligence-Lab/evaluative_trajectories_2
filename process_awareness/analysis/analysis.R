@@ -90,8 +90,8 @@ PerformExclusions <- function(data) {
                                          (data$att_check_3_2%%10 == 0) &
                                          (data$att_check_3_1 == 15) ) ), 0, 1)
     
-    print(paste('percentage excluded, attention checks: ',
-                table(data$attention_check)[2]/n_before_exclusions))
+    print(paste('number excluded, attention checks: ',
+                table(data$attention_check)[2]))
 
     # Perform comprehension checks
     data$attention_check2 <- ifelse( (data$comp_check_1 == 5 &
@@ -115,16 +115,16 @@ PerformExclusions <- function(data) {
                                       (data$understand_check <= 2)
                                    ) ), 0, 1)
     
-    print(paste('percentage excluded, comprehension checks: ',
-                table(data$comp_check)[2]/n_before_exclusions))
+    print(paste('number excluded, comprehension checks: ',
+                table(data$comp_check)[2]))
     
     # Exclude those who failed either attention or comprehension checks
     data <- subset(data, (data$attention_check == 0) & (data$comp_check == 0))
     
     # Number of subjects after exclusions
     n_after_exclusions <- dim(data)[1] #54 
-    print(paste('total percentage excluded, all checks: ',
-                (n_before_exclusions-n_after_exclusions)/n_before_exclusions))
+    print(paste('total number excluded, all checks: ',
+                (n_before_exclusions-n_after_exclusions)))
     
     data$n_after_exclusions <- n_after_exclusions 
     
@@ -175,6 +175,7 @@ GetRankings <- function(data, old_labs, new_labs) {
    summarise(mean_ranking=mean(rankings),
              .groups = 'drop')
 
+    print("----- By Mean Ranking: ------")
     print(agg_tbl[order(agg_tbl$mean_ranking),])
     return( agg_tbl[order(agg_tbl$mean_ranking),] )
     
@@ -194,16 +195,6 @@ for(i in 1:dim(d_raw)[1]) {
     d_raw$understand_check[i] <- sum(d_raw[i,65:76], na.rm=TRUE)
 }
 
-features <- c('slope', 'accel.', 'end', 'AUC', 'peak', 'valley',
-             '# peaks', '# valleys', '# peaks & valleys', 'semantic embeddings',
-             'interestingness', 'sentiment')
-
-for (i in 65:76) {
-    d_raw[,i][is.na(d_raw[,i])] <- 0
-    print(paste(features[i-64], mean(d_raw[,i], na.rm=TRUE)))
-}
-
-#dir.create("analysis_plots")
 
 ## ================================= (2) Define Variables =====================================
 

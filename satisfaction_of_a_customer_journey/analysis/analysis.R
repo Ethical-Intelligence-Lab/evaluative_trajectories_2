@@ -93,8 +93,8 @@ PerformExclusions <- function(data) {
             (data$att_check_3_2 %% 10 == 0) &
             (data$att_check_3_1 == 15))), 0, 1)
 
-    print(paste('percentage excluded, attention checks: ',
-                table(data$attention_check)[2] / n_before_exclusions))
+    print(paste('Number excluded, attention checks: ',
+                table(data$attention_check)[2]))
 
     # Perform comprehension checks
     data$attention_check2 <- ifelse((data$comp_check_1 == 80 &
@@ -129,25 +129,22 @@ PerformExclusions <- function(data) {
             (data$comp_check_9 == 'Satisfaction')
         )), 0, 1)
 
-    print(paste('percentage excluded, comprehension checks: ',
-                table(data$comp_check)[2] / n_before_exclusions))
-
     # Exclude those who failed either attention or comprehension checks
     data <- subset(data, (data$attention_check == 0) & (data$comp_check == 0))
 
     # Number of subjects after exclusions
     n_after_exclusions <- dim(data)[1]; n_after_exclusions #177
-    print(paste('percentage excluded, duplicate answers: ',
-                (dim(satisfaction_dups)[1] + dim(pd_dups)[1]) / n_after_exclusions))
-    print(paste('total percentage excluded, comprehension checks: ',
-                (n_before_exclusions - n_after_exclusions) / n_before_exclusions))
+    print(paste('Total number excluded, duplicate answers: ',
+                dim(satisfaction_dups)[1] + dim(pd_dups)[1]))
+    print(paste('Total number excluded, comprehension checks: ',
+                n_before_exclusions - n_after_exclusions))
 
     data$n_after_exclusions <- n_after_exclusions
 
-    print('mean age:')
+    print('Mean age:')
     print(mean(as.numeric(data$age), trim = 0, na.rm = TRUE)) ## mean age 
 
-    print('% female:')
+    print('% Female:')
     print(table(data$gender)[1] / sum(table(data$gender))) ## percentage of females
 
     return(data)
@@ -291,39 +288,19 @@ GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
     data$willingness_to_pay <- as.numeric(data$willingness_to_pay) #create numeric version of willingness_to_pay
     data$subject_n <- as.numeric(factor(data$subject))
 
-    print('Did answers vary depending on question and plot type?')
+    print('*-*-*-*-*-*-*-*-* Did answers vary depending on question and plot type? *-*-*-*-*-*-*-*-*')
     effect_mod <- lm(data$score_n ~ data$question_type_n + data$plot_type_n + data$subject_n)
     print(summary(effect_mod))
-    print('-----------------------------------------------------')
 
-    print('Which question type scored higher?')
-    t_mod <- t.test(data$score_n ~ data$question_type, paired = TRUE)
-    print(t_mod)
-    print(paste('Means: ', unique(data$question_type)[1], ': ', tapply(data$score_n, data$question_type, mean)[[unique(data$question_type)[1]]]))
-    print(paste('Means: ', unique(data$question_type)[2], ': ', tapply(data$score_n, data$question_type, mean)[[unique(data$question_type)[2]]]))
-    print(paste('SDs: ', unique(data$question_type)[1], ': ', tapply(data$score_n, data$question_type, sd)[[unique(data$question_type)[1]]]))
-    print(paste('SDs: ', unique(data$question_type)[2], ': ', tapply(data$score_n, data$question_type, sd)[[unique(data$question_type)[2]]]))
-    print('-----------------------------------------------------')
-
-    # 3. Willingness to Pay
-    print('Did willingness to pay vary depending on plot type?')
-    wtp_mod <- lm(data = data, willingness_to_pay ~ plot_type_n + (1 | subject_n))
-    print(summary(wtp_mod))
-    print('-----------------------------------------------------')
-
-    print('Does willingness to pay correlate with satisfaction ratings?')
+    print('*-*-*-*-*-*-*-*-* Does willingness to pay correlate with satisfaction ratings? *-*-*-*-*-*-*-*-*')
     wtp_satisfaction_corr <- cor.test(data$willingness_to_pay[data$question_type == "satisfaction"],
                                       data$score_n[data$question_type == "satisfaction"])
-    print('willingness to pay vs. satisfaction:')
     print(wtp_satisfaction_corr)
-    print('-----------------------------------------------------')
 
-    print('Does willingness to pay correlate with personal desirability ratings?')
+    print('*-*-*-*-*-*-*-*-* Does willingness to pay correlate with personal desirability ratings? *-*-*-*-*-*-*-*-*')
     wtp_pd_corr <- cor.test(data$willingness_to_pay[data$question_type == "personal_desirability"],
                             data$score_n[data$question_type == "personal_desirability"])
-    print('willingness to pay vs. personal desirability:')
     print(wtp_pd_corr)
-    print('-----------------------------------------------------')
 
     # 4. Difference between linear and quadratic models for satisfaction and personal desirability
 
@@ -345,7 +322,7 @@ GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
     pd_score_avg <- data_plot[, "pd_score_avg"]
     satisfaction_pd_diff <- data_plot[, "satisfaction_pd_diff"]
 
-    print('Does a quadratic regression fit the shape of the difference between satisfaction and desirability ratings better than a linear one does?')
+    print('*-*-*-*-*-*-*-*-* Does a quadratic regression fit the shape of the difference between satisfaction and desirability ratings better than a linear one does? *-*-*-*-*-*-*-*-*')
     print('First, the linear fit:')
     satisfaction_pd_diff_lin <- lm(satisfaction_pd_diff ~ data_plot$order_num)
     print(summary(satisfaction_pd_diff_lin))
@@ -370,13 +347,13 @@ GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
               axis.title.x = element_blank())
     print('-----------------------------------------------------')
 
-    print('Difference between linear and quadratic models:')
+    print('*-*-*-*-*-*-*-*-* Difference between linear and quadratic models: *-*-*-*-*-*-*-*-*')
     satisfaction_pd_diff_lrt <- lrtest(satisfaction_pd_diff_lin, satisfaction_pd_diff_quadratic)
     print(satisfaction_pd_diff_lrt)
     print('-----------------------------------------------------')
 
     linear_quad <- ggarrange(linear_plot, quadratic_plot, nrow = 1, ncol = 2)
-    # theme(plot.margin = margin(0.1,0.1,-0.5,0.1, "cm"))
+     theme(plot.margin = margin(0.1,0.1,-0.5,0.1, "cm"))
     linear_quad <- annotate_figure(linear_quad,
                                    left = text_grob("Difference Between Satisfaction and Desirability", color = "black", face = "bold", size = 20, rot = 90),
                                    bottom = text_grob("Plot Ordered by Satisfaction Scores", color = "black", face = "bold", size = 20, vjust = 0.4))
@@ -393,7 +370,7 @@ CreateDataFeaturesDF <- function(data, features_df, n_after_exclusions) {
     Output: score_features_df (which contains all of the predictors and participant scores)
     "
 
-    score_features_df <- cbind(data, sentiment_score = data$sentiment_score,
+    score_features_df <- cbind(data,
                                as.data.frame(do.call("rbind", replicate(n_after_exclusions, standardize(features_df), simplify = FALSE))))
     score_features_df["satisfaction"] <- as.data.frame(standardize(apply(score_features_df["satisfaction"], 2, as.numeric)))
     score_features_df["personal_desirability"] <- as.data.frame(apply(score_features_df["personal_desirability"], 2, as.numeric))
@@ -410,71 +387,6 @@ CreateDataFeaturesDF <- function(data, features_df, n_after_exclusions) {
     return(score_features_df)
 
 }
-
-Get_noise_ceiling <- function(dat_long, question_type, n_ss) {
-    "
-    Find correlation values between two randomly sample halves of the data,
-    correct with the Spearman-Brown Prophecy formula (defined above), and put into a list.
-    Input: data_long, question type ('satisfaction' or 'personal_desirability')
-    Output: summary of the correlation results, to be used to plot noise ceiling (25th and 75th percentiles)
-    "
-
-    # Convert "satisfaction" and "personal_desirability" columns into numeric
-    dat_long[, c("satisfaction", "personal_desirability")] <- sapply(dat_long[, c("satisfaction", "personal_desirability")], as.numeric)
-
-    # Filter the scores using the "subject" column, and put into a list
-    list_of_question <- c()
-    for (i in plot_names) {
-        list_of_question[i] <- dat_long %>%
-            filter(plot_names == i) %>%
-            select(question_type)
-    }
-
-    # Convert to data frame
-    df_of_question <- data.frame(list_of_question)
-
-    # Find correlation values between two randomly-sampled halves of the data,
-    # correct with the Spearman-Brown Prophecy formula (defined above), and put into a list.
-
-    # Divide number of participants in half
-    half_n_ss <- n_ss / 2
-
-    # If even number of participants:
-    if (half_n_ss == round(half_n_ss)) {
-        coded <- c(rep(1, half_n_ss), rep(2, half_n_ss))
-    }
-
-    # If odd number of participants:
-    if (half_n_ss != round(half_n_ss)) {
-        coded <- c(rep(1, half_n_ss + 0.5), rep(2, half_n_ss - 0.5))
-    }
-
-    # Create a list to store the simulations
-    sims <- 1000
-    store <- rep(NA, sims)
-    set.seed(2)
-
-    # Perform 1000 correlations
-    for (i in 1:sims) {
-
-        # Get random samples
-        rand_assign <- sample(coded, n_ss, FALSE) #randomly assign rows as either 1 or 2
-        assign_1 <- df_of_question[rand_assign == 1,] #random sample 1
-        assign_2 <- df_of_question[rand_assign == 2,] #random sample 2
-        means_1 <- colMeans(assign_1) #get the means of random sample 1
-        means_2 <- colMeans(assign_2) #get the means of random sample 2
-
-        # Perform correlations on the means of both random samples
-        store[i] <- cor(means_1, means_2)
-    }
-
-    # Apply Spearman-Brown correction: cor_value_adj <- (2 * cor_value) / (1 + cor_value)
-    corrected_store <- Get_spearman_brown_correction(store)
-    store_summary <- summary(corrected_store)
-
-    return(store_summary)
-}
-
 
 MakePCAFunction <- function(score_features_df) {
     "
@@ -590,9 +502,6 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
     satisfaction_new_order <- with(results_satisfaction_long, reorder(principal_components, pcs_results, median, na.rm = TRUE))
     results_satisfaction_long["satisfaction_new_order"] <- satisfaction_new_order
 
-    # Get_noise_ceiling function
-    summary_satisfaction <- Get_noise_ceiling(dat_long, "satisfaction", n_ss)
-
     #-------------------------------------------------------------------------------------------------------------------
 
     #2. Personal Desirability
@@ -629,9 +538,6 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
     results_pd_long["pd_new_order"] <- pd_new_order
     results_pd_long <- results_pd_long[order(match(results_pd_long[, "pd_new_order"], results_satisfaction_long[, "satisfaction_new_order"])),] #order by satisfaction scores
 
-    # Get_noise_ceiling function
-    summary_pd <- Get_noise_ceiling(dat_long, "personal_desirability", n_ss)
-
     #-------------------------------------------------------------------------------------------------------------------
 
     #3. Plotting
@@ -641,7 +547,7 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
     pcs_results_long <- gather(pcs_results_ordered, key = question_type, value = results, satisfaction_results, pd_results)
 
     # Make boxplot from CV_plotter function
-    pcs_plot <- CV_plotter(pcs_results_long, pcs_results_long$pcs_order, pcs_results_long$results, pcs_results_long$question_type, "Principal Components", summary_satisfaction, summary_pd)
+    pcs_plot <- CV_plotter(pcs_results_long, pcs_results_long$pcs_order, pcs_results_long$results, pcs_results_long$question_type, "Principal Components")
 
     # Get the labels
     x_labs <- ggplot_build(pcs_plot)$layout$panel_params[[1]]$
@@ -669,7 +575,7 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
                                                           conf.int = TRUE, data = t_results_satisfaction)
         p_value_stars_1_satisfaction[i] <- stars.pval(wilcox_test_1_wt_satisfaction[[i]]$"p.value") #get stars
 
-        print(paste0(x_labs[i], " --------------------------------------------------------------------------------------"))
+        print(paste0("Satisfaction --------------------------------------------------------------------------------------", x_labs[i]))
         print(wilcox_test_1_wt_satisfaction[[i]])
     }
 
@@ -682,7 +588,7 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
                                                 conf.int = TRUE, data = t_results_pd)
         p_value_stars_1_pd[i] <- stars.pval(wilcox_test_1_wt_pd[[i]]$"p.value") #get stars
 
-        print(paste0(x_labs[i], " --------------------------------------------------------------------------------------"))
+        print(paste0("PD --------------------------------------------------------------------------------------", x_labs[i]))
         print(wilcox_test_1_wt_pd[[i]])
     }
 
@@ -780,7 +686,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots, tr
                     "2nd Derivative", "2nd Derivative\nPrime", "2nd Derivative\nAscending", "2nd Derivative\nDescending", "2nd Derivative\nEnd")
 
     if (colnames(dat)[45] != "End Value") { setnames(dat, old = predictors_old, new = predictors) }
-
+    print("Running cross validation analysis...")
 
     set.seed(1)
     n_folds <- n_ss
@@ -837,7 +743,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots, tr
 
 
             print(paste(ptype, ': mean predictor result,', predictors[i], ': ', mean(as.numeric(results[i,]), na.rm = TRUE)))
-            print(paste(ptype, ': median predictor result,', predictors[i], ': ', median(as.numeric(results[i,]), na.rm = TRUE)))
+            #print(paste(ptype, ': median predictor result,', predictors[i], ': ', median(as.numeric(results[i,]), na.rm = TRUE)))
 
         }
 
@@ -848,9 +754,6 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots, tr
             results_satisfaction_long <- gather(t_results_satisfaction, key = predictors, value = predictors_results, colnames(t_results_satisfaction)) #length(predictors)*n_folds
             satisfaction_new_order <- with(results_satisfaction_long, reorder(predictors, predictors_results, mean, na.rm = TRUE))
             results_satisfaction_long["satisfaction_new_order"] <- satisfaction_new_order
-
-            # Get_noise_ceiling function
-            summary_satisfaction <- Get_noise_ceiling(dat_long, "satisfaction", n_ss)
         } else {
             # Reorder predictors according to their significance
             t_results_pd <- as.data.frame(t(results))
@@ -859,9 +762,6 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots, tr
             pd_new_order <- with(results_pd_long, reorder(predictors, predictors_results, mean, na.rm = TRUE))
             results_pd_long["pd_new_order"] <- pd_new_order
             results_pd_long <- results_pd_long[order(match(results_pd_long[, "pd_new_order"], results_satisfaction_long[, "satisfaction_new_order"])),] #order by satisfaction scores
-
-            # Get_noise_ceiling function
-            summary_pd <- Get_noise_ceiling(dat_long, "personal_desirability", n_ss)
         }
     }
 
@@ -877,7 +777,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots, tr
     # Make boxplot from CV_plotter function
     predictors_plot <- CV_plotter(predictors_results_long, predictors_results_long$predictors_order,
                                   predictors_results_long$results, predictors_results_long$question_type,
-                                  "Predictors", summary_satisfaction, summary_pd)
+                                  "Predictors")
 
     # Get the labels
     x_labs <- ggplot_build(predictors_plot)$layout$panel_params[[1]]$
@@ -930,6 +830,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots, tr
                                                                label = p_value_stars_pd[[i]])
     }
 
+    print(predictors_plot)
     return(predictors_plot)
 }
 

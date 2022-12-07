@@ -137,10 +137,10 @@ MakeSentimentBarPlot <- function(data, n_plots, plot_names, title = "Satisfactio
     return(sentiment_bar_plot)
 }
 
-CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, sum_satisfaction, sum_pd) {
+CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels) {
     "
     What this function does: creates a grouped box plot of the cross-validated prediction results
-    Inputs: results_df, x_order, results_order, ques_type, x_labels, sum_satisfaction, sum_pd
+    Inputs: results_df, x_order, results_order, ques_type, x_labels
     Output: a boxplot of participant rating predictions with either principal components or predictors
     "
 

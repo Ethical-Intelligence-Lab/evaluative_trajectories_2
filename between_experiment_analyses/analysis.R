@@ -35,58 +35,58 @@ cluster_polynomials <- read.csv('../directly_experienced_content/analysis/data/c
 
 suppressWarnings({
 ### Start Analysis ###
-print('Customer Journeys Satisfaction v. Personal Desirability')
+print('***** Customer Journeys Satisfaction v. Personal Desirability *****')
 print(cor.test(d_customer_journeys$word.score[d_customer_journeys$word.question_type == "satisfaction"],
          d_customer_journeys$word.score[d_customer_journeys$word.question_type == "personal_desirability"]))
 
 
-print('Lifelines Meaningfulness v. Personal Desirability?')
+print('***** Lifelines Meaningfulness v. Personal Desirability? *****')
 print(cor.test(d_lifelines$word.score[d_lifelines$word.question_type == "meaningfulness"],
          d_lifelines$word.score[d_lifelines$word.question_type == "personal_desirability"]))
 
-print('Customer Journey Satisfaction v. Hiring Likelihood')
+print('***** Customer Journey Satisfaction v. Hiring Likelihood *****')
 d_cj <- d_customer_journeys[d_customer_journeys$word.question_type == "satisfaction",]
 d_ip <- d_interview_performance[d_interview_performance$word.question_type == "hiring_likelihood",]
 print(cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
          aggregate(d_ip, list(d_ip$word.plot_names), mean)$word.score))
 
-print('Customer Journeys Personal Desirability v. Hiring Likelihood')
+print('***** Customer Journeys Personal Desirability v. Hiring Likelihood *****')
 d_cj <- d_customer_journeys[d_customer_journeys$word.question_type == "personal_desirability",]
 d_ip <- d_interview_performance[d_interview_performance$word.question_type == "hiring_likelihood",]
 print(cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
          aggregate(d_ip, list(d_ip$word.plot_names), mean)$word.score))
 
-print('Lifelines Meaningfulness v. Hiring Likelihood')
+print('***** Lifelines Meaningfulness v. Hiring Likelihood *****')
 d_ll <- d_lifelines[d_lifelines$word.question_type == "meaningfulness",]
 d_ip <- d_interview_performance[d_interview_performance$word.question_type == "hiring_likelihood",]
 print(cor.test(aggregate(d_ll, list(d_ll$word.plot_names), mean)$word.score,
          aggregate(d_ip, list(d_ip$word.plot_names), mean)$word.score))
 
-print('Lifelines Personal Desirability v. Hiring Likelihood Correlate?')
+print('***** Lifelines Personal Desirability v. Hiring Likelihood Correlate? *****')
 d_ll <- d_lifelines[d_lifelines$word.question_type == "personal_desirability",]
 d_ip <- d_interview_performance[d_interview_performance$word.question_type == "hiring_likelihood",]
 print(cor.test(aggregate(d_ll, list(d_ll$word.plot_names), mean)$word.score,
          aggregate(d_ip, list(d_ip$word.plot_names), mean)$word.score))
 
-print('Lifelines Meaningfulness v. Customer Journeys Satisfaction')
+print('***** Lifelines Meaningfulness v. Customer Journeys Satisfaction *****')
 d_ll <- d_lifelines[d_lifelines$word.question_type == "meaningfulness",]
 d_cj <- d_customer_journeys[d_customer_journeys$word.question_type == "satisfaction",]
 print(cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
          aggregate(d_ll, list(d_ll$word.plot_names), mean)$word.score))
 
-print('Lifelines Meaningfulness v. Customer Journeys Personal Desirability')
+print('***** Lifelines Meaningfulness v. Customer Journeys Personal Desirability *****')
 d_ll <- d_lifelines[d_lifelines$word.question_type == "meaningfulness",]
 d_cj <- d_customer_journeys[d_customer_journeys$word.question_type == "personal_desirability",]
 print(cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
          aggregate(d_ll, list(d_ll$word.plot_names), mean)$word.score))
 
-print('Lifelines Personal Desirability v. Customer Journeys Satisfaction')
+print('***** Lifelines Personal Desirability v. Customer Journeys Satisfaction *****')
 d_ll <- d_lifelines[d_lifelines$word.question_type == "personal_desirability",]
 d_cj <- d_customer_journeys[d_customer_journeys$word.question_type == "satisfaction",]
 print(cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
          aggregate(d_ll, list(d_ll$word.plot_names), mean)$word.score))
 
-print('Lifelines Personal Desirability v. Customer Journeys Personal Desirability')
+print('***** Lifelines Personal Desirability v. Customer Journeys Personal Desirability *****')
 d_ll <- d_lifelines[d_lifelines$word.question_type == "personal_desirability",]
 d_cj <- d_customer_journeys[d_customer_journeys$word.question_type == "personal_desirability",]
 print(cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
@@ -95,11 +95,8 @@ print(cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
 ##############################   FIRST PERSON ANALYSES   #############################
 n_clusters <- length(table(d_first_person$cluster_labels))
 
-})
-
 #########   Find which clusters are closest to which curve   #########
 #########   First run 'tools/Lifelines_Generate_Plots.R'     #########
-
 
 plotter <- function(i, exp, eqn1, eqn2) {
     base <- ggplot() + xlim(0, 80) + ylim(0, 100) +
@@ -161,32 +158,34 @@ get_corr_plot <- function(num) {
     return(plot_names[result[[2]][, 2][num + 1]]);
 }
 
-print('Customer Journey Satisfaction v. WTP')
+print('***** Customer Journey Satisfaction v. WTP *****')
 d_ll$corresponding_plots <- sapply(d_first_person$word.cluster_labels, FUN = get_corr_plot)
 d_cj <- d_customer_journeys[d_customer_journeys$word.question_type == "satisfaction",]
 cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
          aggregate(d_ll, list(d_ll$corresponding_plots), mean)$word.score)
 
-print('Customer Journey PD v. WTP')
+print('***** Customer Journey PD v. WTP *****')
 d_cj <- d_customer_journeys[d_customer_journeys$word.question_type == "personal_desirability",]
 cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
          aggregate(d_ll, list(d_ll$corresponding_plots), mean)$word.score)
 
 ############## Check if corresponding clusters correlate in Lifelines ##############
 
-print('Lifelines Meaningfulness v. WTP')
+print('***** Lifelines Meaningfulness v. WTP *****')
 d_cj <- d_lifelines[d_lifelines$word.question_type == "meaningfulness",]
 cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
          aggregate(d_ll, list(d_ll$corresponding_plots), mean)$word.score)
 
-print('Lifelines PD v. WTP')
+print('***** Lifelines PD v. WTP *****')
 d_cj <- d_lifelines[d_lifelines$word.question_type == "personal_desirability",]
 cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
          aggregate(d_ll, list(d_ll$corresponding_plots), mean)$word.score)
 
 ############## Check if corresponding clusters correlate in Hiring ##############
 
-print('Hiring v. WTP')
+print('***** Hiring v. WTP *****')
 d_cj <- d_interview_performance[d_interview_performance$word.question_type == "hiring_likelihood",]
 cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
          aggregate(d_ll, list(d_ll$corresponding_plots), mean)$word.score)
+
+})

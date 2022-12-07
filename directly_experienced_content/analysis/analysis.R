@@ -151,8 +151,7 @@ OrderSentimentDataframe <- function(data, n_plots, plot_names) {
 ##========================##
 
 GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
-
-    # "We found a significant effect of cluster type on willingness to buy: "
+    print("*-*-*-*-*-*-*-*-*-*-*-* We found a significant effect of cluster type on willingness to buy *-*-*-*-*-*-*-*-*-*-*-*")
     print(summary(lm(data = data, willing ~ cluster_labels)))
 }
 
@@ -361,14 +360,9 @@ CrossValidationAnalysisWtPCs <- function(dat, n_ss, n_plots) {
 
 
 CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, consider_tags = FALSE, genres_separate = FALSE) {
-    "
-    Measure the performance of each of our predictors by doing cross-validated regressions, holding out
-    one participant for each cross-validation step.
-    Input: data_wt_PCs, data_long, n_after_exclusions, n_plots
-    Output: relative importance of individual predictors and its graph
-    "
 
-    # n_ss <- n_after_exclusions
+    print("Running cross validation analysis...")
+
     fold_size <- 8
 
 
@@ -451,7 +445,6 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, co
             }
 
             print(paste('willing: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_willing[i,]), na.rm = TRUE)))
-            print(paste('willing: median predictor result,', predictors[i], ': ', median(as.numeric(results_willing[i,]), na.rm = TRUE)))
         }
     } else {
         s <- sample(1:dim(dat)[1])
@@ -488,7 +481,6 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, co
             }
 
             print(paste('willing: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_willing[i,]), na.rm = TRUE)))
-            print(paste('willing: median predictor result,', predictors[i], ': ', median(as.numeric(results_willing[i,]), na.rm = TRUE)))
         }
     }
 
@@ -543,6 +535,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, co
         predictors_plot <- predictors_plot + ggplot2::annotate("text", x = willing_bottom_x + i - 1, y = willing_bottom_y, size = 8, label = p_value_stars_willing[[i]])
     }
 
+    print(predictors_plot)
     return(list(predictors_plot, predicted_willingness))
 }
 
@@ -584,6 +577,7 @@ simulate_f1_score <- function(dat) {
 #simulate_f1_score(d_long)
 
 CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, random = FALSE, fold_amount = 180, perf_metric = "F1", max_wtp = FALSE, predicted_willing = data.frame(), sample_all_ones = FALSE, weight = 7) {
+    print("Running cross validation analysis for raffle choice...")
     choices <- data.frame()
 
     pm <- as.numeric(dat$genre == genres[match(dat$movie_choice, movies)])
@@ -678,7 +672,6 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
             }
 
             print(paste('willing: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_raffle[i,]), na.rm = TRUE)))
-            print(paste('willing: median predictor result,', predictors[i], ': ', median(as.numeric(results_raffle[i,]), na.rm = TRUE)))
         }
 
     } else if (dim(predicted_willing)[1] != 0) {
@@ -722,7 +715,6 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
             }
 
             print(paste('willing: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_raffle[i,]), na.rm = TRUE)))
-            print(paste('willing: median predictor result,', predictors[i], ': ', median(as.numeric(results_raffle[i,]), na.rm = TRUE)))
         }
 
     } else if (no_kfold) {  # Just simple logistic regression
@@ -794,7 +786,6 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
             }
 
             print(paste('willing: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_raffle[i,]), na.rm = TRUE)))
-            print(paste('willing: median predictor result,', predictors[i], ': ', median(as.numeric(results_raffle[i,]), na.rm = TRUE)))
         }
     } else if (sample_all_ones) {
         # Sample all ones and 10% of zeros:
@@ -835,7 +826,6 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
             }
 
             print(paste('willing: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_raffle[i,]), na.rm = TRUE)))
-            print(paste('willing: median predictor result,', predictors[i], ': ', median(as.numeric(results_raffle[i,]), na.rm = TRUE)))
         }
     }
 
@@ -896,6 +886,7 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
         predictors_plot <- predictors_plot + ggplot2::annotate("text", x = willing_bottom_x + i - 1, y = willing_bottom_y, size = 8, label = p_value_stars_willing[[i]])
     }
 
+    print(predictors_plot)
     return(list(predictors_plot, mean(as.matrix(t_results_raffle)), max(cm)))
 }
 
@@ -924,16 +915,7 @@ d_long <- read.csv(fname)
 dir.create("plots/analysis_plots")
 dir.create("plots/analysis_plots_sentence")
 
-## ================================= (1) Perform Exclusions and Process Data =====================================
-"
-- Perform exclusions
-- Create d_long (nrows = num_ss*num_plots)
-- Prepare for semantic and interestingness analyses
-  - Create csv for semantic analysis
-  - Create semantic embeddings dataframe
-  - Create interestingness dataframe
-- Create data_plot_long (nrows = num_plots*num_questions, i.e averages for plotting)
-"
+## ================================= (1) Process Data =====================================
 
 num_subjects_and_plots <- dim(d_long)[1]
 n_subjects <- num_subjects_and_plots / length(genres);
