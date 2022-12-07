@@ -89,8 +89,8 @@ PerformExclusions <- function(data) {
             (data$att_check_3_2 %% 10 == 0) &
             (data$att_check_3_1 == 15))), 0, 1)
 
-    print(paste('percentage excluded, attention checks: ',
-                table(data$attention_check)[2] / length(data$attention_check)))
+    print(paste('number excluded, attention checks: ',
+                table(data$attention_check)[2]))
 
     # Perform comprehension checks
     data$attention_check2 <- ifelse((data$comp_check_1 == 80 &
@@ -125,18 +125,15 @@ PerformExclusions <- function(data) {
             (data$comp_check_9 == 'Meaningfulness')
         )), 0, 1)
 
-    print(paste('percentage excluded, comprehension checks: ',
-                table(data$comp_check)[2] / length(data$comp_check)))
-
     # Exclude those who failed either attention or comprehension checks
     data <- subset(data, (data$attention_check == 0) & (data$comp_check == 0))
 
     # Number of subjects after exclusions
     n_after_exclusions <- dim(data)[1] #124
-    print(paste('percentage excluded, duplicate answers: ',
-                (dim(meaning_dups)[1] + dim(pd_dups)[1]) / n_after_exclusions))
-    print(paste('total percentage excluded, comprehension checks: ',
-                (n_before_exclusions - n_after_exclusions) / n_before_exclusions))
+    print(paste('number excluded, duplicate answers: ',
+                (dim(meaning_dups)[1] + dim(pd_dups)[1])))
+    print(paste('total number excluded, attention & comprehension checks: ',
+                (n_before_exclusions - n_after_exclusions)))
 
     data$n_after_exclusions <- n_after_exclusions
 
@@ -885,7 +882,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_ss, n_plots) {
         }
 
         print(paste('meaningfulness: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_meaning[i,]), na.rm = TRUE)))
-        print(paste('meaningfulness: median predictor result,', predictors[i], ': ', median(as.numeric(results_meaning[i,]), na.rm = TRUE)))
+        #print(paste('meaningfulness: median predictor result,', predictors[i], ': ', median(as.numeric(results_meaning[i,]), na.rm = TRUE)))
     }
 
     # Reorder predictors according to their significance 
@@ -921,7 +918,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_ss, n_plots) {
         }
 
         print(paste('personal desirability: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_pd[i,]), na.rm = TRUE)))
-        print(paste('personal desirability: median predictor result,', predictors[i], ': ', median(as.numeric(results_pd[i,]), na.rm = TRUE)))
+        #print(paste('personal desirability: median predictor result,', predictors[i], ': ', median(as.numeric(results_pd[i,]), na.rm = TRUE)))
     }
 
     # Reorder predictors according to their significance 
@@ -996,6 +993,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_ss, n_plots) {
                                                                label = p_value_stars_pd[[i]])
     }
 
+    print(predictors_plot)
     return(predictors_plot)
     #-------------------------------------------------------------------------------------------------------------------
 
