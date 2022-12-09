@@ -93,6 +93,7 @@ PerformExclusions <- function(data) {
             (data$att_check_3_1 == 15))), 0, 1)
 
     print(paste0("Number before exclusions (those who both finished the survey and passed all attention checks): ", dim(data)[1]))
+    n_before_exc <- dim(data)[1]
 
     # Perform comprehension checks
     data$attention_check2 <- ifelse((data$comp_check_1 == 80 &
@@ -132,7 +133,7 @@ PerformExclusions <- function(data) {
 
     # Number of subjects after exclusions
     n_after_exclusions <- dim(data)[1];
-    print(paste0("Number after exclusions: ", dim(data)[1]))
+    print(paste0("Number of participants excluded: ", n_before_exc - dim(data)[1]))
 
     data$n_after_exclusions <- n_after_exclusions
 

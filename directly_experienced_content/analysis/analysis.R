@@ -910,6 +910,7 @@ dir.create("plots/analysis_plots_sentence")
 num_subjects_and_plots <- dim(d_long)[1]
 n_subjects <- num_subjects_and_plots / length(genres);
 print(paste0("Number after exclusions: ", n_subjects))
+print("Demographics and exclusion process in 'main.ipynb'")
 
 ### (i) CREATE CSV FOR SEMANTIC ANALYSIS
 analyze_words <- GetWordAnalysis(d_long, n_plots)

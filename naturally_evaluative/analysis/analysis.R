@@ -101,7 +101,14 @@ PerformExclusions <- function(data) {
 
     # Number of subjects after exclusions
     n_after_exclusions <- dim(data)[1] #218
-    print(paste0("Number after exclusions: ", dim(data)[1]))
+    print(paste0("Number of participants excluded: ", n_before_exclusions - dim(data)[1]))
+
+    print('Mean age:')
+    print(mean(as.numeric(data$age), trim = 0, na.rm = TRUE)) ## mean age
+
+    print('% Female:')
+    print(table(data$gender)[1] / sum(table(data$gender))) ## percentage of females
+
 
     data$n_after_exclusions <- n_after_exclusions
 
@@ -830,10 +837,11 @@ dev.off()
 ordered_d <- sentiment_df[[1]] %>%
         arrange(factor(plot_names, levels = d_s1_order[, 1]))
 
-cor.test(d_s1_order$word.sentiment_score, ordered_d[ordered_d$question_type == 'word', 'mean'])
 cor.test(d_s1_order$word.sentiment_score, ordered_d[ordered_d$question_type == 'sentence', 'mean'])
+cor.test(d_s1_order$word.sentiment_score, ordered_d[ordered_d$question_type == 'word', 'mean'])
 
-var.test(sentiment_df[[2]][sentiment_df[[2]]$question_type == 'sentence', 'sentiment_score'],
+
+vt <- var.test(sentiment_df[[2]][sentiment_df[[2]]$question_type == 'sentence', 'sentiment_score'],
        sentiment_df[[2]][sentiment_df[[2]]$question_type == 'word', 'sentiment_score'])
 
 t.test(sentiment_df[[2]][sentiment_df[[2]]$question_type == 'sentence', 'sentiment_score'],

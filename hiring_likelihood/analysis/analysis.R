@@ -104,9 +104,16 @@ PerformExclusions <- function(data) {
 
     # Number of subjects after exclusions
     n_after_exclusions <- dim(data)[1] #140
-    print(paste0("Number after exclusions: ", dim(data)[1]))
+    print(paste0("Number of participants excluded: ", n_before_exclusions - dim(data)[1]))
 
     data$n_after_exclusions <- n_after_exclusions
+
+    print('Mean age:')
+    print(mean(as.numeric(data$age), trim = 0, na.rm = TRUE)) ## mean age
+
+    print('% Female:')
+    print(table(data$gender)[1] / sum(table(data$gender))) ## percentage of females
+
 
     return(data)
 }
