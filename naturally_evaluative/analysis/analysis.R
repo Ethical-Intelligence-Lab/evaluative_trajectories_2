@@ -70,8 +70,7 @@ PerformExclusions <- function(data) {
             (data$att_check_3_2 %% 10 == 0) &
             (data$att_check_3_1 == 15))), 0, 1)
 
-    print(paste('percentage excluded, attention checks: ',
-                table(data$attention_check)[2] / n_before_exclusions)) #1.01%
+    print(paste0("Number before exclusions (those who both finished the survey and passed all attention checks): ", dim(data)[1]))
 
     # Perform comprehension checks
     data$attention_check2 <- ifelse((data$comp_check_1 == 80 &
@@ -97,18 +96,12 @@ PerformExclusions <- function(data) {
             (data$comp_check_9 == 'Give a one-word summary of the customer journey')
         )), 0, 1)
 
-    print(paste('percentage excluded, comprehension checks: ',
-                table(data$comp_check)[2] / n_before_exclusions)) #26.35%
-
     # Exclude those who failed either attention or comprehension checks
     data <- subset(data, (data$attention_check == 0) & (data$comp_check == 0))
 
     # Number of subjects after exclusions
     n_after_exclusions <- dim(data)[1] #218
-    print(paste('percentage excluded, duplicate answers: ', #0
-                (dim(sentence_dups)[1] + dim(word_dups)[1]) / n_after_exclusions))
-    print(paste('total percentage excluded, comprehension checks: ', #26.35% 
-                (n_before_exclusions - n_after_exclusions) / n_before_exclusions))
+    print(paste0("Number after exclusions: ", dim(data)[1]))
 
     data$n_after_exclusions <- n_after_exclusions
 

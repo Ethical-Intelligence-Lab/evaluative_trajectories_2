@@ -74,10 +74,7 @@ PerformExclusions <- function(data) {
             (data$att_check_3_2 %% 10 == 0) &
             (data$att_check_3_1 == 15))), 0, 1)
 
-    print(paste('Recruited: ',
-                n_before_exclusions))
-    print(paste('Number excluded, attention checks: ',
-                table(data$attention_check)[2]))
+    print(paste0("Number before exclusions (those who both finished the survey and passed all attention checks): ", dim(data)[1]))
 
     # Perform comprehension checks
     data$attention_check2 <- ifelse((data$comp_check_1 == 80 &
@@ -101,16 +98,13 @@ PerformExclusions <- function(data) {
             (data$comp_check_9 == 'Indicate how likely it was that you would hire the candidate')
         )), 0, 1)
 
-    print(paste('Number excluded, comprehension checks: ',
-                table(data$comp_check)[2]))
 
     # Exclude those who failed either attention or comprehension checks
     data <- subset(data, (data$attention_check == 0) & (data$comp_check == 0))
 
     # Number of subjects after exclusions
     n_after_exclusions <- dim(data)[1] #140
-    print(paste('total number excluded, comprehension checks: ',
-                n_before_exclusions - n_after_exclusions))
+    print(paste0("Number after exclusions: ", dim(data)[1]))
 
     data$n_after_exclusions <- n_after_exclusions
 
@@ -187,12 +181,12 @@ ProcessForPlots <- function(data, n_plots, plot_names) {
 
 
 Get_stats <- function(data, n_plots) {
-    " Find hiring likelihood means and standard deviations for every plot
-      Every plot repeats every 27 times, since there are 27 plots title. 
-      Hence the 'seq' indeces for each calculation
-      Input: data_long, n_plots
-      Output: equations (a list of means and standard deviations of hiring likelihood scores for every plot)
-    "
+    #Find hiring likelihood means and standard deviations for every plot
+    # Every plot repeats every 27 times, since there are 27 plots title.
+    # Hence the 'seq' indeces for each calculation
+    # Input: data_long, n_plots
+    # Output: equations (a list of means and standard deviations of hiring likelihood scores for every plot)
+
     hiring_likelihood_score <- as.numeric(data$hiring_likelihood)
 
     equations <- c()
@@ -208,11 +202,9 @@ Get_stats <- function(data, n_plots) {
 ##================================================================================================================
 
 Get_sentiment_stats <- function(data, n_plots) {
-    "
-    Find sentiment score means and standard deviations for every plot 
-    Input: data_long, n_plots 
-    Output: sentiment_list (a list of average mean and standard deviation sentiment scores for every plot)
-    "
+    #Find sentiment score means and standard deviations for every plot
+    #Input: data_long, n_plots
+    #Output: sentiment_list (a list of average mean and standard deviation sentiment scores for every plot)
 
     # Clean words 
     word_clean <- word(tolower(data$word), 1) #make all words lowercase, and collect only the first word of a given sentence
@@ -236,11 +228,9 @@ Get_sentiment_stats <- function(data, n_plots) {
 
 
 CreateSentimentDataframe <- function(data, n_plots, plot_names) {
-    "
-    Make a dataframe with sentiment scores for every plot, which we will use later to add to dat_final 
-    Input: data_long, n_plots, plot_names 
-    Output: sentiment_df (will be important later on when we bind it to dat for analysis)
-    "
+    #Make a dataframe with sentiment scores for every plot, which we will use later to add to dat_final
+    #Input: data_long, n_plots, plot_names
+    #Output: sentiment_df (will be important later on when we bind it to dat for analysis)
 
     sentiment_stats <- Get_sentiment_stats(data, n_plots)
     sentiment_df <- data.frame(plot_names = plot_names,
@@ -252,11 +242,9 @@ CreateSentimentDataframe <- function(data, n_plots, plot_names) {
 
 
 OrderSentimentDataframe <- function(data, n_plots, plot_names) {
-    "
-    Create a new data frame to store the sentiment scores by ascending hiring likelihood scores 
-    Input: data_long, n_plots, plot_names 
-    Output: sentiment_df_sorted (the sentiment_df ordered by levels in the function factor())
-    "
+    #Create a new data frame to store the sentiment scores by ascending hiring likelihood scores
+    #Input: data_long, n_plots, plot_names
+    #Output: sentiment_df_sorted (the sentiment_df ordered by levels in the function factor())
 
     # Get the order of hiring_likelihood scores
     stats <- Get_stats(data, n_plots)
@@ -296,11 +284,9 @@ GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
 
 
 CreateDataFeaturesDF <- function(data, dat_final, features_df, n_after_exclusions, num_subjects_and_plots) {
-    "
-    Bind the three dataframes: data, sentiment score, and standardize(features), i.e., the standardized plot features.
-    Input: data_long, dat_final, features, n_after_exclusions, num_subjects_and_plots
-    Output: score_features_df (which contains all of the predictors and participant scores)
-    "
+    #Bind the three dataframes: data, sentiment score, and standardize(features), i.e., the standardized plot features.
+    #Input: data_long, dat_final, features, n_after_exclusions, num_subjects_and_plots
+    #Output: score_features_df (which contains all of the predictors and participant scores)
 
     score_features_df <- cbind(data,
                                as.data.frame(do.call("rbind", replicate(n_after_exclusions, standardize(features_df), simplify = FALSE))))
@@ -318,12 +304,10 @@ CreateDataFeaturesDF <- function(data, dat_final, features_df, n_after_exclusion
 
 
 MakePCAFunction <- function(score_features_df) {
-    "
-    Perform mixed-effects regression based on PCA-reduced features of our predictors. 
-    Input: score_features_df 
-    Output: the structure of the PCA fit, the PCA correlation values for hiring likelihood  
-    scores, and score_features_df (now with the addition of PC1 through PC5 scores)
-    "
+    #Perform mixed-effects regression based on PCA-reduced features of our predictors.
+    #Input: score_features_df
+    #Output: the structure of the PCA fit, the PCA correlation values for hiring likelihood
+    #scores, and score_features_df (now with the addition of PC1 through PC5 scores)
 
     # Define the columns that we want for the PCA: from embeddings to integral and the D1 & D2 predictors.
     score_features_ss <- subset(score_features_df, select = c(embeddings:integral, d1_avg_unweight:d1_avg_weight_end, d2_avg_unweight:d2_avg_weight_end))
@@ -660,15 +644,15 @@ plot_names <- c("linear_rise", "linear_fall",
 d_raw <- read.csv('./data/data.csv')
 
 ## ================================= (1) Perform Exclusions and Process Data =====================================
-"
-- Perform exclusions
-- Create data_long (nrows = num_ss*num_plots)
-- Prepare for semantic and interestingness analyses
-  - Create csv for semantic analysis
-  - Create semantic embeddings dataframe
-  - Create interestingness dataframe
-- Create data_plot_long (nrows = num_plots*num_questions, i.e averages for plotting)
-"
+
+#- Perform exclusions
+#- Create data_long (nrows = num_ss*num_plots)
+#- Prepare for semantic and interestingness analyses
+#  - Create csv for semantic analysis
+#  - Create semantic embeddings dataframe
+#  - Create interestingness dataframe
+#- Create data_plot_long (nrows = num_plots*num_questions, i.e averages for plotting)
+
 
 d <- PerformExclusions(d_raw) #num_rows = num_ss
 n_after_exclusions <- d$n_after_exclusions[1]
@@ -789,6 +773,7 @@ cross_validation_analysis_wt_predictors
 dev.off()
 # same note above
 
+print("**** For correlations across studies, please run 'between_experiment_analyses/analysis.R' ****")
 ## =========================================== (4) Move Files ====================================================
 
 plot_files <- list.files(pattern = c("(.pdf|.png)"))

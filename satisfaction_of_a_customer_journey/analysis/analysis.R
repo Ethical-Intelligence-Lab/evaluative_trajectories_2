@@ -47,12 +47,11 @@ source('./plotting.R')
 ##===============================
 
 PerformExclusions <- function(data) {
-    "
-    Excludes participants if they do not finish the survey, finished it too quickly (under 120 seconds), 
-    gave duplicate answers, or failed important attention and comprehension checks.
-    Input: data   #num_rows = num_ss
-    Output: data after it has been 'cleaned'
-    "
+
+    #Excludes participants if they do not finish the survey, finished it too quickly (under 120 seconds),
+    #gave duplicate answers, or failed important attention and comprehension checks.
+    #Input: data   #num_rows = num_ss
+    #Output: data after it has been 'cleaned'
 
     # Exclude those who did not finish the survey
     data <- subset(data, (data$Finished == TRUE))
@@ -93,8 +92,7 @@ PerformExclusions <- function(data) {
             (data$att_check_3_2 %% 10 == 0) &
             (data$att_check_3_1 == 15))), 0, 1)
 
-    print(paste('Number excluded, attention checks: ',
-                table(data$attention_check)[2]))
+    print(paste0("Number before exclusions (those who both finished the survey and passed all attention checks): ", dim(data)[1]))
 
     # Perform comprehension checks
     data$attention_check2 <- ifelse((data$comp_check_1 == 80 &
@@ -133,11 +131,8 @@ PerformExclusions <- function(data) {
     data <- subset(data, (data$attention_check == 0) & (data$comp_check == 0))
 
     # Number of subjects after exclusions
-    n_after_exclusions <- dim(data)[1]; n_after_exclusions #177
-    print(paste('Total number excluded, duplicate answers: ',
-                dim(satisfaction_dups)[1] + dim(pd_dups)[1]))
-    print(paste('Total number excluded, comprehension checks: ',
-                n_before_exclusions - n_after_exclusions))
+    n_after_exclusions <- dim(data)[1];
+    print(paste0("Number after exclusions: ", dim(data)[1]))
 
     data$n_after_exclusions <- n_after_exclusions
 
@@ -858,15 +853,14 @@ d_raw <- read.csv('./data/data.csv')
 dir.create("plots/analysis_plots")
 
 ## ================================= (1) Perform Exclusions and Process Data =====================================
-"
-- Perform exclusions
-- Create d_long (nrows = num_ss*num_plots)
-- Prepare for semantic and interestingness analyses
-  - Create csv for semantic analysis
-  - Create semantic embeddings dataframe
-  - Create interestingness dataframe
-- Create data_plot_long (nrows = num_plots*num_questions, i.e averages for plotting)
-"
+
+#- Perform exclusions
+#- Create d_long (nrows = num_ss*num_plots)
+#- Prepare for semantic and interestingness analyses
+#  - Create csv for semantic analysis
+#  - Create semantic embeddings dataframe
+#  - Create interestingness dataframe
+#- Create data_plot_long (nrows = num_plots*num_questions, i.e averages for plotting)
 
 d <- PerformExclusions(d_raw) #num_rows = num_ss
 n_after_exclusions <- d$n_after_exclusions[1]

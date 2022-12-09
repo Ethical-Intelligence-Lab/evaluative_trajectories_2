@@ -301,7 +301,6 @@ CrossValidationAnalysisWtPCs <- function(dat, n_ss, n_plots) {
 
     # Loop through the pcs, comparing each to null, then PC2 vs PC3, PC3 vs PC5, PC5 vs PC1, and PC1 vs PC4
     # willing: One-sided Wilcox test
-    print("willing: --------------------------------------------------------------------------------------")
     for (i in 1:length(pcs)) {
         pcs_index <- x_labs[i]
         pcs_index_plus_one <- x_labs[i + 1]
@@ -309,7 +308,6 @@ CrossValidationAnalysisWtPCs <- function(dat, n_ss, n_plots) {
                                                      conf.int = TRUE, data = t_results_willing)
         p_value_stars_1_willing[i] <- stars.pval(wilcox_test_1_wt_willing[[i]]$"p.value") #get stars
 
-        print(paste0(x_labs[i], " --------------------------------------------------------------------------------------"))
         print(wilcox_test_1_wt_willing[[i]])
     }
 
@@ -361,7 +359,7 @@ CrossValidationAnalysisWtPCs <- function(dat, n_ss, n_plots) {
 
 CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, consider_tags = FALSE, genres_separate = FALSE) {
 
-    print("Running cross validation analysis...")
+    print("----------- Running cross validation analysis... -----------")
 
     fold_size <- 8
 
@@ -516,14 +514,10 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, co
 
     # Loop through the predictors, comparing each to a null distribution
     # willing: One-sided Wilcox test
-    print("willing: --------------------------------------------------------------------------------------")
     for (i in x_labs) {
-        print(paste0(i, " --------------------------------------------------------------------------------------"))
         wilcox_test_wt_willing[[i]] <- wilcox.test(t_results_willing[, i], y = NULL, alternative = "greater",
                                                    conf.int = TRUE)
         p_value_stars_willing[i] <- stars.pval(wilcox_test_wt_willing[[i]]$"p.value") #get stars
-
-        print(wilcox_test_wt_willing[[i]])
     }
 
 
@@ -577,7 +571,7 @@ simulate_f1_score <- function(dat) {
 #simulate_f1_score(d_long)
 
 CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, random = FALSE, fold_amount = 180, perf_metric = "F1", max_wtp = FALSE, predicted_willing = data.frame(), sample_all_ones = FALSE, weight = 7) {
-    print("Running cross validation analysis for raffle choice...")
+    print("----------- Running cross validation analysis for raffle choice... -----------")
     choices <- data.frame()
 
     pm <- as.numeric(dat$genre == genres[match(dat$movie_choice, movies)])
@@ -866,14 +860,10 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
         wilcox_test_wt_pd <- c()
         p_value_stars_pd <- c()
 
-        print("willing: --------------------------------------------------------------------------------------")
         for (i in x_labs) {
-            print(paste0(i, " --------------------------------------------------------------------------------------"))
             wilcox_test_wt_willing[[i]] <- wilcox.test(t_results_raffle[, i], y = rep(0.222, length(t_results_raffle[, i])), alternative = "greater",
                                                        conf.int = TRUE)  # Comparing with .222 (all 1's)
             p_value_stars_willing[i] <- stars.pval(wilcox_test_wt_willing[[i]]$"p.value") #get stars
-
-            print(wilcox_test_wt_willing[[i]])
         }
     }
 
@@ -919,6 +909,7 @@ dir.create("plots/analysis_plots_sentence")
 
 num_subjects_and_plots <- dim(d_long)[1]
 n_subjects <- num_subjects_and_plots / length(genres);
+print(paste0("Number after exclusions: ", n_subjects))
 
 ### (i) CREATE CSV FOR SEMANTIC ANALYSIS
 analyze_words <- GetWordAnalysis(d_long, n_plots)
@@ -974,10 +965,9 @@ ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
 dev.off()
 
 ## ============================================== (2) Analysis =====================================================
-
-"
-Get main statistical effects, and run descriptive and predictive analyses
-"
+print("-----------------------------------------------------------------------------------------------------------------------------------------")
+print("*-*-*-* !!!! Exclusions and line fitting is in 'main.ipynb', and clustering analyses are in 'TimeSeriesClustering.ipynb file !!!! *-*-*-*")
+print("-----------------------------------------------------------------------------------------------------------------------------------------")
 
 #### GET MAIN EFFECTS
 if (sentence_data) {
@@ -1022,6 +1012,8 @@ avg_f1s <- append(avg_f1s, results_list[[2]])
 max_f1s <- append(max_f1s, results_list[[3]])
 
 options(warn = oldw)
+
+print("Correlations between studies are in 'between_experiment_analyses/analysis.R' file.")
 
 ##=====##
 ## END ##

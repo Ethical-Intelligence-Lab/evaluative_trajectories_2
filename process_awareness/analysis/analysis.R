@@ -90,8 +90,7 @@ PerformExclusions <- function(data) {
                                          (data$att_check_3_2%%10 == 0) &
                                          (data$att_check_3_1 == 15) ) ), 0, 1)
     
-    print(paste('number excluded, attention checks: ',
-                table(data$attention_check)[2]))
+    print(paste0("Number before exclusions (those who both finished the survey and passed all attention checks): ", dim(data)[1]))
 
     # Perform comprehension checks
     data$attention_check2 <- ifelse( (data$comp_check_1 == 5 &
@@ -114,18 +113,15 @@ PerformExclusions <- function(data) {
                                       (data$comp_check_8 == 2) &
                                       (data$understand_check <= 2)
                                    ) ), 0, 1)
-    
-    print(paste('number excluded, comprehension checks: ',
-                table(data$comp_check)[2]))
+
     
     # Exclude those who failed either attention or comprehension checks
     data <- subset(data, (data$attention_check == 0) & (data$comp_check == 0))
     
     # Number of subjects after exclusions
     n_after_exclusions <- dim(data)[1] #54 
-    print(paste('total number excluded, all checks: ',
-                (n_before_exclusions-n_after_exclusions)))
-    
+    print(paste0("Number after exclusions: ", dim(data)[1]))
+
     data$n_after_exclusions <- n_after_exclusions 
     
     return(data)
@@ -244,6 +240,9 @@ plot <- ggplot(data = rankings, aes(x = ranking, y = true_ranking, size=24), asp
 plot
 
 ggsave("fig.png", plot = plot, width=30, height=30, units = "cm")
+
+print("When correlating the predicted ranks from study 2 with the true ranks of study 1, we see no evidence of a systematic relationship")
+print(cor.test(rankings$ranking, rankings$true_ranking))
 
 ## ================================= (4) Plot rankings ========================================
 
