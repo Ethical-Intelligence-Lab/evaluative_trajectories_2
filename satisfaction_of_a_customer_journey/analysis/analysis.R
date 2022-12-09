@@ -41,6 +41,7 @@ pacman::p_load('data.table', #rename data frame columns
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #set working directory to current directory
 source('../../tools/common_functions.R')
 source('./plotting.R')
+source('../../tools/Lifelines_Generate_Plots.R')
 
 ##===============================
 ## FUNCTIONS FOR PREPROCESSING ##

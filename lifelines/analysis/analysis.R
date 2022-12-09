@@ -40,6 +40,7 @@ pacman::p_load('data.table', #rename data frame columns
 
 source('../../tools/common_functions.R')
 source('./plotting.R')
+source('../../tools/Lifelines_Generate_Plots.R')
 
 ##================================================================================================================
 ##FUNCTIONS FOR PREPROCESSING##

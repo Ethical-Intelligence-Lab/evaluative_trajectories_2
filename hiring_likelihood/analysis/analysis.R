@@ -42,6 +42,8 @@ pacman::p_load('ggplot2', #plot stuff
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #set working directory to current directory
 source('../../tools/common_functions.R')
 source('./plotting.R')
+source('../../tools/Lifelines_Generate_Plots.R')
+
 
 ##================================================================================================================
 ##FUNCTIONS FOR PREPROCESSING##
