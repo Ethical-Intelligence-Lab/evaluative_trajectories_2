@@ -3,7 +3,6 @@ Julian De Freitas, Pechthida Kim, Tomer Ullman
 
 ## Instructions
 * For topic modelling, install 'gsl' (If you use homebrew, execute `brew install gsl`)
-* Run `tools/Lifelines_Generate_Plots.R`, since we will use the variables generated here in the other analyses.
 * Steps below are only required if you want to run clustering code:
   * Create a virtual Python environment
   * Install requirements: `pip install -r requirements.txt`
