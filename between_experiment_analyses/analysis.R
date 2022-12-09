@@ -4,6 +4,8 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 if (!require(pacman)) { install.packages("pacman") }
 pacman::p_load('RcppHungarian', 'ggplot2', 'ggpubr', 'rjson')
 
+source('../tools/Lifelines_Generate_Plots.R')
+
 # Create R equations
 create_equation <- function(eqn) {
     eqn <- fromJSON(eqn)
