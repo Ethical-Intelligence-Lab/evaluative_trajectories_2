@@ -286,7 +286,7 @@ GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
     data$subject_n <- as.numeric(factor(data$subject))
 
     print('*-*-*-*-*-*-*-*-* Did answers vary depending on question and plot type? *-*-*-*-*-*-*-*-*')
-    effect_mod <- lmer(score_n ~ question_type_n + plot_type_n + subject_n + (1 | subject_n), data=data)
+    effect_mod <- lmer(score_n ~ question_type_n + plot_type_n + (1 | subject_n), data=data)
     print(summary(effect_mod))
 
     print('*-*-*-*-*-*-*-*-* Does willingness to pay correlate with satisfaction ratings? *-*-*-*-*-*-*-*-*')
