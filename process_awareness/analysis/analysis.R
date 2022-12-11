@@ -37,6 +37,7 @@ pacman::p_load('ggplot2', #plot stuff
 )
 
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+source('../../tools/Lifelines_Generate_Plots.R')
 
 ##================================================================================================================
                                          ##FUNCTIONS##
@@ -239,7 +240,7 @@ plot <- ggplot(data = rankings, aes(x = ranking, y = true_ranking, size=24), asp
   theme_bw(base_size = 28) +
   geom_point() + coord_fixed() +
   theme(legend.position = "none", axis.line = element_line(color='black'), panel.grid.minor = element_blank(), panel.border = element_blank()) +
-  geom_smooth(method = 'lm', se=T, size=2, alpha=0.2, color='black') + stat_cor(method = "pearson", label.x = 5.2, label.y = 12, p.digits=3)
+  geom_smooth(method = 'lm', se=T, size=2, alpha=0.2, color='black') + stat_cor(method = "pearson", label.x = 5.2, label.y = 12, p.digits=3, cor.coef.name="r")
 
 plot
 

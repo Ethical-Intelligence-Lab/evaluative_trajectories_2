@@ -223,140 +223,6 @@ MakePCAFunction <- function(score_features_df) {
 
 }
 
-
-CrossValidationAnalysisWtPCs <- function(dat, n_ss, n_plots) {
-    "
-    Measure the performance of each of our PCs by doing cross-validated regressions, holding out
-    one participant for each cross-validation step.
-    Input: data_wt_PCs, data_long, n_after_exclusions, n_plots
-    Output: relative importance of principal components and its graph
-    "
-
-    set.seed(1)
-    pcs <- c('PC1', 'PC2', 'PC3', 'PC4', 'PC5')
-    n_folds <- n_ss
-    folds <- cut(seq(1, nrow(dat)), breaks = n_folds, labels = FALSE)
-    folds2 <- rep(seq(1, n_plots), times = n_folds) #plot x subjects folds
-    indeces <- seq(1, (n_plots * n_folds))
-
-    #-------------------------------------------------------------------------------------------------------------------
-
-    #1. WTP
-    results <- data.frame(matrix(NA, nrow = length(pcs), ncol = n_folds))
-    rownames(results) <- pcs
-
-    for (i in 1:length(pcs)) {
-        for (j in 1:n_folds) {
-            ss_results <- c()
-            truths <- c()
-
-            for (k in 1:n_plots) {
-                trainIndeces <- indeces[(folds == j) & (folds2 != k)]
-                testIndeces <- indeces[(folds == j) & (folds2 == k)]
-
-                fitpc <- lm(willing ~ get(pcs[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
-                ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
-                truths <- c(truths, dat$willing[testIndeces])
-            }
-
-            results[i, j] <- cor(truths, ss_results)
-        }
-
-        print(paste('wtp: mean PC result,', pcs[i], ': ', mean(as.numeric(results[i,]), na.rm = TRUE)))
-        print(paste('wtp: median PC result,', pcs[i], ': ', median(as.numeric(results[i,]), na.rm = TRUE)))
-    }
-
-    # Reorder pcs according to their significance
-    t_results_willing <- as.data.frame(t(results))
-    colnames(t_results_willing) <- c("PC1\nSecond Derivative\nPredictors", "PC2\nFirst Derivative\nPredictors and End Value",
-                                     "PC3\nMin, Max\nSentiment, and Integral", "PC4\nNumber of Peaks\nValleys, and Extrema",
-                                     "PC5\nInterestingness")
-    results_willing_long <- gather(t_results_willing, key = principal_components, value = pcs_results, colnames(t_results_willing)) #length(pcs)*n_folds
-    willing_new_order <- with(results_willing_long, reorder(principal_components, pcs_results, median, na.rm = TRUE))
-    results_willing_long["willing_new_order"] <- willing_new_order
-
-    #3. Plotting
-    pcs_results_ordered <- data.frame(pcs_order = results_willing_long$willing_new_order,
-                                      willing_results = results_willing_long$pcs_results) #combine willing and pd results
-    pcs_results_long <- gather(pcs_results_ordered, key = question_type, value = results, willing_results)
-
-    # Make boxplot from CV_plotter function
-    pcs_plot <- CV_plotter(pcs_results_long, pcs_results_long$pcs_order, pcs_results_long$results, pcs_results_long$question_type, "Principal Components")
-
-    # Get the labels
-    x_labs <- ggplot_build(pcs_plot)$layout$panel_params[[1]]$
-        x$
-        get_labels()
-
-    # Perform Wilcoxon tests and get stars for significance
-    # Define empty lists
-    wilcox_test_1_wt_willing <- c()
-    wilcox_test_2_wt_willing <- c()
-    p_value_stars_1_willing <- c()
-    p_value_stars_2_willing <- c()
-    wilcox_test_1_wt_pd <- c()
-    wilcox_test_2_wt_pd <- c()
-    p_value_stars_1_pd <- c()
-    p_value_stars_2_pd <- c()
-
-    # Loop through the pcs, comparing each to null, then PC2 vs PC3, PC3 vs PC5, PC5 vs PC1, and PC1 vs PC4
-    # willing: One-sided Wilcox test
-    for (i in 1:length(pcs)) {
-        pcs_index <- x_labs[i]
-        pcs_index_plus_one <- x_labs[i + 1]
-        wilcox_test_1_wt_willing[[i]] <- wilcox.test(t_results_willing[, pcs_index], y = NULL, alternative = "greater",
-                                                     conf.int = TRUE, data = t_results_willing)
-        p_value_stars_1_willing[i] <- stars.pval(wilcox_test_1_wt_willing[[i]]$"p.value") #get stars
-
-        print(wilcox_test_1_wt_willing[[i]])
-    }
-
-    # Define heights of annotations
-    bottom_y <- -1.05 #y value for all bottom stars
-
-    willing_color <- "#56B4E9"
-    willing_bottom_x <- 1.19 #x value for bottom stars
-    willing_top_x <- willing_bottom_x + 0.5 #x value for top stars
-    willing_top_y <- 1.17 #y value for top stars
-    willing_bracket_y <- 1.07 #y value for top bracket
-    willing_bracket_start <- 1.24 #x starting point for top bracket
-    willing_bracket_end <- 2.15 #x ending point for top bracket
-
-    pd_color <- "#009E73"
-    pd_bottom_x <- 0.813 #x value for bottom stars
-    pd_top_x <- pd_bottom_x + 0.5 #x value for top stars
-    pd_top_y <- 1.39 #y value for top stars
-    pd_bracket_y <- 1.31 #y value for top bracket
-    pd_bracket_start <- 0.85 #x starting point for top bracket
-    pd_bracket_end <- 1.8 #x ending point for top bracket
-
-    # Add to the plot: stars indicating significance
-    pcs_plot <- pcs_plot +
-
-        # One-sided Wilcox test
-        ggplot2::annotate("text", x = willing_bottom_x, y = bottom_y, size = 8, label = p_value_stars_1_willing[[1]]) +
-        ggplot2::annotate("text", x = willing_bottom_x + 1, y = bottom_y, size = 8, label = p_value_stars_1_willing[[2]]) +
-        ggplot2::annotate("text", x = willing_bottom_x + 2, y = bottom_y, size = 8, label = p_value_stars_1_willing[[3]]) +
-        ggplot2::annotate("text", x = willing_bottom_x + 3, y = bottom_y, size = 8, label = p_value_stars_1_willing[[4]]) +
-        ggplot2::annotate("text", x = willing_bottom_x + 4, y = bottom_y, size = 8, label = p_value_stars_1_willing[[5]]) +
-
-        # Two-sided Wilcox test (with brackets)
-        geom_segment(aes(x = willing_bracket_start, xend = willing_bracket_end, y = willing_bracket_y, yend = willing_bracket_y, colour = willing_color)) +
-        ggplot2::annotate("text", x = willing_top_x, y = willing_top_y, size = 8, label = p_value_stars_2_willing[[1]]) +
-        geom_segment(aes(x = willing_bracket_start + 1, xend = willing_bracket_end + 1, y = willing_bracket_y, yend = willing_bracket_y, color = willing_color)) +
-        ggplot2::annotate("text", x = willing_top_x + 1, y = willing_top_y, size = 8, label = p_value_stars_2_willing[[2]]) +
-        geom_segment(aes(x = willing_bracket_start + 2, xend = willing_bracket_end + 2, y = willing_bracket_y, yend = willing_bracket_y, color = willing_color)) +
-        ggplot2::annotate("text", x = willing_top_x + 2, y = willing_top_y, size = 8, label = p_value_stars_2_willing[[3]]) +
-        geom_segment(aes(x = willing_bracket_start + 3, xend = willing_bracket_end + 3, y = willing_bracket_y, yend = willing_bracket_y, color = willing_color)) +
-        ggplot2::annotate("text", x = willing_top_x + 3, y = willing_top_y, size = 8, label = p_value_stars_2_willing[[4]]) +
-        scale_colour_identity()
-
-    #-------------------------------------------------------------------------------------------------------------------
-
-    return(pcs_plot)
-}
-
-
 CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, consider_tags = FALSE, genres_separate = FALSE) {
 
     print("----------- Running cross validation analysis... -----------")
@@ -500,7 +366,6 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, co
     # Make boxplot from CV_plotter function
     predictors_plot <- CV_plotter(predictors_results_long, predictors_results_long$predictors_order, predictors_results_long$results, predictors_results_long$question_type, "Predictors")
 
-    # Get the labels
     x_labs <- ggplot_build(predictors_plot)$layout$panel_params[[1]]$
         x$
         get_labels()
@@ -518,6 +383,8 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, co
         wilcox_test_wt_willing[[i]] <- wilcox.test(t_results_willing[, i], y = NULL, alternative = "greater",
                                                    conf.int = TRUE)
         p_value_stars_willing[i] <- stars.pval(wilcox_test_wt_willing[[i]]$"p.value") #get stars
+        print(paste0("----------------------", i))
+        print(wilcox_test_wt_willing[[i]])
     }
 
 
@@ -525,7 +392,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, co
     willing_bottom_x <- 1.0 #x value for bottom stars
     willing_bottom_y <- -1.0 #y value for bottom stars
 
-    for (i in 1:20) {
+    for (i in 1:length(predictors)) {
         predictors_plot <- predictors_plot + ggplot2::annotate("text", x = willing_bottom_x + i - 1, y = willing_bottom_y, size = 8, label = p_value_stars_willing[[i]])
     }
 
@@ -847,13 +714,13 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
                                   predictors_results_long$results, predictors_results_long$question_type,
                                   "Predictors", y_axis = paste0(perf_metric, " Score"), no_kfold = no_kfold)
 
-    # Get the labels
     x_labs <- ggplot_build(predictors_plot)$layout$panel_params[[1]]$
-        x$
-        get_labels()
+            x$
+            get_labels()
 
     # Loop through the predictors, comparing each to a null distribution
     # willing: One-sided Wilcox test
+    print("RAFFLE CHOICE: --------------------------------------------------------------------------------------")
     if (!no_kfold) {
         wilcox_test_wt_willing <- c()
         p_value_stars_willing <- c()
@@ -864,6 +731,8 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
             wilcox_test_wt_willing[[i]] <- wilcox.test(t_results_raffle[, i], y = rep(0.222, length(t_results_raffle[, i])), alternative = "greater",
                                                        conf.int = TRUE)  # Comparing with .222 (all 1's)
             p_value_stars_willing[i] <- stars.pval(wilcox_test_wt_willing[[i]]$"p.value") #get stars
+            print(paste0("---------------", i))
+            print(wilcox_test_wt_willing[[i]])
         }
     }
 
@@ -872,7 +741,7 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
     willing_bottom_x <- 1.0 #x value for bottom stars
     willing_bottom_y <- 0 #y value for bottom stars
 
-    for (i in 1:20) {
+    for (i in 1:length(predictors)) {
         predictors_plot <- predictors_plot + ggplot2::annotate("text", x = willing_bottom_x + i - 1, y = willing_bottom_y, size = 8, label = p_value_stars_willing[[i]])
     }
 

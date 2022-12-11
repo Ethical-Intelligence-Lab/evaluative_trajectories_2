@@ -342,7 +342,7 @@ GetMainEffects <- function(data, data_long, n_plots, plot_names, my_embeddings) 
     data$subject_n <- as.numeric(factor(data$subject))
 
     print('Did answers vary depending on question and plot type?')
-    effect_mod <- lm(data$score_n ~ data$question_type_n * data$plot_type_n + (1 | data$subject_n))
+    effect_mod <- lmer(score_n ~ question_type_n * plot_type_n + (1 | subject_n), data = data)
     print(summary(effect_mod))
     print('-----------------------------------------------------')
 
