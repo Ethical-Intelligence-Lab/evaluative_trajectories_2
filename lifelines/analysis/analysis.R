@@ -881,9 +881,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_ss, n_plots) {
                 truths <- c(truths, dat$meaningfulness[testIndeces])
             }
 
-            if(!is.na(cor(truths, ss_results)) && cor.test(truths, ss_results)$p.value < 0.05) {
-                results_meaning[i, j] <- cor(truths, ss_results)
-            }
+            results_meaning[i, j] <- cor(truths, ss_results)
 
         }
 
