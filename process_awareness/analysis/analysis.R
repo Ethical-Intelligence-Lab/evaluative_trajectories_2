@@ -216,10 +216,10 @@ d <- PerformExclusions(d_raw) #num_rows = num_ss
 d_n_after_exclusions <- d$d_n_after_exclusions[1]
 
 # Perform rank order analysis 
-rankings <- GetRankings(d, old_names, new_names) 
+rankings <- GetRankings(d, old_names, new_names)
 
-true_ranking <- c('sentiment_score', 'end_value', 'd1_avg_unweight', 'integral', 'max', 'min', 'number_peaks', 'embeddings', 'number_valleys', 'interestingness', 'd2_avg_unweight', 'number_extrema')
-labels <- c('Sentiment Score', 'End Value', 'Slope', 'Area Under\nthe Line', 'Maximum', 'Minimum', 'Number of Peaks', 'Embeddings', 'Number of Valleys', 'Interestingness', 'Acceleration', 'Number of\nTotal Extrema')
+true_ranking <- c('sentiment_score', 'end_value', 'number_extrema', 'd2_avg_unweight', 'd1_avg_unweight', 'interestingness', 'number_valleys', 'number_peaks', 'embeddings', 'integral', 'max', 'min')
+labels <- c('Sentiment Score', 'End Value', 'Number of\nTotal Extrema', 'Acceleration', 'Slope', 'Interestingness', 'Number of Valleys', 'Number of Peaks', 'Embeddings', 'Integral', 'Maximum', 'Minimum')
 GetTrueRank <- function(x) {
   return( which(x == true_ranking)[[1]] ); 
 }
@@ -240,7 +240,7 @@ plot <- ggplot(data = rankings, aes(x = ranking, y = true_ranking, size=24), asp
   theme_bw(base_size = 28) +
   geom_point() + coord_fixed() +
   theme(legend.position = "none", axis.line = element_line(color='black'), panel.grid.minor = element_blank(), panel.border = element_blank()) +
-  geom_smooth(method = 'lm', se=T, size=2, alpha=0.2, color='black') + stat_cor(method = "pearson", label.x = 5.2, label.y = 12, p.digits=3, cor.coef.name="r")
+  geom_smooth(method = 'lm', se=T, size=2, alpha=0.2, color='black') + stat_cor(method = "pearson", label.x = 5.2, label.y = 12.5, p.digits=3, cor.coef.name="r")
 
 plot
 

@@ -5,6 +5,25 @@ pacman::p_load('qdapDictionaries')
 #install_sentiment.ai()
 #init_sentiment.ai()
 
+# Return absolute value of the mean
+absmean <- function(x) {
+    return(abs(mean(na.omit(x))))
+}
+
+# Return absolute value of the SE
+# mean-se is 1.96 * std err (https://stulp.gmw.rug.nl/ggplotworkshop/comparinggroupstatistics.html)
+absse <- function(x) {
+    result <- mean_se(na.omit(x), 1.96)
+    if(result[2] * result[3] < 0) {
+        if(mean(na.omit(x)) < 0) {
+            return(mean_se(na.omit(x), 1.96) * -1)
+        }
+        return(result)
+    }
+    return(abs(result))
+}
+
+
 CleanWord <- function(word) {
     word <- word(tolower(word), 1)
     word <- gsub("[^a-z]", "", word) #get rid of numbers and special characters, leaving only letters a-z

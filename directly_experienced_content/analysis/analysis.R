@@ -353,7 +353,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, co
     t_results_willing <- as.data.frame(t(results_willing))
     colnames(t_results_willing) <- predictors
     results_willing_long <- gather(t_results_willing, key = predictors, value = predictors_results, colnames(t_results_willing)) #length(predictors)*n_folds
-    willing_new_order <- with(results_willing_long, reorder(predictors, predictors_results, mean, na.rm = TRUE))
+    willing_new_order <- with(results_willing_long, reorder(predictors, predictors_results, absmean))
     results_willing_long["willing_new_order"] <- willing_new_order
 
     #-------------------------------------------------------------------------------------------------------------------
@@ -380,7 +380,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, co
     # Loop through the predictors, comparing each to a null distribution
     # willing: One-sided Wilcox test
     for (i in x_labs) {
-        wilcox_test_wt_willing[[i]] <- wilcox.test(t_results_willing[, i], y = NULL, alternative = "greater",
+        wilcox_test_wt_willing[[i]] <- wilcox.test(t_results_willing[, i], y = NULL,
                                                    conf.int = TRUE)
         p_value_stars_willing[i] <- stars.pval(wilcox_test_wt_willing[[i]]$"p.value") #get stars
         print(paste0("----------------------", i))
@@ -390,10 +390,22 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, co
 
     # Define heights of annotations
     willing_bottom_x <- 1.0 #x value for bottom stars
-    willing_bottom_y <- -1.0 #y value for bottom stars
+    willing_bottom_y <- -0.05 #y value for bottom stars
+
+    rw <- results_willing_long[!is.na(results_willing_long$predictors_results),]
+    means <- aggregate(rw$predictors_results, list(rw$predictors), FUN=mean)
+
 
     for (i in 1:length(predictors)) {
-        predictors_plot <- predictors_plot + ggplot2::annotate("text", x = willing_bottom_x + i - 1, y = willing_bottom_y, size = 8, label = p_value_stars_willing[[i]])
+        if(means[means$Group.1 == x_labs[[i]], 'x'] < 0) {
+            star_color <- "#a30000"
+        } else {
+            star_color <- "#26a300"
+        }
+
+        predictors_plot <- predictors_plot + ggplot2::annotate("text", x = willing_bottom_x + i - 1,
+                                                               y = willing_bottom_y, size = 8,
+                                                               label = p_value_stars_willing[[i]], color=star_color)
     }
 
     print(predictors_plot)
@@ -699,7 +711,7 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
 
     colnames(t_results_raffle) <- predictors
     results_raffle_long <- gather(t_results_raffle, key = predictors, value = predictors_results, colnames(t_results_raffle)) #length(predictors)*n_folds
-    willing_new_order <- with(results_raffle_long, reorder(predictors, predictors_results, mean, na.rm = TRUE))
+    willing_new_order <- with(results_raffle_long, reorder(predictors, predictors_results, absmean))
     results_raffle_long["willing_new_order"] <- willing_new_order
 
     #-------------------------------------------------------------------------------------------------------------------
@@ -728,8 +740,8 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
         p_value_stars_pd <- c()
 
         for (i in x_labs) {
-            wilcox_test_wt_willing[[i]] <- wilcox.test(t_results_raffle[, i], y = rep(0.222, length(t_results_raffle[, i])), alternative = "greater",
-                                                       conf.int = TRUE)  # Comparing with .222 (all 1's)
+            wilcox_test_wt_willing[[i]] <- wilcox.test(t_results_raffle[, i], y = rep(0.222, length(t_results_raffle[, i])),
+                                                       conf.int = TRUE, alternative="greater")  # Comparing with .222 (all 1's)
             p_value_stars_willing[i] <- stars.pval(wilcox_test_wt_willing[[i]]$"p.value") #get stars
             print(paste0("---------------", i))
             print(wilcox_test_wt_willing[[i]])
@@ -741,8 +753,11 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
     willing_bottom_x <- 1.0 #x value for bottom stars
     willing_bottom_y <- 0 #y value for bottom stars
 
+    rw <- results_raffle_long[!is.na(results_raffle_long$predictors_results),]
+    means <- aggregate(rw$predictors_results, list(rw$predictors), FUN=mean)
+
     for (i in 1:length(predictors)) {
-        predictors_plot <- predictors_plot + ggplot2::annotate("text", x = willing_bottom_x + i - 1, y = willing_bottom_y, size = 8, label = p_value_stars_willing[[i]])
+        predictors_plot <- predictors_plot + ggplot2::annotate("text", x = willing_bottom_x + i - 1, y = willing_bottom_y, size = 8, label = p_value_stars_willing[[i]], color=star_color)
     }
 
     print(predictors_plot)

@@ -107,9 +107,8 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels) 
 
     grouped_box_plot <- ggplot(data = results_df, aes(x = x_order, y = results_order)) +
         scale_x_discrete() +
-        geom_hline(yintercept = 0, color = "gray60") +
-        stat_summary(fun = mean, geom = "point", color="#3c7ea3", shape = 20, size = 5, position = position_dodge(.75)) +
-        stat_summary(fun.data = mean_se, geom = "errorbar", color="#3c7ea3", aes(group = question_type, width = 0.5), position = position_dodge(.75), fun.args = list(mult = 1.96)) +  # mean-se is 1.96 * std err (https://stulp.gmw.rug.nl/ggplotworkshop/comparinggroupstatistics.html)
+        stat_summary(fun = absmean, geom = "point", color="#3c7ea3", shape = 20, size = 5, position = position_dodge(.75)) +
+        stat_summary(fun.data = absse, geom = "errorbar", color="#3c7ea3", aes(group = question_type, width = 0.5), position = position_dodge(.75)) +
         ggtitle(paste0("Hiring Likelihood Predictions with ", x_labels)) +
         xlab(x_labels) +
         ylab("Prediction Performance\n(Cross-Validated Pearson's r)") +

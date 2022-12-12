@@ -717,7 +717,7 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
     for (i in 1:length(pcs)) {
         pcs_index <- x_labs[i]
         pcs_index_plus_one <- x_labs[i + 1]
-        wilcox_test_1_wt_meaning[[i]] <- wilcox.test(t_results_meaning[, pcs_index], y = NULL, alternative = "greater",
+        wilcox_test_1_wt_meaning[[i]] <- wilcox.test(t_results_meaning[, pcs_index], y = NULL,
                                                      conf.int = TRUE, data = t_results_meaning)
         p_value_stars_1_meaning[i] <- stars.pval(wilcox_test_1_wt_meaning[[i]]$"p.value") #get stars
 
@@ -730,7 +730,7 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
     for (i in 1:length(pcs)) {
         pcs_index <- x_labs[i]
         pcs_index_plus_one <- x_labs[i + 1]
-        wilcox_test_1_wt_pd[[i]] <- wilcox.test(t_results_pd[, pcs_index], y = NULL, alternative = "greater",
+        wilcox_test_1_wt_pd[[i]] <- wilcox.test(t_results_pd[, pcs_index], y = NULL,
                                                 conf.int = TRUE, data = t_results_pd)
         p_value_stars_1_pd[i] <- stars.pval(wilcox_test_1_wt_pd[[i]]$"p.value") #get stars
 
@@ -881,7 +881,10 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_ss, n_plots) {
                 truths <- c(truths, dat$meaningfulness[testIndeces])
             }
 
-            results_meaning[i, j] <- cor(truths, ss_results)
+            if(!is.na(cor(truths, ss_results)) && cor.test(truths, ss_results)$p.value < 0.05) {
+                results_meaning[i, j] <- cor(truths, ss_results)
+            }
+
         }
 
         print(paste('meaningfulness: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_meaning[i,]), na.rm = TRUE)))
@@ -892,7 +895,10 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_ss, n_plots) {
     t_results_meaning <- as.data.frame(t(results_meaning))
     colnames(t_results_meaning) <- predictors
     results_meaning_long <- gather(t_results_meaning, key = predictors, value = predictors_results, colnames(t_results_meaning)) #length(predictors)*n_folds
-    meaning_new_order <- with(results_meaning_long, reorder(predictors, predictors_results, mean, na.rm = TRUE))
+
+    rm <- results_meaning_long[!is.na(results_meaning_long$predictors_results),]
+    means_m <- aggregate(rm$predictors_results, list(rm$predictors), FUN=mean)
+    meaning_new_order <- with(results_meaning_long, reorder(predictors, predictors_results, absmean))
     results_meaning_long["meaning_new_order"] <- meaning_new_order
 
     # Get_noise_ceiling function
@@ -928,7 +934,8 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_ss, n_plots) {
     t_results_pd <- as.data.frame(t(results_pd))
     colnames(t_results_pd) <- predictors
     results_pd_long <- gather(t_results_pd, key = predictors, value = predictors_results, colnames(t_results_pd)) #length(predictors)*n_folds
-    pd_new_order <- with(results_pd_long, reorder(predictors, predictors_results, mean, na.rm = TRUE))
+
+    pd_new_order <- with(results_pd_long, reorder(predictors, predictors_results, absmean))
     results_pd_long["pd_new_order"] <- pd_new_order
     results_pd_long <- results_pd_long[order(match(results_pd_long[, "pd_new_order"], results_meaning_long[, "meaning_new_order"])),] #order by meaningfulness scores
 
@@ -960,12 +967,18 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_ss, n_plots) {
     wilcox_test_wt_pd <- c()
     p_value_stars_pd <- c()
 
+    rm <- results_meaning_long[!is.na(results_meaning_long$predictors_results),]
+    rpd <- results_pd_long[!is.na(results_pd_long$predictors_results),]
+
+    means_m <- aggregate(rm$predictors_results, list(rm$predictors), FUN=mean)
+    means_pd <- aggregate(rpd$predictors_results, list(rpd$predictors), FUN=mean)
+
     # Loop through the predictors, comparing each to a null distribution
     # Meaningfulness: One-sided Wilcox test
     print("Meaningfulness: --------------------------------------------------------------------------------------")
     for (i in x_labs) {
         print(paste0(i, " --------------------------------------------------------------------------------------"))
-        wilcox_test_wt_meaning[[i]] <- wilcox.test(t_results_meaning[, i], y = NULL, alternative = "greater",
+        wilcox_test_wt_meaning[[i]] <- wilcox.test(t_results_meaning[, i], y = NULL,
                                                    conf.int = TRUE, data = t_results_meaning)
         p_value_stars_meaning[i] <- stars.pval(wilcox_test_wt_meaning[[i]]$"p.value") #get stars
         print(wilcox_test_wt_meaning[[i]])
@@ -975,7 +988,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_ss, n_plots) {
     print("Personal Desirability: --------------------------------------------------------------------------------------")
     for (i in x_labs) {
         print(paste0(i, " --------------------------------------------------------------------------------------"))
-        wilcox_test_wt_pd[[i]] <- wilcox.test(t_results_pd[, i], y = NULL, alternative = "greater",
+        wilcox_test_wt_pd[[i]] <- wilcox.test(t_results_pd[, i], y = NULL,
                                               conf.int = TRUE, data = t_results_pd)
         p_value_stars_pd[i] <- stars.pval(wilcox_test_wt_pd[[i]]$"p.value") #get stars
         print(wilcox_test_wt_pd[[i]])
@@ -983,17 +996,29 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_ss, n_plots) {
 
     # Define heights of annotations 
     meaning_bottom_x <- 0.8 #x value for bottom stars 
-    meaning_bottom_y <- -1.05 #y value for bottom stars 
+    meaning_bottom_y <- -0.5 #y value for bottom stars
     pd_bottom_x <- 1.2 #x value for bottom stars 
-    pd_bottom_y <- meaning_bottom_y - 0.10 #y value for bottom stars
+    pd_bottom_y <- meaning_bottom_y - 0.05 #y value for bottom stars
 
     for (i in 1:20) {
+        if(means_m[means_m$Group.1 == x_labs[[i]], 'x'] < 0) {
+            star_color_m <- "#a30000"
+        } else {
+            star_color_m <- "#26a300"
+        }
+
+        if(means_pd[means_pd$Group.1 == x_labs[[i]], 'x'] < 0) {
+            star_color_pd <- "#a30000"
+        } else {
+            star_color_pd <- "#26a300"
+        }
+
         predictors_plot <- predictors_plot + ggplot2::annotate("text", x = meaning_bottom_x + i - 1,
                                                                y = meaning_bottom_y, size = 8,
-                                                               label = p_value_stars_meaning[[i]])
+                                                               label = p_value_stars_meaning[[i]], color=star_color_m)
         predictors_plot <- predictors_plot + ggplot2::annotate("text", x = pd_bottom_x + i - 1,
                                                                y = pd_bottom_y, size = 8,
-                                                               label = p_value_stars_pd[[i]])
+                                                               label = p_value_stars_pd[[i]], color=star_color_pd)
     }
 
     print(predictors_plot)

@@ -448,220 +448,6 @@ MakePCAFunction <- function(score_features_df) {
 
 }
 
-
-CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
-    "
-    Measure the performance of each of our PCs by doing cross-validated regressions, holding out
-    one participant for each cross-validation step.
-    Input: data_wt_PCs, data_long, n_after_exclusions, n_plots
-    Output: relative importance of principal components and its graph
-    "
-
-    set.seed(1)
-    pcs <- c('PC1', 'PC2', 'PC3', 'PC4', 'PC5')
-    n_folds <- n_ss
-    folds <- cut(seq(1, nrow(dat)), breaks = n_folds, labels = FALSE)
-    folds2 <- rep(seq(1, n_plots), times = n_folds) #plot x subjects folds
-    indeces <- seq(1, (n_plots * n_folds))
-
-    #-------------------------------------------------------------------------------------------------------------------
-
-    #1. Satisfaction
-    results_satisfaction <- data.frame(matrix(NA, nrow = length(pcs), ncol = n_folds))
-    rownames(results_satisfaction) <- pcs
-
-    for (i in 1:length(pcs)) {
-        for (j in 1:n_folds) {
-            ss_results <- c()
-            truths <- c()
-
-            for (k in 1:n_plots) {
-                trainIndeces <- indeces[(folds == j) & (folds2 != k)]
-                testIndeces <- indeces[(folds == j) & (folds2 == k)]
-                fitpc <- lm(satisfaction ~ get(pcs[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
-                ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
-                truths <- c(truths, dat$satisfaction[testIndeces])
-            }
-
-            results_satisfaction[i, j] <- cor(truths, ss_results)
-        }
-
-        print(paste('satisfaction: mean PC result,', pcs[i], ': ', mean(as.numeric(results_satisfaction[i,]), na.rm = TRUE)))
-        print(paste('satisfaction: median PC result,', pcs[i], ': ', median(as.numeric(results_satisfaction[i,]), na.rm = TRUE)))
-    }
-
-    # Reorder pcs according to their significance
-    t_results_satisfaction <- as.data.frame(t(results_satisfaction))
-    colnames(t_results_satisfaction) <- c("PC1\nFirst Derivative\nPredictors and End Value", "PC2\nSecond Derivative\nPredictors",
-                                          "PC3\nEmbeddings, Sentiment\nIntegral, and Min", "PC4\nInterestingness, Max, \nNumber of Valleys and Extrema",
-                                          "PC5\nNumber of Peaks")
-    results_satisfaction_long <- gather(t_results_satisfaction, key = principal_components, value = pcs_results, colnames(t_results_satisfaction)) #length(pcs)*n_folds
-    satisfaction_new_order <- with(results_satisfaction_long, reorder(principal_components, pcs_results, median, na.rm = TRUE))
-    results_satisfaction_long["satisfaction_new_order"] <- satisfaction_new_order
-
-    #-------------------------------------------------------------------------------------------------------------------
-
-    #2. Personal Desirability
-    results_pd <- data.frame(matrix(NA, nrow = length(pcs), ncol = n_folds))
-    rownames(results_pd) <- pcs
-
-    for (i in 1:length(pcs)) {
-        for (j in 1:n_folds) {
-            ss_results <- c()
-            truths <- c()
-
-            for (k in 1:n_plots) {
-                trainIndeces <- indeces[(folds == j) & (folds2 != k)]
-                testIndeces <- indeces[(folds == j) & (folds2 == k)]
-                fitpc <- lm(personal_desirability ~ get(pcs[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
-                ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
-                truths <- c(truths, dat$personal_desirability[testIndeces])
-            }
-
-            results_pd[i, j] <- cor(truths, ss_results)
-        }
-
-        print(paste('personal desirability: mean PC result,', pcs[i], ': ', mean(as.numeric(results_pd[i,]), na.rm = TRUE)))
-        print(paste('personal desirability: median PC result,', pcs[i], ': ', median(as.numeric(results_pd[i,]), na.rm = TRUE)))
-    }
-
-    # Reorder pcs according to their significance
-    t_results_pd <- as.data.frame(t(results_pd))
-    colnames(t_results_pd) <- c("PC1\nFirst Derivative\nPredictors and End Value", "PC2\nSecond Derivative\nPredictors",
-                                "PC3\nEmbeddings, Sentiment\nIntegral, and Min", "PC4\nInterestingness, Max, \nNumber of Valleys and Extrema",
-                                "PC5\nNumber of Peaks")
-    results_pd_long <- gather(t_results_pd, key = principal_components, value = pcs_results, colnames(t_results_pd)) #length(pcs)*n_folds
-    pd_new_order <- with(results_pd_long, reorder(principal_components, pcs_results, median, na.rm = TRUE))
-    results_pd_long["pd_new_order"] <- pd_new_order
-    results_pd_long <- results_pd_long[order(match(results_pd_long[, "pd_new_order"], results_satisfaction_long[, "satisfaction_new_order"])),] #order by satisfaction scores
-
-    #-------------------------------------------------------------------------------------------------------------------
-
-    #3. Plotting
-    pcs_results_ordered <- data.frame(pcs_order = results_satisfaction_long$satisfaction_new_order,
-                                      satisfaction_results = results_satisfaction_long$pcs_results,
-                                      pd_results = results_pd_long$pcs_results) #combine satisfaction and pd results
-    pcs_results_long <- gather(pcs_results_ordered, key = question_type, value = results, satisfaction_results, pd_results)
-
-    # Make boxplot from CV_plotter function
-    pcs_plot <- CV_plotter(pcs_results_long, pcs_results_long$pcs_order, pcs_results_long$results, pcs_results_long$question_type, "Principal Components")
-
-    # Get the labels
-    x_labs <- ggplot_build(pcs_plot)$layout$panel_params[[1]]$
-        x$
-        get_labels()
-
-    # Perform Wilcoxon tests and get stars for significance
-    # Define empty lists
-    wilcox_test_1_wt_satisfaction <- c()
-    wilcox_test_2_wt_satisfaction <- c()
-    p_value_stars_1_satisfaction <- c()
-    p_value_stars_2_satisfaction <- c()
-    wilcox_test_1_wt_pd <- c()
-    wilcox_test_2_wt_pd <- c()
-    p_value_stars_1_pd <- c()
-    p_value_stars_2_pd <- c()
-
-    # Loop through the pcs, comparing each to null, then PC2 vs PC3, PC3 vs PC5, PC5 vs PC1, and PC1 vs PC4
-    # Satisfaction: One-sided Wilcox test
-    print("Satisfaction: --------------------------------------------------------------------------------------")
-    for (i in 1:length(pcs)) {
-        pcs_index <- x_labs[i]
-        pcs_index_plus_one <- x_labs[i + 1]
-        wilcox_test_1_wt_satisfaction[[i]] <- wilcox.test(t_results_satisfaction[, pcs_index], y = NULL, alternative = "greater",
-                                                          conf.int = TRUE, data = t_results_satisfaction)
-        p_value_stars_1_satisfaction[i] <- stars.pval(wilcox_test_1_wt_satisfaction[[i]]$"p.value") #get stars
-
-        print(paste0("Satisfaction --------------------------------------------------------------------------------------", x_labs[i]))
-        print(wilcox_test_1_wt_satisfaction[[i]])
-    }
-
-    # Personal Desirability: One-sided Wilcox test
-    print("Personal Desirability: --------------------------------------------------------------------------------------")
-    for (i in 1:length(pcs)) {
-        pcs_index <- x_labs[i]
-        pcs_index_plus_one <- x_labs[i + 1]
-        wilcox_test_1_wt_pd[[i]] <- wilcox.test(t_results_pd[, pcs_index], y = NULL, alternative = "greater",
-                                                conf.int = TRUE, data = t_results_pd)
-        p_value_stars_1_pd[i] <- stars.pval(wilcox_test_1_wt_pd[[i]]$"p.value") #get stars
-
-        print(paste0("PD --------------------------------------------------------------------------------------", x_labs[i]))
-        print(wilcox_test_1_wt_pd[[i]])
-    }
-
-    # Satisfaction: Two-sided Wilcox test
-    print("Satisfaction: --------------------------------------------------------------------------------------")
-    for (i in 1:(length(pcs) - 1)) {
-        pcs_index <- x_labs[i]
-        pcs_index_plus_one <- x_labs[i + 1]
-        wilcox_test_2_wt_satisfaction[[i]] <- wilcox.test(t_results_satisfaction[, pcs_index], y = t_results_satisfaction[, pcs_index_plus_one],
-                                                          alternative = "two.sided", conf.int = TRUE, data = t_results_satisfaction)
-        p_value_stars_2_satisfaction[i] <- stars.pval(wilcox_test_2_wt_satisfaction[[i]]$"p.value") #get stars
-        if (p_value_stars_2_satisfaction[i] %in% c("", " ")) {
-            p_value_stars_2_satisfaction[i] <- "ns"
-        }
-
-        print(paste0(sub("\\\n.*", "", pcs_index), " vs ", sub("\\\n.*", "", pcs_index_plus_one), #print PC comparisons vs one another
-                     " --------------------------------------------------------------------------------------"))
-        print(wilcox_test_2_wt_satisfaction[[i]])
-    }
-
-    # Personal Desirability: Two-sided Wilcox test
-    print("Personal Desirability: --------------------------------------------------------------------------------------")
-    for (i in 1:(length(pcs) - 1)) {
-        pcs_index <- x_labs[i]
-        pcs_index_plus_one <- x_labs[i + 1]
-        wilcox_test_2_wt_pd[[i]] <- wilcox.test(t_results_pd[, pcs_index], y = t_results_pd[, pcs_index_plus_one],
-                                                alternative = "two.sided", conf.int = TRUE, data = t_results_pd)
-        p_value_stars_2_pd[i] <- stars.pval(wilcox_test_2_wt_pd[[i]]$"p.value") #get stars
-        if (p_value_stars_2_pd[i] %in% c("", " ")) {
-            p_value_stars_2_pd[i] <- "ns"
-        }
-
-        print(paste0(sub("\\\n.*", "", pcs_index), " vs ", sub("\\\n.*", "", pcs_index_plus_one), #print PC comparisons vs one another
-                     " --------------------------------------------------------------------------------------"))
-        print(wilcox_test_2_wt_pd[[i]])
-    }
-
-    # Define heights of annotations
-    bottom_y <- -1.05 #y value for all bottom stars
-
-    satisfaction_color <- "#56B4E9"
-    satisfaction_bottom_x <- 1.19 #x value for bottom stars
-    satisfaction_top_x <- satisfaction_bottom_x + 0.5 #x value for top stars
-    satisfaction_top_y <- 1.17 #y value for top stars
-    satisfaction_bracket_y <- 1.07 #y value for top bracket
-    satisfaction_bracket_start <- 1.24 #x starting point for top bracket
-    satisfaction_bracket_end <- 2.15 #x ending point for top bracket
-
-    pd_color <- "#009E73"
-    pd_bottom_x <- 0.813 #x value for bottom stars
-    pd_top_x <- pd_bottom_x + 0.5 #x value for top stars
-    pd_top_y <- 1.39 #y value for top stars
-    pd_bracket_y <- 1.31 #y value for top bracket
-    pd_bracket_start <- 0.85 #x starting point for top bracket
-    pd_bracket_end <- 1.8 #x ending point for top bracket
-
-    # Add to the plot: stars indicating significance
-    for (i in 0:4) {
-        pcs_plot <- pcs_plot + ggplot2::annotate("text", x = satisfaction_bottom_x + i,
-                                                 y = bottom_y, size = 8, label = p_value_stars_1_satisfaction[[i + 1]])
-        pcs_plot <- pcs_plot + ggplot2::annotate("text", x = pd_bottom_x + i, y = bottom_y,
-                                                 size = 8, label = p_value_stars_1_pd[[i + 1]])
-
-        if (i != 4) {
-            pcs_plot <- pcs_plot + geom_segment(aes(x = satisfaction_bracket_start + i, xend = satisfaction_bracket_end + i, y = satisfaction_bracket_y, yend = satisfaction_bracket_y, colour = satisfaction_color))
-            pcs_plot <- pcs_plot + ggplot2::annotate("text", x = satisfaction_top_x + i, y = satisfaction_top_y, size = 8, label = p_value_stars_2_satisfaction[[i + 1]])
-            pcs_plot <- pcs_plot + geom_segment(aes(x = pd_bracket_start + i, xend = pd_bracket_end + i, y = pd_bracket_y, yend = pd_bracket_y, colour = satisfaction_color))
-            pcs_plot <- pcs_plot + ggplot2::annotate("text", x = pd_top_x + i, y = pd_top_y, size = 8, label = p_value_stars_2_pd[[i + 1]])
-        }
-    }
-
-    pcs_plot <- pcs_plot + scale_colour_identity()
-    return(pcs_plot)
-}
-
-
 CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots, trajectories_separate = FALSE) {
     "
     Measure the performance of each of our predictors by doing cross-validated regressions, holding out
@@ -749,20 +535,24 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots, tr
             t_results_satisfaction <- as.data.frame(t(results))
             colnames(t_results_satisfaction) <- predictors
             results_satisfaction_long <- gather(t_results_satisfaction, key = predictors, value = predictors_results, colnames(t_results_satisfaction)) #length(predictors)*n_folds
-            satisfaction_new_order <- with(results_satisfaction_long, reorder(predictors, predictors_results, mean, na.rm = TRUE))
+            satisfaction_new_order <- with(results_satisfaction_long, reorder(predictors, predictors_results, absmean))
             results_satisfaction_long["satisfaction_new_order"] <- satisfaction_new_order
         } else {
             # Reorder predictors according to their significance
             t_results_pd <- as.data.frame(t(results))
             colnames(t_results_pd) <- predictors
             results_pd_long <- gather(t_results_pd, key = predictors, value = predictors_results, colnames(t_results_pd)) #length(predictors)*n_folds
-            pd_new_order <- with(results_pd_long, reorder(predictors, predictors_results, mean, na.rm = TRUE))
+
+            pd_new_order <- with(results_pd_long, reorder(predictors, predictors_results, absmean))
             results_pd_long["pd_new_order"] <- pd_new_order
             results_pd_long <- results_pd_long[order(match(results_pd_long[, "pd_new_order"], results_satisfaction_long[, "satisfaction_new_order"])),] #order by satisfaction scores
         }
     }
 
     #-------------------------------------------------------------------------------------------------------------------
+
+    means_pd <- aggregate(results_pd_long$predictors_results, list(results_pd_long$predictors), FUN=mean)
+    means_satisfaction <- aggregate(results_satisfaction_long$predictors_results, list(results_satisfaction_long$predictors), FUN=mean)
 
     #3. Plotting
     predictors_results_ordered <- data.frame(predictors_order = results_satisfaction_long$satisfaction_new_order,
@@ -793,7 +583,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots, tr
     print("Satisfaction: --------------------------------------------------------------------------------------")
     for (i in x_labs) {
         print(paste0(i, " --------------------------------------------------------------------------------------"))
-        wilcox_test_wt_satisfaction[[i]] <- wilcox.test(t_results_satisfaction[, i], y = NULL, alternative = "greater",
+        wilcox_test_wt_satisfaction[[i]] <- wilcox.test(t_results_satisfaction[, i], y = NULL,
                                                         conf.int = TRUE, data = t_results_satisfaction)
         p_value_stars_satisfaction[i] <- stars.pval(wilcox_test_wt_satisfaction[[i]]$"p.value") #get stars
 
@@ -804,7 +594,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots, tr
     print("Personal Desirability: -----------------------------------------------------------------------------------")
     for (i in x_labs) {
         print(paste0(i, " --------------------------------------------------------------------------------------"))
-        wilcox_test_wt_pd[[i]] <- wilcox.test(t_results_pd[, i], y = NULL, alternative = "greater",
+        wilcox_test_wt_pd[[i]] <- wilcox.test(t_results_pd[, i], y = NULL,
                                               conf.int = TRUE, data = t_results_pd)
         p_value_stars_pd[i] <- stars.pval(wilcox_test_wt_pd[[i]]$"p.value") #get stars
 
@@ -813,18 +603,31 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots, tr
 
     # Define heights of annotations
     pd_bottom_x <- 0.8 #x value for bottom stars
-    pd_bottom_y <- -1.0 #y value for bottom stars
+    pd_bottom_y <- -0.08 #y value for bottom stars
     satisfaction_bottom_x <- 1.2 #x value for bottom stars
-    satisfaction_bottom_y <- pd_bottom_y - 0.15 #y value for bottom stars
+    satisfaction_bottom_y <- pd_bottom_y - 0.05 #y value for bottom stars
 
     # Add to the plot: stars indicating significance
     for (i in 1:20) {
+
+        if(means_pd[means_pd$Group.1 == x_labs[[i]], 'x'] < 0) {
+            pd_color <- "#a30000"
+        } else {
+            pd_color <- "#26a300"
+        }
+
+        if(means_satisfaction[means_satisfaction$Group.1 == x_labs[[i]], 'x'] < 0) {
+            satisfaction_color <- "#a30000"
+        } else {
+            satisfaction_color <- "#26a300"
+        }
+
         predictors_plot <- predictors_plot + ggplot2::annotate("text", x = satisfaction_bottom_x + i - 1,
                                                                y = satisfaction_bottom_y, size = 8,
-                                                               label = p_value_stars_satisfaction[[i]])
+                                                               label = p_value_stars_satisfaction[[i]], color = satisfaction_color)
         predictors_plot <- predictors_plot + ggplot2::annotate("text", x = pd_bottom_x + i - 1,
                                                                y = pd_bottom_y, size = 8,
-                                                               label = p_value_stars_pd[[i]])
+                                                               label = p_value_stars_pd[[i]], color = pd_color)
     }
 
     print(predictors_plot)
@@ -977,20 +780,6 @@ write.csv(data.frame(word = dat), "./data/dat.csv", row.names = FALSE) #create w
 # Create a dataframe of features and subject scores
 score_features_df <- CreateDataFeaturesDF(d_long, features, n_after_exclusions)
 
-
-if (FALSE) {
-    # Run regularized regression on all predictors
-    ridge_regression_wt_predictors <- AnalyzeRidgeRegression(score_features_df)
-
-    # Run mixed-effects regression on PCA-reduced features
-    data_wt_PCs <- MakePCAFunction(score_features_df)
-
-    # Get performance of each predictor and PCA-reduced feature using cross-validation.
-    cross_validation_analysis_wt_pcs <- CrossValidationAnalysisWtPCs(data_wt_PCs, d_long, n_after_exclusions, n_plots)
-    pdf(file = "predictions_wt_pcs_cv_plot.pdf", width = 17, height = 9)
-    plot(cross_validation_analysis_wt_pcs)
-    dev.off()
-}
 
 cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(score_features_df, d_long, n_after_exclusions, n_plots)
 pdf(file = "predictions_wt_predictors_cv_plot.pdf", width = 17, height = 9)

@@ -150,9 +150,8 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels) 
     grouped_box_plot <- ggplot(data = results_df, aes(x = x_order, y = results_order, fill = question_type, color = question_type)) +
         scale_colour_manual(values = c("#3c7ea3", "#800000")) +
         scale_x_discrete() +
-        geom_hline(yintercept = 0, color = "gray60") +
-        stat_summary(fun = mean, geom = "point", shape = 20, size = 5, aes(group = question_type, color=question_type), position = position_dodge(.75)) +
-        stat_summary(fun.data = mean_se, geom = "errorbar", size=1.2, aes(group = question_type, width=0.5, color=question_type), position = position_dodge(.75), fun.args = list(mult = 1.96)) +  # mean-se is 1.96 * std err (https://stulp.gmw.rug.nl/ggplotworkshop/comparinggroupstatistics.html)
+        stat_summary(fun = absmean, geom = "point", shape = 20, size = 5, aes(group = question_type, color=question_type), position = position_dodge(.75)) +
+        stat_summary(fun.data = absse, geom = "errorbar", size=1.2, aes(group = question_type, width=0.5, color=question_type), position = position_dodge(.75)) +
         ggtitle(paste0("Satisfaction and Desirability Predictions with ", x_labels)) +
         xlab(x_labels) +
         ylab("Prediction Performance\n(Cross-Validated Pearson's r)") +

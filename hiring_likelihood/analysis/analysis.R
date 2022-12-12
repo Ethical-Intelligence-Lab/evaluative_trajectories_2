@@ -358,150 +358,6 @@ MakePCAFunction <- function(score_features_df) {
 
 }
 
-
-CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
-    "
-    Measure the performance of each of our PCs by doing cross-validated regressions, holding out 
-    one participant for each cross-validation step. 
-    Input: data_wt_PCs, data_long, n_after_exclusions, n_plots
-    Output: relative importance of principal components and its graph
-    "
-
-    set.seed(1)
-    pcs <- c('PC1', 'PC2', 'PC3', 'PC4', 'PC5')
-    n_folds <- n_ss
-    folds <- cut(seq(1, nrow(dat)), breaks = n_folds, labels = FALSE)
-    folds2 <- rep(seq(1, n_plots), times = n_folds) #plot x subjects folds
-    indeces <- seq(1, (n_plots * n_folds))
-
-    #-------------------------------------------------------------------------------------------------------------------
-
-    # Hiring Likelihood 
-    results_hiring_likelihood <- data.frame(matrix(NA, nrow = length(pcs), ncol = n_folds))
-    rownames(results_hiring_likelihood) <- pcs
-
-    for (i in 1:length(pcs)) {
-        for (j in 1:n_folds) {
-            ss_results <- c()
-            truths <- c()
-
-            for (k in 1:n_plots) {
-                trainIndeces <- indeces[(folds == j) & (folds2 != k)]
-                testIndeces <- indeces[(folds == j) & (folds2 == k)]
-                fitpc <- lm(hiring_likelihood ~ get(pcs[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
-                ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
-                truths <- c(truths, dat$hiring_likelihood[testIndeces])
-            }
-
-            results_hiring_likelihood[i, j] <- cor(truths, ss_results)
-        }
-
-        print(paste('hiring likelihood: mean PC result,', pcs[i], ': ', mean(as.numeric(results_hiring_likelihood[i,]), na.rm = TRUE)))
-        print(paste('hiring likelihood: median PC result,', pcs[i], ': ', median(as.numeric(results_hiring_likelihood[i,]), na.rm = TRUE)))
-    }
-
-    # Reorder pcs according to their significance 
-    t_results_hiring_likelihood <- as.data.frame(t(results_hiring_likelihood))
-    colnames(t_results_hiring_likelihood) <- c("PC1\nFirst Derivative\nPredictors and End Value", "PC2\nSecond Derivative\nPredictors",
-                                               "PC3\nFluctuations, Embeddings,\nand Interestingness", "PC4\nIntegral, Sentiment,\nMax, and Min",
-                                               "PC5\nNumber of Peaks\nand Extrema") #rename using corrplot(my_PCA$Structure, method = "circle", mar = c(0, 0, 4, 0)) in MakePCAFunction()
-
-    results_hiring_likelihood_long <- gather(t_results_hiring_likelihood, key = principal_components, value = pcs_results, colnames(t_results_hiring_likelihood)) #length(pcs)*n_folds
-    hiring_likelihood_new_order <- with(results_hiring_likelihood_long, reorder(principal_components, pcs_results, median, na.rm = TRUE))
-    results_hiring_likelihood_long["hiring_likelihood_new_order"] <- hiring_likelihood_new_order
-
-    #-------------------------------------------------------------------------------------------------------------------
-
-    #2. Plotting 
-    pcs_results_ordered <- data.frame(pcs_order = results_hiring_likelihood_long$hiring_likelihood_new_order,
-                                      hiring_likelihood_results = results_hiring_likelihood_long$pcs_results)
-    pcs_results_long <- gather(pcs_results_ordered, key = question_type, value = results, hiring_likelihood_results)
-
-    # Make boxplot from CV_plotter function
-    pcs_plot <- CV_plotter(pcs_results_long, pcs_results_long$pcs_order, pcs_results_long$results, pcs_results_long$question_type, "Principal Components")
-
-    # Get the labels (in order)
-    x_labs <- ggplot_build(pcs_plot)$layout$panel_params[[1]]$
-        x$
-        get_labels()
-
-    # Perform Wilcoxon tests and get stars for significance 
-    # Define empty lists 
-    wilcox_test_1_wt_hiring_likelihood <- c()
-    wilcox_test_2_wt_hiring_likelihood <- c()
-    p_value_stars_1_hiring_likelihood <- c()
-    p_value_stars_2_hiring_likelihood <- c()
-
-    # Loop through the pcs, comparing each to null, then PC2 vs PC3, PC3 vs PC5, PC5 vs PC1, and PC1 vs PC4 
-    # Hiring Likelihood: One-sided Wilcox test
-    print("Hiring Likelihood: --------------------------------------------------------------------------------------")
-    for (i in 1:length(pcs)) {
-        pcs_index <- x_labs[i]
-        pcs_index_plus_one <- x_labs[i + 1]
-        wilcox_test_1_wt_hiring_likelihood[[i]] <- wilcox.test(t_results_hiring_likelihood[, pcs_index], y = NULL, alternative = "greater",
-                                                               conf.int = TRUE, data = t_results_hiring_likelihood)
-        p_value_stars_1_hiring_likelihood[i] <- stars.pval(wilcox_test_1_wt_hiring_likelihood[[i]]$"p.value") #get stars
-
-        print(paste0(x_labs[i], " --------------------------------------------------------------------------------------"))
-        print(wilcox_test_1_wt_hiring_likelihood[[i]])
-    }
-
-    # Hiring Likelihood: Two-sided Wilcox test
-    print("Hiring Likelihood: --------------------------------------------------------------------------------------")
-    for (i in 1:(length(pcs) - 1)) {
-        pcs_index <- x_labs[i]
-        pcs_index_plus_one <- x_labs[i + 1]
-        wilcox_test_2_wt_hiring_likelihood[[i]] <- wilcox.test(t_results_hiring_likelihood[, pcs_index], y = t_results_hiring_likelihood[, pcs_index_plus_one],
-                                                               alternative = "two.sided", conf.int = TRUE, data = t_results_hiring_likelihood)
-        p_value_stars_2_hiring_likelihood[i] <- stars.pval(wilcox_test_2_wt_hiring_likelihood[[i]]$"p.value") #get stars
-        if (p_value_stars_2_hiring_likelihood[i] %in% c("", " ")) {
-            p_value_stars_2_hiring_likelihood[i] <- "ns"
-        }
-
-        print(paste0(sub("\\\n.*", "", pcs_index), " vs ", sub("\\\n.*", "", pcs_index_plus_one), #print PC comparisons vs one another
-                     " --------------------------------------------------------------------------------------"))
-        print(wilcox_test_2_wt_hiring_likelihood[[i]])
-    }
-
-    # Define heights of annotations 
-    bottom_y <- -1.05 #y value for all bottom stars 
-
-    hiring_likelihood_color <- "#56B4E9"
-    hiring_likelihood_bottom_x <- 1 #x value for bottom stars 
-    hiring_likelihood_top_x <- hiring_likelihood_bottom_x + 0.5 #x value for top stars 
-    hiring_likelihood_top_y <- 1.17 #y value for top stars 
-    hiring_likelihood_bracket_y <- 1.09 #y value for top bracket  
-    hiring_likelihood_bracket_start <- 1.05 #x starting point for top bracket 
-    hiring_likelihood_bracket_end <- 1.95 #x ending point for top bracket 
-
-    # Add to the plot: stars indicating significance 
-    pcs_plot <- pcs_plot +
-
-        # One-sided Wilcox test
-        ggplot2::annotate("text", x = hiring_likelihood_bottom_x, y = bottom_y, size = 8, label = p_value_stars_1_hiring_likelihood[[1]]) +
-        ggplot2::annotate("text", x = hiring_likelihood_bottom_x + 1, y = bottom_y, size = 8, label = p_value_stars_1_hiring_likelihood[[2]]) +
-        ggplot2::annotate("text", x = hiring_likelihood_bottom_x + 2, y = bottom_y, size = 8, label = p_value_stars_1_hiring_likelihood[[3]]) +
-        ggplot2::annotate("text", x = hiring_likelihood_bottom_x + 3, y = bottom_y, size = 8, label = p_value_stars_1_hiring_likelihood[[4]]) +
-        ggplot2::annotate("text", x = hiring_likelihood_bottom_x + 4, y = bottom_y, size = 8, label = p_value_stars_1_hiring_likelihood[[5]]) +
-
-        # Two-sided Wilcox test (with brackets)
-        geom_segment(aes(x = hiring_likelihood_bracket_start, xend = hiring_likelihood_bracket_end, y = hiring_likelihood_bracket_y, yend = hiring_likelihood_bracket_y, colour = hiring_likelihood_color)) +
-        ggplot2::annotate("text", x = hiring_likelihood_top_x, y = hiring_likelihood_top_y, size = 8, label = p_value_stars_2_hiring_likelihood[[1]]) +
-        geom_segment(aes(x = hiring_likelihood_bracket_start + 1, xend = hiring_likelihood_bracket_end + 1, y = hiring_likelihood_bracket_y, yend = hiring_likelihood_bracket_y, color = hiring_likelihood_color)) +
-        ggplot2::annotate("text", x = hiring_likelihood_top_x + 1, y = hiring_likelihood_top_y, size = 8, label = p_value_stars_2_hiring_likelihood[[2]]) +
-        geom_segment(aes(x = hiring_likelihood_bracket_start + 2, xend = hiring_likelihood_bracket_end + 2, y = hiring_likelihood_bracket_y, yend = hiring_likelihood_bracket_y, color = hiring_likelihood_color)) +
-        ggplot2::annotate("text", x = hiring_likelihood_top_x + 2, y = hiring_likelihood_top_y, size = 8, label = p_value_stars_2_hiring_likelihood[[3]]) +
-        geom_segment(aes(x = hiring_likelihood_bracket_start + 3, xend = hiring_likelihood_bracket_end + 3, y = hiring_likelihood_bracket_y, yend = hiring_likelihood_bracket_y, color = hiring_likelihood_color)) +
-        ggplot2::annotate("text", x = hiring_likelihood_top_x + 3, y = hiring_likelihood_top_y, size = 8, label = p_value_stars_2_hiring_likelihood[[4]]) +
-
-        scale_colour_identity()
-
-    #-------------------------------------------------------------------------------------------------------------------
-
-    return(pcs_plot)
-}
-
-
 CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
     print("Running cross validation...")
 
@@ -551,7 +407,10 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
                 }
             }
 
+            #ct <- cor.test(truths, ss_results)
+            #if(ct$p.value < 0.05) {
             results_hiring_likelihood[i, j] <- cor(truths, ss_results)
+            #}
         }
 
         print(paste('hiring likelihood: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_hiring_likelihood[i,]), na.rm = TRUE)))
@@ -561,7 +420,8 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
     t_results_hiring_likelihood <- as.data.frame(t(results_hiring_likelihood))
     colnames(t_results_hiring_likelihood) <- predictors
     results_hiring_likelihood_long <- gather(t_results_hiring_likelihood, key = predictors, value = predictors_results, colnames(t_results_hiring_likelihood)) #length(predictors)*n_folds
-    hiring_likelihood_new_order <- with(results_hiring_likelihood_long, reorder(predictors, predictors_results, mean, na.rm = TRUE))
+
+    hiring_likelihood_new_order <- with(results_hiring_likelihood_long, reorder(predictors, predictors_results, absmean))
     results_hiring_likelihood_long["hiring_likelihood_new_order"] <- hiring_likelihood_new_order
 
     #-------------------------------------------------------------------------------------------------------------------
@@ -589,41 +449,32 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
     print("Hiring Likelihood: --------------------------------------------------------------------------------------")
     for (i in x_labs) {
         print(paste0(i, " --------------------------------------------------------------------------------------"))
-        wilcox_test_wt_hiring_likelihood[[i]] <- wilcox.test(t_results_hiring_likelihood[, i], y = NULL, alternative = "greater",
+        wilcox_test_wt_hiring_likelihood[[i]] <- wilcox.test(t_results_hiring_likelihood[, i], y = NULL, #alternative = "greater",
                                                              conf.int = TRUE, data = t_results_hiring_likelihood)
         p_value_stars_hiring_likelihood[i] <- stars.pval(wilcox_test_wt_hiring_likelihood[[i]]$"p.value") #get stars
         print(wilcox_test_wt_hiring_likelihood[[i]])
     }
 
     # Define heights of annotations 
-    hiring_likelihood_bottom_x <- 1 #x value for bottom stars 
-    hiring_likelihood_bottom_y <- -1.05 #y value for bottom stars 
+    hiring_likelihood_bottom_x <- 1 #x value for bottom stars
+    hiring_likelihood_bottom_y <- -0.1 #y value for bottom stars
 
-    # Add to the plot: stars indicating significance 
-    predictors_plot <- predictors_plot +
+    rh <- results_hiring_likelihood_long[!is.na(results_hiring_likelihood_long$predictors_results),]
+    means <- aggregate(rh$predictors_results, list(rh$predictors), FUN=mean)
 
-        # One-sided Wilcox test
-        ggplot2::annotate("text", x = hiring_likelihood_bottom_x, y = hiring_likelihood_bottom_y, size = 8, label = p_value_stars_hiring_likelihood[[1]]) +
-        ggplot2::annotate("text", x = hiring_likelihood_bottom_x + 1, y = hiring_likelihood_bottom_y, size = 8, label = p_value_stars_hiring_likelihood[[2]]) +
-        ggplot2::annotate("text", x = hiring_likelihood_bottom_x + 2, y = hiring_likelihood_bottom_y, size = 8, label = p_value_stars_hiring_likelihood[[3]]) +
-        ggplot2::annotate("text", x = hiring_likelihood_bottom_x + 3, y = hiring_likelihood_bottom_y, size = 8, label = p_value_stars_hiring_likelihood[[4]]) +
-        ggplot2::annotate("text", x = hiring_likelihood_bottom_x + 4, y = hiring_likelihood_bottom_y, size = 8, label = p_value_stars_hiring_likelihood[[5]]) +
-        ggplot2::annotate("text", x = hiring_likelihood_bottom_x + 5, y = hiring_likelihood_bottom_y, size = 8, label = p_value_stars_hiring_likelihood[[6]]) +
-        ggplot2::annotate("text", x = hiring_likelihood_bottom_x + 6, y = hiring_likelihood_bottom_y, size = 8, label = p_value_stars_hiring_likelihood[[7]]) +
-        ggplot2::annotate("text", x = hiring_likelihood_bottom_x + 7, y = hiring_likelihood_bottom_y, size = 8, label = p_value_stars_hiring_likelihood[[8]]) +
-        ggplot2::annotate("text", x = hiring_likelihood_bottom_x + 8, y = hiring_likelihood_bottom_y, size = 8, label = p_value_stars_hiring_likelihood[[9]]) +
-        ggplot2::annotate("text", x = hiring_likelihood_bottom_x + 9, y = hiring_likelihood_bottom_y, size = 8, label = p_value_stars_hiring_likelihood[[10]]) +
-        ggplot2::annotate("text", x = hiring_likelihood_bottom_x + 10, y = hiring_likelihood_bottom_y, size = 8, label = p_value_stars_hiring_likelihood[[11]]) +
-        ggplot2::annotate("text", x = hiring_likelihood_bottom_x + 11, y = hiring_likelihood_bottom_y, size = 8, label = p_value_stars_hiring_likelihood[[12]]) +
-        ggplot2::annotate("text", x = hiring_likelihood_bottom_x + 12, y = hiring_likelihood_bottom_y, size = 8, label = p_value_stars_hiring_likelihood[[13]]) +
-        ggplot2::annotate("text", x = hiring_likelihood_bottom_x + 13, y = hiring_likelihood_bottom_y, size = 8, label = p_value_stars_hiring_likelihood[[14]]) +
-        ggplot2::annotate("text", x = hiring_likelihood_bottom_x + 14, y = hiring_likelihood_bottom_y, size = 8, label = p_value_stars_hiring_likelihood[[15]]) +
-        ggplot2::annotate("text", x = hiring_likelihood_bottom_x + 15, y = hiring_likelihood_bottom_y, size = 8, label = p_value_stars_hiring_likelihood[[16]]) +
-        ggplot2::annotate("text", x = hiring_likelihood_bottom_x + 16, y = hiring_likelihood_bottom_y, size = 8, label = p_value_stars_hiring_likelihood[[17]]) +
-        ggplot2::annotate("text", x = hiring_likelihood_bottom_x + 17, y = hiring_likelihood_bottom_y, size = 8, label = p_value_stars_hiring_likelihood[[18]]) +
-        ggplot2::annotate("text", x = hiring_likelihood_bottom_x + 18, y = hiring_likelihood_bottom_y, size = 8, label = p_value_stars_hiring_likelihood[[19]]) +
-        ggplot2::annotate("text", x = hiring_likelihood_bottom_x + 19, y = hiring_likelihood_bottom_y, size = 8, label = p_value_stars_hiring_likelihood[[20]])
+    # Add to the plot: stars indicating significance
 
+    for( i in 1:20 ) {
+        if(means[means$Group.1 == x_labs[[i]], 'x'] < 0) {
+            star_color <- "#a30000"
+        } else {
+            star_color <- "#26a300"
+        }
+        predictors_plot <- predictors_plot + ggplot2::annotate("text", x = hiring_likelihood_bottom_x + i - 1,
+                                                               y = hiring_likelihood_bottom_y, size = 8,
+                                                               label = p_value_stars_hiring_likelihood[[i]],
+                                                               color = star_color)
+    }
     #-------------------------------------------------------------------------------------------------------------------
 
     print(predictors_plot)

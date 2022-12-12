@@ -113,7 +113,7 @@ for (i in 1:27) {  # Each cluster
             curr_error <- sum(c(curr_error, (cluster_poly(j * 9 / 8) - eqns[[k]](j))^2))  # equations for lifelines
         }
 
-        curr_error <- curr_error / 100
+        curr_error <- curr_error / 80
         mses[i, k] <- curr_error
     }
 }
@@ -125,10 +125,10 @@ for (i in (1:27)) { errors <- append(errors, mses[i, result[[2]][, 2][i]]) }
 print(paste0("Total error: ", Reduce("+", errors)))
 
 
-#png(file = (paste0("cluster_match_exp=", exp, ".png")), width = 480, height = 480)
+png(file = (paste0("cluster_match_exp=", exp, ".png")), width = 480, height = 480)
 plot_list <- list()
 for (i in 1:27) {
-    #print(paste0('Cluster ', i, ' matches with line ', result[[2]][, 2][i]))
+    print(paste0('Cluster ', i, ' matches with line ', result[[2]][, 2][i]))
     plot_list[[i]] <- plotter(i, exp, create_equation(cluster_polynomials[i, 2]), eqns[[result[[2]][, 2][i]]])
 }
 
