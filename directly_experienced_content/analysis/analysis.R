@@ -164,7 +164,7 @@ CreateDataFeaturesDF <- function(data) {
     "
 
     score_features_df <- data
-    score_features_df["willing"] <- as.data.frame(apply(score_features_df["willing"], 2, as.numeric))
+    score_features_df["willing"] <- as.data.frame(standardize(apply(score_features_df["willing"], 2, as.numeric)))
     score_features_df["subject"] <- as.data.frame(apply(score_features_df["subject"], 2, as.numeric))
     score_features_df["genre"] <- as.data.frame(as.numeric(factor(score_features_df$genre)))
     score_features_df["sentiment_score"] <- standardize(score_features_df["sentiment_score"])
@@ -221,195 +221,6 @@ MakePCAFunction <- function(score_features_df) {
 
     return(score_features_df)
 
-}
-
-CrossValidationAnalysisWtPredictors <- function(dat, n_plots, random = FALSE, consider_tags = FALSE, genres_separate = FALSE) {
-
-    print("----------- Running cross validation analysis... -----------")
-
-    fold_size <- 8
-
-
-    predictors_old <- c("embeddings", "interestingness", "sentiment_score", "max", "min", "end_value", "number_peaks", "number_valleys", "number_extrema", "integral",
-                        "d1_avg_unweight", "d1_avg_weight_prime", "d1_avg_weight_asc", "d1_avg_weight_des", "d1_avg_weight_end",
-                        "d2_avg_unweight", "d2_avg_weight_prime", "d2_avg_weight_asc", "d2_avg_weight_des", "d2_avg_weight_end")
-
-    if (sentence_data) { predictors_old <- append(predictors_old, "sentiment_score_sentence", after = 3) }
-    predictors <- c("Embeddings", "Interestingness", "Sentiment Score", "Maximum", "Minimum", "End Value", "Number of\nPeaks", "Number of\nValleys", "Number of\nExtrema", "Integral",
-                    "1st Derivative", "1st Derivative\nPrime", "1st Derivative\nAscending", "1st Derivative\nDescending", "1st Derivative\nEnd",
-                    "2nd Derivative", "2nd Derivative\nPrime", "2nd Derivative\nAscending", "2nd Derivative\nDescending", "2nd Derivative\nEnd")
-
-    predicted_willingness <- data.frame(matrix(ncol = length(predictors), nrow = dim(dat)[1]))
-    colnames(predicted_willingness) = predictors
-
-    if (sentence_data) { predictors <- append(predictors, "Sentiment Score\n(Sentence)", after = 3) }
-
-    if (colnames(dat)[10] != "Integral") {
-        setnames(dat, old = predictors_old, new = predictors)
-    }
-
-    set.seed(1)
-    n_folds <- dim(dat)[1] / n_plots
-    folds <- cut(seq(1, nrow(dat)), breaks = n_folds, labels = FALSE)
-    folds2 <- rep(seq(1, n_plots), times = n_folds) #plot x subjects folds
-    indeces <- seq(1, (n_plots * n_folds))
-
-    # Train for and Predict willing
-    if (genres_separate) {
-        results_willing <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_plots))
-    } else {
-        results_willing <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
-    }
-
-    rownames(results_willing) <- predictors
-
-    if (!random) {
-        for (i in 1:length(predictors)) {
-            if (genres_separate) { nn_folds <- n_plots } else { nn_folds <- n_folds }
-            for (j in 1:nn_folds) {  # Each subject
-                ss_results <- c()
-                truths <- c()
-
-                if (genres_separate) { nn_ss <- n_folds } else { nn_ss <- n_plots }
-                for (k in 1:nn_ss) {  # Each genre
-                    if (genres_separate) {
-                        trainIndeces <- indeces[(folds2 == j) & (folds != k)]
-                        testIndeces <- indeces[(folds2 == j) & (folds == k)]
-                    } else {
-                        trainIndeces <- indeces[(folds == j) & (folds2 != k)]
-                        testIndeces <- indeces[(folds == j) & (folds2 == k)]
-                    }
-
-
-                    if (predictors[i] == "Sentiment Score") { # Exclude train indexes that is not a word
-                        trainIndeces <- subset(trainIndeces, dat$is_word[trainIndeces])
-
-                        if (consider_tags) {
-                            trainIndeces <- subset(trainIndeces, dat$word_tag[trainIndeces] == "ADJ")
-                        }
-
-                    }
-
-                    if (predictors[i] == "Sentiment Score" && !dat$is_word[testIndeces]) { # Do not fit if not a word
-                        next
-                    } else if (consider_tags &&
-                        predictors[i] == "Sentiment Score" &&
-                        dat$word_tag[testIndeces] != "ADJ") {
-                        next
-                    } else {
-                        fitpc <- lm(willing ~ get(predictors[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
-                        willing_predict <- predict(fitpc, dat)[testIndeces]
-                        predicted_willingness[8 * (j - 1) + k, predictors[i]] <- willing_predict
-                        ss_results <- c(ss_results, willing_predict)
-                        truths <- c(truths, dat$willing[testIndeces])
-                    }
-                }
-
-                results_willing[i, j] <- cor(truths, ss_results)
-            }
-
-            print(paste('willing: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_willing[i,]), na.rm = TRUE)))
-        }
-    } else {
-        s <- sample(1:dim(dat)[1])
-        random_train_splits <- split(s, ceiling(seq_along(s) / fold_size))
-        results_willing <- data.frame(matrix(NA, nrow = length(predictors), ncol = length(random_train_splits)))
-        rownames(results_willing) <- predictors
-
-        for (i in 1:length(predictors)) {
-            for (j in 1:length(random_train_splits)) {  # Number of folds
-                ss_results <- c()
-                truths <- c()
-                for (k in 1:length(random_train_splits[[j]])) {  # Try each one in fold
-                    trainIndeces <- random_train_splits[[j]]
-                    testIndeces <- random_train_splits[[j]][k]
-                    trainIndeces <- trainIndeces[trainIndeces != testIndeces]
-
-                    if (predictors[i] == "Sentiment Score") { # Exclude train indexes that is not a word
-                        trainIndeces <- subset(trainIndeces, dat$is_word[trainIndeces])
-                    }
-
-                    if (predictors[i] == "Sentiment Score" && !dat$is_word[testIndeces]) { # Do not fit if not a word
-                        next
-                    } else {
-                        print(trainIndeces)
-                        print(testIndeces)
-                        fitpc <- lm(willing ~ get(predictors[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
-                        ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
-                        truths <- c(truths, dat$willing[testIndeces])
-                    }
-
-                }
-
-                results_willing[i, j] <- cor(truths, ss_results)
-            }
-
-            print(paste('willing: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_willing[i,]), na.rm = TRUE)))
-        }
-    }
-
-
-    # Reorder predictors according to their significance
-    t_results_willing <- as.data.frame(t(results_willing))
-    colnames(t_results_willing) <- predictors
-    results_willing_long <- gather(t_results_willing, key = predictors, value = predictors_results, colnames(t_results_willing)) #length(predictors)*n_folds
-    willing_new_order <- with(results_willing_long, reorder(predictors, predictors_results, absmean))
-    results_willing_long["willing_new_order"] <- willing_new_order
-
-    #-------------------------------------------------------------------------------------------------------------------
-    #-------------------------------------------------------------------------------------------------------------------
-    #3. Plotting
-    predictors_results_ordered <- data.frame(predictors_order = results_willing_long$willing_new_order,
-                                             willing_results = results_willing_long$predictors_results)
-    predictors_results_long <- gather(predictors_results_ordered, key = question_type, value = results, willing_results)
-
-    # Make boxplot from CV_plotter function
-    predictors_plot <- CV_plotter(predictors_results_long, predictors_results_long$predictors_order, predictors_results_long$results, predictors_results_long$question_type, "Predictors")
-
-    x_labs <- ggplot_build(predictors_plot)$layout$panel_params[[1]]$
-        x$
-        get_labels()
-
-    # Perform Wilcoxon tests and get stars for significance
-    # Define empty lists
-    wilcox_test_wt_willing <- c()
-    p_value_stars_willing <- c()
-    wilcox_test_wt_pd <- c()
-    p_value_stars_pd <- c()
-
-    # Loop through the predictors, comparing each to a null distribution
-    # willing: One-sided Wilcox test
-    for (i in x_labs) {
-        wilcox_test_wt_willing[[i]] <- wilcox.test(t_results_willing[, i], y = NULL,
-                                                   conf.int = TRUE)
-        p_value_stars_willing[i] <- stars.pval(wilcox_test_wt_willing[[i]]$"p.value") #get stars
-        print(paste0("----------------------", i))
-        print(wilcox_test_wt_willing[[i]])
-    }
-
-
-    # Define heights of annotations
-    willing_bottom_x <- 1.0 #x value for bottom stars
-    willing_bottom_y <- -0.05 #y value for bottom stars
-
-    rw <- results_willing_long[!is.na(results_willing_long$predictors_results),]
-    means <- aggregate(rw$predictors_results, list(rw$predictors), FUN=mean)
-
-
-    for (i in 1:length(predictors)) {
-        if(means[means$Group.1 == x_labs[[i]], 'x'] < 0) {
-            star_color <- "#a30000"
-        } else {
-            star_color <- "#26a300"
-        }
-
-        predictors_plot <- predictors_plot + ggplot2::annotate("text", x = willing_bottom_x + i - 1,
-                                                               y = willing_bottom_y, size = 8,
-                                                               label = p_value_stars_willing[[i]], color=star_color)
-    }
-
-    print(predictors_plot)
-    return(list(predictors_plot, predicted_willingness))
 }
 
 simulate_f1_score <- function(dat) {
@@ -737,6 +548,19 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
         p_value_stars_pd <- c()
 
         for (i in x_labs) {
+            vt <- var.test(as.numeric(t_results_raffle[, i]), rep(0.222, length(t_results_raffle[, i])))
+
+            # Shapiro test first -> if it's normal, use t-test, if not, use wilcox test
+            if((shapiro.test(as.numeric(t_results_raffle[, i]))$p.value < 0.05) ||
+                (shapiro.test(as.numeric(t_results_raffle[, i]))$p.value < 0.05)) {
+                wilcox_test_wt_willing[[i]] <- wilcox.test(x = t_results_raffle[, i],
+                                                     y = rep(0.222, length(t_results_raffle[, i])), alternative = "greater")
+            } else {
+                wilcox_test_wt_willing[[i]] <- t.test(x = t_results_raffle[, i],
+                                                     y = rep(0.222, length(t_results_raffle[, i])),
+                                                alternative = "greater", var.equal = vt$p.value > 0.05)
+            }
+
             wilcox_test_wt_willing[[i]] <- wilcox.test(t_results_raffle[, i], y = rep(0.222, length(t_results_raffle[, i])),
                                                        conf.int = TRUE, alternative="greater")  # Comparing with .222 (all 1's)
             p_value_stars_willing[i] <- stars.pval(wilcox_test_wt_willing[[i]]$"p.value") #get stars
@@ -744,7 +568,6 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
             print(wilcox_test_wt_willing[[i]])
         }
     }
-
 
     # Define heights of annotations
     willing_bottom_x <- 1.0 #x value for bottom stars
@@ -754,7 +577,8 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
     means <- aggregate(rw$predictors_results, list(rw$predictors), FUN=mean)
 
     for (i in 1:length(predictors)) {
-        predictors_plot <- predictors_plot + ggplot2::annotate("text", x = willing_bottom_x + i - 1, y = willing_bottom_y, size = 8, label = p_value_stars_willing[[i]], color=star_color)
+        predictors_plot <- predictors_plot + ggplot2::annotate("text", x = willing_bottom_x + i - 1,
+                                                               y = willing_bottom_y, size = 8, label = p_value_stars_willing[[i]])
     }
 
     print(predictors_plot)
@@ -874,19 +698,20 @@ write.csv(data.frame(word = d_for_comparison), "./data/dat_for_comparison.csv", 
 
 
 ##### RUN PREDICTIVE ANALYSES
-if (sentence_data) { fname <- "./plots/analysis_plots_sentence/predictions_wt_predictors_cv_plot_sentence.pdf" } else { fname <- "./plots/analysis_plots/predictions_wt_predictors_cv_plot.pdf" }
-cv_out <- CrossValidationAnalysisWtPredictors(d_long, n_plots)
-cv_plot <- cv_out[1]
-pdf(file = fname, width = 17, height = 9)
-plot(cv_plot[[1]])
+fold_amount <- 10
+cv_result <- CrossValidationAnalysis(d_long, n_after_exclusions, n_plots, random=TRUE,
+                                                   fold_amount = fold_amount, dep_var='willing', n_reps=10)
+pdf(file = paste0("./plots/analysis_plots/predictions_wt_predictors_cv_plot_", fold_amount, ".pdf"), width = 15, height = 9)
+plot(cv_result[[1]])
 dev.off()
 
 avg_f1s <- c()
 max_f1s <- c()
+fold_amount <- 10
 results_list <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE,
-                                                                                   random = TRUE, fold_amount = 18,
+                                                                                   random = TRUE, fold_amount = fold_amount,
                                                                                    perf_metric = "F1", max_wtp = FALSE)
-pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_f1_", 18, ".pdf"), width = 17, height = 9)
+pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_f1_", fold_amount, ".pdf"), width = 17, height = 9)
 plot(results_list[[1]])
 dev.off()
 
@@ -897,6 +722,6 @@ options(warn = oldw)
 
 print("Correlations between studies are in 'between_experiment_analyses/analysis.R' file.")
 
-##=====##
+##=====##willing
 ## END ##
 ##=====##

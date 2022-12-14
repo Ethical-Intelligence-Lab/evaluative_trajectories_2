@@ -1,5 +1,5 @@
 
-CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, y_axis = "Pearson's r", no_kfold = FALSE) {
+CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, random_data = NULL, y_axis = "Pearson's r", no_kfold = FALSE) {
     "
     What this function does: creates a grouped box plot of the cross-validated prediction results
     Inputs: results_df, x_order, results_order, ques_type, x_labels, sum_willing
@@ -52,6 +52,15 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
                   legend.position = "top",
                   legend.title.align = 0.5) }
 
+    if(!is.null(random_data)) {
+        grouped_box_plot <- grouped_box_plot +
+            geom_hline(yintercept = absmean(random_data$random)) +
+        ggplot2::annotate("rect", xmin = -Inf, xmax = Inf, ymin = absse(random_data$random)$ymin, ymax = absse(random_data$random)$ymax, fill = "black", alpha = .2, color = NA)
+    }
+
+    if(y_axis == "F1 Score") {
+        grouped_box_plot <- grouped_box_plot + geom_hline(yintercept = 0.222)
+    }
 
     return(grouped_box_plot)
 }

@@ -1,9 +1,295 @@
 pacman::p_load('qdapDictionaries')
+pacman::p_load('hash')
 #pacman::p_load('sentiment.ai')
 
 # Run only first time if you are using this package::
 #install_sentiment.ai()
 #init_sentiment.ai()
+
+CrossValidationAnalysis <- function(dat, n_ss, n_plots, random = TRUE, fold_amount = 10,
+                                    n_reps = 1, load_results = FALSE, dep_var = 'hiring_likelihood') {
+    print("Running cross validation...")
+    dir.create('cv_results', showWarnings = FALSE)
+
+    predictors_old <- c("embeddings", "interestingness", "sentiment_score", "max", "min", "end_value", "number_peaks", "number_valleys", "number_extrema", "integral",
+                        "d1_avg_unweight", "d1_avg_weight_prime", "d1_avg_weight_asc", "d1_avg_weight_des", "d1_avg_weight_end",
+                        "d2_avg_unweight", "d2_avg_weight_prime", "d2_avg_weight_asc", "d2_avg_weight_des", "d2_avg_weight_end")
+    predictors <- c("Embeddings", "Interestingness", "Sentiment Score", "Maximum", "Minimum", "End Value", "Number of\nPeaks", "Number of\nValleys", "Number of\nExtrema", "Integral",
+                    "1st Derivative", "1st Derivative\nPrime", "1st Derivative\nAscending", "1st Derivative\nDescending", "1st Derivative\nEnd",
+                    "2nd Derivative", "2nd Derivative\nPrime", "2nd Derivative\nAscending", "2nd Derivative\nDescending", "2nd Derivative\nEnd")
+
+    if (!('Integral' %in% colnames(dat))) {
+        setnames(dat, old = predictors_old, new = predictors)
+    }
+
+    predictors <- c('random', predictors)
+    n_folds <- n_ss
+
+    folds <- cut(seq(1, nrow(dat)), breaks = n_folds, labels = FALSE)
+    folds2 <- rep(seq(1, n_plots), times = n_folds) #plot x subjects folds
+    indeces <- seq(1, (n_plots * n_folds))
+
+    #-------------------------------------------------------------------------------------------------------------------
+
+    results_e <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
+    errors_e <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
+    rownames(results_e) <- predictors
+    rownames(errors_e) <- predictors
+
+    dv_results <- hash()
+    if (load_results) {
+        for (dv in dep_var) {
+            results_e <- read.csv(paste0('cv_results/cv_', fold_amount, '_', n_reps, '_', dv, '_results.csv'), row.names = 1)
+            errors_e <- read.csv(paste0('cv_results/cv_', fold_amount, '_', n_reps, '_', dv, '_errors.csv'), row.names = 1)
+
+            dv_results[[dv]] <- list(results_e, errors_e)
+        }
+    } else {
+        for (dv in dep_var) {
+            results_hl_list <- list()
+            errors_hl_list <- list()
+
+            for (p in 1:n_reps) { # Replicate n_reps times to make sure our model is robust
+                print(paste("Running iteration ", p, "..."))
+                set.seed(p)
+                dat$random <- standardize(sample(100, size = nrow(dat), replace = TRUE))
+
+                results_e <- data.frame(matrix(NA, nrow = length(predictors), ncol = fold_amount))
+                errors_e <- data.frame(matrix(NA, nrow = length(predictors), ncol = fold_amount))
+                rownames(results_e) <- predictors
+                rownames(errors_e) <- predictors
+
+                folds <- createFolds(factor(rep(0, dim(dat)[1])), k = fold_amount, list = TRUE) #factor(dat[, 'subject'])
+                all_indices <- createFolds(factor(rep(0, dim(dat)[1])), k = 1, list = TRUE)[[1]]
+
+                for (i in 1:length(predictors)) {
+                    cat("...")
+                    for (j in 1:fold_amount) {  # Number of folds
+                        ss_results <- c()
+                        truths <- c()
+
+                        trainIndeces <- c(setdiff(c(all_indices), c(folds[[j]])))
+
+                        # Fit model on subset of train data
+                        fitpc <- lm(get(dv) ~ get(predictors[i]), data = dat, subset = trainIndeces)
+
+                        for (k in 1:length(folds[[j]])) {  # Predict each participant in fold
+                            testIndeces <- folds[[j]][k]
+                            ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
+                            truths <- c(truths, dat[testIndeces, dv])
+                        }
+
+                        errors_e[i, j] <- RMSE(truths, ss_results)
+                        results_e[i, j] <- cor(truths, ss_results)
+                    }
+                }
+
+                results_hl_list <- append(results_hl_list, list(results_e))
+                errors_hl_list <- append(errors_hl_list, list(errors_e))
+            }
+
+            # Collect mean r's of each run
+            results_means_bw_runs <- data.frame("1" = results_hl_list[[1]])
+            for (i in 2:n_reps) {
+                col_name <- i
+                results_means_bw_runs <- cbind(results_means_bw_runs, data.frame(col_name = results_hl_list[[i]]))
+            }
+
+            names(results_means_bw_runs) <- (1:n_reps * fold_amount)
+
+            # Collect mean RMSE's of each run
+            errors_means_bw_runs <- data.frame("1" = errors_hl_list[[1]])
+            for (i in 2:n_reps) {
+                col_name <- i
+                errors_means_bw_runs <- cbind(errors_means_bw_runs, data.frame(col_name = errors_hl_list[[i]]))
+            }
+
+            names(errors_means_bw_runs) <- (1:n_reps * fold_amount)
+
+            results_e <- results_means_bw_runs
+            errors_e <- errors_means_bw_runs
+
+            write.csv(errors_e, paste0('cv_results/cv_', fold_amount, '_', n_reps, '_', dv, '_errors.csv'))
+            write.csv(results_e, paste0('cv_results/cv_', fold_amount, '_', n_reps, '_', dv, '_results.csv'))
+
+            dv_results[[dv]] <- list(results_e, errors_e)
+        }
+    }
+
+    # ----------------------------- Now we have the results, sort the data and plot -----------------------------
+
+    predictors <- predictors[!predictors %in% 'random']
+    if (length(dep_var) == 1) {  # Studies with single question
+        # Reorder predictors according to their mean r
+        t_results_e <- as.data.frame(t(results_e))
+        random_data <- t_results_e["random"]
+        t_results_e <- t_results_e[, !names(t_results_e) %in% c("random")]
+        colnames(t_results_e) <- predictors
+        results_e_long <- gather(t_results_e, key = predictors, value = predictors_results, colnames(t_results_e))
+        results_e_long["new_order"] <- with(results_e_long, reorder(predictors, predictors_results, absmean))
+
+        means_h <- aggregate(results_e_long$predictors_results, list(results_e_long$predictors), FUN = mean)
+        ordered_pred <- means_h[order(-means_h$x),]
+        cat("\n")
+        for (i in ordered_pred$Group.1) {
+            print(sprintf("%-50s: %f *-*-*-*-* Mean RMSE:  %f", paste0('Mean predictor result, ', i),
+                          means_h[means_h$Group.1 == i, 'x'], mean(as.numeric(errors_e[i,]))))
+        }
+
+        predictors_results_ordered <- data.frame(predictors_order = results_e_long$new_order,
+                                                 results = results_e_long$predictors_results)
+        predictors_results_long <- gather(predictors_results_ordered, key = question_type, value = results, results)
+
+        # Make boxplot from CV_plotter function
+        predictors_plot <- CV_plotter(results_df = predictors_results_long, x_order = predictors_results_long$predictors_order,
+                                      results_order = predictors_results_long$results, ques_type = predictors_results_long$question_type,
+                                      x_labels = "Predictors", random_data = random_data)
+
+        # Get the labels
+        x_labs <- ggplot_build(predictors_plot)$layout$panel_params[[1]]$
+            x$
+            get_labels()
+
+        # Wilcoxon or t-tests
+        wilcox_test_wt_e <- c()
+        p_value_stars_e <- c()
+        print("--------------------------------------------------------------------------------------")
+        for (i in x_labs) {
+            print(paste0(i, " --------------------------------------------------------------------------------------"))
+            vt <- var.test(as.numeric(errors_e[i,]), as.numeric(errors_e['random',]))
+
+            # Shapiro test first -> if it's normal, use t-test, if not, use wilcox test
+            if ((shapiro.test(as.numeric(errors_e[i,]))$p.value < 0.05) ||
+                (shapiro.test(as.numeric(errors_e['random',]))$p.value < 0.05)) {
+                wilcox_test_wt_e[[i]] <- wilcox.test(x = as.numeric(errors_e[i,]),
+                                                     y = as.numeric(errors_e['random',]), alternative = "less")
+            } else {
+                wilcox_test_wt_e[[i]] <- t.test(x = as.numeric(errors_e[i,]),
+                                                y = as.numeric(errors_e['random',]), alternative = "less",
+                                                var.equal = vt$p.value > 0.05)
+            }
+
+            p_value_stars_e[i] <- stars.pval(wilcox_test_wt_e[[i]]$"p.value") #get stars
+            print(wilcox_test_wt_e[[i]])
+        }
+
+        # Define heights of annotations
+        bottom_x <- 1 #x value for bottom stars
+        bottom_y <- -0.1 #y value for bottom stars
+
+        rh <- results_e_long[!is.na(results_e_long$predictors_results),]
+        means <- aggregate(rh$predictors_results, list(rh$predictors), FUN = mean)
+
+        # Add to the plot: stars indicating significance
+
+        for (i in 1:20) {
+            predictors_plot <- predictors_plot + ggplot2::annotate("text", x = bottom_x + i - 1,
+                                                                   y = bottom_y, size = 8,
+                                                                   label = p_value_stars_e[[x_labs[i]]])
+        }
+
+        print(predictors_plot)
+        return(list(predictors_plot, mean(as.matrix(errors_e)), mean(as.matrix(results_e))))
+    } else {  # Studies with two questions
+        results_prime <- data.frame()
+        for (dv in dep_var) {
+            # Reorder predictors according to their significance
+            t_results <- data.frame(t(dv_results[[dv]][[1]]))
+            random_data <- t_results["random"]
+            t_results <- t_results[, !colnames(t_results) %in% c("random")]
+
+            colnames(t_results) <- predictors[!predictors %in% 'random']
+            results_long <- gather(t_results, key = predictors,
+                                   value = predictors_results, colnames(t_results))
+            new_order <- with(results_long, reorder(predictors, predictors_results, absmean))
+            results_long[paste0(dv, "_new_order")] <- new_order
+            if (dv != 'personal_desirability') {
+                results_prime <- results_long
+            }
+
+            if (dv == 'personal_desirability') {  # Match order
+                results_long <- results_long[order(match(results_long[, "personal_desirability_new_order"],
+                                                         results_prime[, paste0(dep_var[[1]], "_new_order")])),]
+
+                ### Combine results to use at plotting
+                predictors_results_ordered <- data.frame(predictors_order = results_prime[, paste0(dep_var[[1]], '_new_order')])
+                predictors_results_ordered[, paste0(dep_var[[1]], '_results')] <- results_prime$predictors_results
+                predictors_results_ordered[, paste0(dep_var[[2]], '_results')] <- results_long$predictors_results
+
+                predictors_results_long <- gather(predictors_results_ordered, key = question_type, value = results,
+                                                  paste0(dep_var[[1]], '_results'),
+                                                  paste0(dep_var[[2]], '_results'))
+            }
+
+            ### Print mean results and errors
+            means_h <- aggregate(results_long$predictors_results,
+                                 list(results_long$predictors), FUN = mean)
+            ordered_pred <- means_h[order(-means_h$x),]
+            cat("\n")
+            print(paste("*********", dv, "*********"))
+            for (i in ordered_pred$Group.1) {
+                print(sprintf("%-50s: %f *-*-*-*-* Mean RMSE:  %f", paste0('Mean predictor result, ', i),
+                              means_h[means_h$Group.1 == i, 'x'], mean(as.numeric(errors_e[i,]))))
+            }
+        }
+
+        ############################ Plotting ############################
+        predictors_plot <- CV_plotter(predictors_results_long, predictors_results_long$predictors_order,
+                                      predictors_results_long$results, predictors_results_long$question_type,
+                                      "Predictors", random_data)
+
+        x_labs <- ggplot_build(predictors_plot)$layout$panel_params[[1]]$
+            x$
+            get_labels()
+
+        # Wilcoxon or t-tests
+        pd_bottom_x <- 0.8 #x value for bottom stars
+        pd_bottom_y <- -0.08 #y value for bottom stars
+        satisfaction_bottom_x <- 1.2 #x value for bottom stars
+        satisfaction_bottom_y <- pd_bottom_y - 0.05 #y value for bottom stars
+
+        wilcox_test_wts <- hash()
+        p_value_stars <- hash()
+        for (dv in dep_var) {
+            print(paste0("------------------------------", dv, "------------------------------"))
+            for (label in x_labs) {
+                print(paste0(label, " --------------------------------------------------------------------------------------"))
+                vt <- var.test(as.numeric(dv_results[[dv]][[2]][label,]), as.numeric(dv_results[[dv]][[2]]['random',]))
+
+                # Shapiro test first -> if it's normal, use t-test, if not, use wilcox test
+                if (shapiro.test(as.numeric(dv_results[[dv]][[2]][label,]))$p.value < 0.05 ||
+                    shapiro.test(as.numeric(dv_results[[dv]][[2]]['random',]))$p.value < 0.05) {
+                    wilcox_test_wts[[dv]][[label]] <- wilcox.test(x = as.numeric(dv_results[[dv]][[2]][label,]),
+                                                             y = as.numeric(dv_results[[dv]][[2]]['random',]), alternative = "less")
+                } else {
+                    wilcox_test_wts[[dv]][[label]] <- t.test(x = as.numeric(dv_results[[dv]][[2]][label,]),
+                                                        y = as.numeric(dv_results[[dv]][[2]]['random',]), alternative = "less",
+                                                        var.equal = vt$p.value > 0.05)
+                }
+
+                p_value_stars[[dv]][[label]] <- stars.pval(wilcox_test_wts[[dv]][[label]]$"p.value") #get stars
+                print(wilcox_test_wts[[dv]][[label]])
+            }
+
+            for (i in 1:20) {
+                # Add stars to the plot
+                if (dv == 'personal_desirability') {
+                    predictors_plot <- predictors_plot + ggplot2::annotate("text", x = pd_bottom_x + i - 1,
+                                                                           y = pd_bottom_y, size = 8,
+                                                                           label = p_value_stars[[dv]][[x_labs[i]]])
+                } else {
+                    predictors_plot <- predictors_plot + ggplot2::annotate("text", x = satisfaction_bottom_x + i - 1,
+                                                                           y = satisfaction_bottom_y, size = 8,
+                                                                           label = p_value_stars[[dv]][[x_labs[i]]])
+                }
+            }
+        }
+
+
+        print(predictors_plot)
+        return(list(predictors_plot, mean(as.matrix(errors_e)), mean(as.matrix(results_e))))
+    }
+}
 
 # Return absolute value of the mean
 absmean <- function(x) {
@@ -14,8 +300,8 @@ absmean <- function(x) {
 # mean-se is 1.96 * std err (https://stulp.gmw.rug.nl/ggplotworkshop/comparinggroupstatistics.html)
 absse <- function(x) {
     result <- mean_se(na.omit(x), 1.96)
-    if(result[2] * result[3] < 0) {
-        if(mean(na.omit(x)) < 0) {
+    if (result[2] * result[3] < 0) {
+        if (mean(na.omit(x)) < 0) {
             return(mean_se(na.omit(x), 1.96) * -1)
         }
         return(result)
@@ -61,7 +347,7 @@ MakeWordClouds <- function(data, n_plots, plot_names) {
     super high-quality images necessary for producing small word clouds
     "
 
-    if(n_plots != 27) { # Directly experienced content
+    if (n_plots != 27) { # Directly experienced content
         print("TODO: Word Clouds for Directly Experienced Content!")
     }
 
@@ -323,7 +609,7 @@ ArrangeWordClouds <- function(data_plot_long) {
         annotation_custom(z, xmin = 6.5, xmax = 7.5, ymin = 4, ymax = 6) +
         annotation_custom(aa, xmin = 7.5, xmax = 8.5, ymin = 4, ymax = 6) +
 
-         annotation_custom(kk, xmin = -0.5, xmax = 0.5, ymin = 0, ymax = 2) +
+        annotation_custom(kk, xmin = -0.5, xmax = 0.5, ymin = 0, ymax = 2) +
         annotation_custom(ll, xmin = 0.5, xmax = 1.5, ymin = 0, ymax = 2) +
         annotation_custom(mm, xmin = 1.5, xmax = 2.5, ymin = 0, ymax = 2) +
         annotation_custom(nn, xmin = 2.5, xmax = 3.5, ymin = 0, ymax = 2) +

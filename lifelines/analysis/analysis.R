@@ -21,7 +21,7 @@ pacman::p_load('data.table', #rename data frame columns
                'sentimentr', #sentiment analysis
                'tm', #text mining 
                'wordcloud', #visualize wordclouds for topic models 
-               #'ldatuning', #find number of topics in topic models 
+                           #'ldatuning', #find number of topics in topic models
                'lme4', #run mixed effects linear regression
                'lmerTest', #used in conjunction with lme4; get p-values
                'robustHD', #for the standardize function
@@ -321,8 +321,6 @@ OrderSentimentDataframe <- function(data, n_plots, plot_names) {
 
     return(sentiment_df_sorted)
 }
-
-
 
 
 ##================================================================================================================
@@ -831,18 +829,8 @@ CrossValidationAnalysisWtPCs <- function(dat, dat_long, n_ss, n_plots) {
 }
 
 
-CrossValidationAnalysisWtPredictors <- function(dat, n_ss, n_plots) {
-    "
-    Measure the performance of each of our predictors by doing cross-validated regressions, holding out 
-    one participant for each cross-validation step. 
-    Input: data_wt_PCs, data_long, n_after_exclusions, n_plots 
-    Output: importance of individual predictors and its graph 
-    "
-
-    # dat <- data_wt_PCs 
-    # dat_long <- data_long
-    # n_ss <- n_after_exclusions 
-
+CrossValidationAnalysisWtPredictors <- function(dat, n_ss, n_plots, random = TRUE, fold_amount = 10,
+                                                n_reps = 1, load_results = FALSE) {
     predictors_old <- c("embeddings", "interestingness", "sentiment_score", "max", "min", "end_value", "number_peaks", "number_valleys", "number_extrema", "integral",
                         "d1_avg_unweight", "d1_avg_weight_prime", "d1_avg_weight_asc", "d1_avg_weight_des", "d1_avg_weight_end",
                         "d2_avg_unweight", "d2_avg_weight_prime", "d2_avg_weight_asc", "d2_avg_weight_des", "d2_avg_weight_end")
@@ -850,83 +838,170 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_ss, n_plots) {
                     "1st Derivative", "1st Derivative\nPrime", "1st Derivative\nAscending", "1st Derivative\nDescending", "1st Derivative\nEnd",
                     "2nd Derivative", "2nd Derivative\nPrime", "2nd Derivative\nAscending", "2nd Derivative\nDescending", "2nd Derivative\nEnd")
 
-    if (colnames(d_long)[43] != "Minimum") {
+    if (!('Integral' %in% colnames(dat))) {
         setnames(dat, old = predictors_old, new = predictors)
     }
 
-
-
-    set.seed(1)
+    predictors <- c('random', predictors)
     n_folds <- n_ss
+
     folds <- cut(seq(1, nrow(dat)), breaks = n_folds, labels = FALSE)
     folds2 <- rep(seq(1, n_plots), times = n_folds) #plot x subjects folds
     indeces <- seq(1, (n_plots * n_folds))
 
     #-------------------------------------------------------------------------------------------------------------------
-
     #1. Meaningfulness
     results_meaning <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
+    errors_meaning <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
     rownames(results_meaning) <- predictors
+    rownames(errors_meaning) <- predictors
 
-    for (i in 1:length(predictors)) {
-        for (j in 1:n_folds) {
-            ss_results <- c()
-            truths <- c()
+    results_hl_list_meaning <- list()
+    errors_hl_list_meaning <- list()
 
-            for (k in 1:n_plots) {
-                trainIndeces <- indeces[(folds == j) & (folds2 != k)]
-                testIndeces <- indeces[(folds == j) & (folds2 == k)]
-                fitpc <- lm(meaningfulness ~ get(predictors[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
-                ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
-                truths <- c(truths, dat$meaningfulness[testIndeces])
+    for (i in 1:n_reps) { # Replicate n_reps times to make sure our model is robust
+        print(paste("Running iteration ", i, "..."))
+        set.seed(i)
+        dat$random <- standardize(sample(100, size = nrow(dat), replace = TRUE))
+
+        results_meaning <- data.frame(matrix(NA, nrow = length(predictors), ncol = fold_amount))
+        errors_meaning <- data.frame(matrix(NA, nrow = length(predictors), ncol = fold_amount))
+        rownames(results_meaning) <- predictors
+        rownames(errors_meaning) <- predictors
+
+        folds <- createFolds(factor(dat[, 'subject']), k = fold_amount, list = TRUE)
+        all_indices <- createFolds(factor(dat[, 'subject']), k = 1, list = TRUE)[[1]]
+
+        for (i in 1:length(predictors)) {
+            cat("...")
+            for (j in 1:fold_amount) {  # Number of folds
+                ss_results <- c()
+                truths <- c()
+
+                trainIndeces <- c(setdiff(c(all_indices), c(folds[[j]])))
+
+                # Fit model on subset of train data
+                fitpc <- lm(meaningfulness ~ get(predictors[i]), data = dat, subset = trainIndeces)
+
+                for (k in 1:length(folds[[j]])) {  # Predict each participant in fold
+                    testIndeces <- folds[[j]][k]
+                    ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
+                    truths <- c(truths, dat[testIndeces, study])
+                }
+
+                errors_meaning[i, j] <- RMSE(truths, ss_results)
+                results_meaning[i, j] <- cor(truths, ss_results)
             }
-
-            results_meaning[i, j] <- cor(truths, ss_results)
-
         }
 
-        print(paste('meaningfulness: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_meaning[i,]), na.rm = TRUE)))
-        #print(paste('meaningfulness: median predictor result,', predictors[i], ': ', median(as.numeric(results_meaning[i,]), na.rm = TRUE)))
+        results_hl_list_meaning <- append(results_hl_list_meaning, list(results_meaning))
+        errors_hl_list_meaning <- append(errors_hl_list, list(errors_meaning))
     }
 
-    # Reorder predictors according to their significance 
-    t_results_meaning <- as.data.frame(t(results_meaning))
-    colnames(t_results_meaning) <- predictors
-    results_meaning_long <- gather(t_results_meaning, key = predictors, value = predictors_results, colnames(t_results_meaning)) #length(predictors)*n_folds
+    # Collect mean r's of each run
+    results_means_bw_runs_meaning <- data.frame("1" = results_hl_list_meaning[[1]])
+    for (i in 2:n_reps) {
+        col_name <- i
+        results_means_bw_runs_meaning <- cbind(results_means_bw_runs_meaning, data.frame(col_name = results_hl_list[[i]]))
+    }
 
-    rm <- results_meaning_long[!is.na(results_meaning_long$predictors_results),]
-    means_m <- aggregate(rm$predictors_results, list(rm$predictors), FUN=mean)
-    meaning_new_order <- with(results_meaning_long, reorder(predictors, predictors_results, absmean))
-    results_meaning_long["meaning_new_order"] <- meaning_new_order
+    names(results_means_bw_runs_meaning) <- (1:n_reps * fold_amount)
 
-    # Get_noise_ceiling function
-    summary_meaning <- Get_noise_ceiling(dat, "meaningfulness", n_ss)
+    # Collect mean RMSE's of each run
+    errors_means_bw_runs_meaning <- data.frame("1" = errors_hl_list_meaning[[1]])
+    for (i in 2:n_reps) {
+        col_name <- i
+        errors_means_bw_runs_meaning <- cbind(errors_means_bw_runs_meaning, data.frame(col_name = errors_hl_list[[i]]))
+    }
+
+    names(errors_means_bw_runs_meaning) <- (1:n_reps * fold_amount)
+
+    results_meaning <- results_means_bw_runs_meaning
+    errors_meaning <- errors_means_bw_runs_meaning
+
+    write.csv(errors_meaning, paste0('cv_results/cv_', fold_amount, '_', n_reps, '_errors_meaning.csv'))
+    write.csv(results_meaning, paste0('cv_results/cv_', fold_amount, '_', n_reps, '_results_meaning.csv'))
 
     #-------------------------------------------------------------------------------------------------------------------
 
     #2. Personal Desirability 
-    results_pd <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
-    rownames(results_pd) <- predictors
+    results_meaning <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
+    errors_meaning <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
+    rownames(results_meaning) <- predictors
+    rownames(errors_meaning) <- predictors
 
-    for (i in 1:length(predictors)) {
-        for (j in 1:n_folds) {
-            ss_results <- c()
-            truths <- c()
+    results_hl_list_meaning <- list()
+    errors_hl_list_meaning <- list()
 
-            for (k in 1:n_plots) {
-                trainIndeces <- indeces[(folds == j) & (folds2 != k)]
-                testIndeces <- indeces[(folds == j) & (folds2 == k)]
-                fitpc <- lm(personal_desirability ~ get(predictors[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
-                ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
-                truths <- c(truths, dat$personal_desirability[testIndeces])
+    for (i in 1:n_reps) { # Replicate n_reps times to make sure our model is robust
+        print(paste("Running iteration ", i, "..."))
+        set.seed(i)
+        dat$random <- standardize(sample(100, size = nrow(dat), replace = TRUE))
+
+        results_meaning <- data.frame(matrix(NA, nrow = length(predictors), ncol = fold_amount))
+        errors_meaning <- data.frame(matrix(NA, nrow = length(predictors), ncol = fold_amount))
+        rownames(results_meaning) <- predictors
+        rownames(errors_meaning) <- predictors
+
+        folds <- createFolds(factor(dat[, 'subject']), k = fold_amount, list = TRUE)
+        all_indices <- createFolds(factor(dat[, 'subject']), k = 1, list = TRUE)[[1]]
+
+        for (i in 1:length(predictors)) {
+            cat("...")
+            for (j in 1:fold_amount) {  # Number of folds
+                ss_results <- c()
+                truths <- c()
+
+                trainIndeces <- c(setdiff(c(all_indices), c(folds[[j]])))
+
+                # Fit model on subset of train data
+                fitpc <- lm(meaningfulness ~ get(predictors[i]), data = dat, subset = trainIndeces)
+
+                for (k in 1:length(folds[[j]])) {  # Predict each participant in fold
+                    testIndeces <- folds[[j]][k]
+                    ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
+                    truths <- c(truths, dat[testIndeces, study])
+                }
+
+                errors_meaning[i, j] <- RMSE(truths, ss_results)
+                results_meaning[i, j] <- cor(truths, ss_results)
             }
-
-            results_pd[i, j] <- cor(truths, ss_results)
         }
 
-        print(paste('personal desirability: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_pd[i,]), na.rm = TRUE)))
-        #print(paste('personal desirability: median predictor result,', predictors[i], ': ', median(as.numeric(results_pd[i,]), na.rm = TRUE)))
+        results_hl_list_meaning <- append(results_hl_list_meaning, list(results_meaning))
+        errors_hl_list_meaning <- append(errors_hl_list, list(errors_meaning))
     }
+
+    # Collect mean r's of each run
+    results_means_bw_runs_meaning <- data.frame("1" = results_hl_list_meaning[[1]])
+    for (i in 2:n_reps) {
+        col_name <- i
+        results_means_bw_runs_meaning <- cbind(results_means_bw_runs_meaning, data.frame(col_name = results_hl_list[[i]]))
+    }
+
+    names(results_means_bw_runs_meaning) <- (1:n_reps * fold_amount)
+
+    # Collect mean RMSE's of each run
+    errors_means_bw_runs_meaning <- data.frame("1" = errors_hl_list_meaning[[1]])
+    for (i in 2:n_reps) {
+        col_name <- i
+        errors_means_bw_runs_meaning <- cbind(errors_means_bw_runs_meaning, data.frame(col_name = errors_hl_list[[i]]))
+    }
+
+    names(errors_means_bw_runs_meaning) <- (1:n_reps * fold_amount)
+
+    results_meaning <- results_means_bw_runs_meaning
+    errors_meaning <- errors_means_bw_runs_meaning
+
+    write.csv(errors_meaning, paste0('cv_results/cv_', fold_amount, '_', n_reps, '_errors_meaning.csv'))
+    write.csv(results_meaning, paste0('cv_results/cv_', fold_amount, '_', n_reps, '_results_meaning.csv'))
+
+
+
+
+
+
+
 
     # Reorder predictors according to their significance 
     t_results_pd <- as.data.frame(t(results_pd))
@@ -937,8 +1012,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_ss, n_plots) {
     results_pd_long["pd_new_order"] <- pd_new_order
     results_pd_long <- results_pd_long[order(match(results_pd_long[, "pd_new_order"], results_meaning_long[, "meaning_new_order"])),] #order by meaningfulness scores
 
-    # Get_noise_ceiling function
-    summary_pd <- Get_noise_ceiling(dat, "personal_desirability", n_ss)
+
 
     #-------------------------------------------------------------------------------------------------------------------
 
@@ -951,7 +1025,7 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_ss, n_plots) {
     # Make boxplot from CV_plotter function
     predictors_results_long[predictors_results_long['question_type'] == 'meaning_results', 'question_type'] = "Meaningfulness"
     predictors_results_long[predictors_results_long['question_type'] == 'pd_results', 'question_type'] = "Personal Desirability"
-    predictors_plot <- CV_plotter(predictors_results_long, predictors_results_long$predictors_order, predictors_results_long$results, predictors_results_long$question_type, "Predictors", summary_meaning, summary_pd)
+    predictors_plot <- CV_plotter(predictors_results_long, predictors_results_long$predictors_order, predictors_results_long$results, predictors_results_long$question_type, "Predictors", summary_meaning)
 
     # Get the labels
     x_labs <- ggplot_build(predictors_plot)$layout$panel_params[[1]]$
@@ -968,8 +1042,8 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_ss, n_plots) {
     rm <- results_meaning_long[!is.na(results_meaning_long$predictors_results),]
     rpd <- results_pd_long[!is.na(results_pd_long$predictors_results),]
 
-    means_m <- aggregate(rm$predictors_results, list(rm$predictors), FUN=mean)
-    means_pd <- aggregate(rpd$predictors_results, list(rpd$predictors), FUN=mean)
+    means_m <- aggregate(rm$predictors_results, list(rm$predictors), FUN = mean)
+    means_pd <- aggregate(rpd$predictors_results, list(rpd$predictors), FUN = mean)
 
     # Loop through the predictors, comparing each to a null distribution
     # Meaningfulness: One-sided Wilcox test
@@ -999,13 +1073,13 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_ss, n_plots) {
     pd_bottom_y <- meaning_bottom_y - 0.05 #y value for bottom stars
 
     for (i in 1:20) {
-        if(means_m[means_m$Group.1 == x_labs[[i]], 'x'] < 0) {
+        if (means_m[means_m$Group.1 == x_labs[[i]], 'x'] < 0) {
             star_color_m <- "#a30000"
         } else {
             star_color_m <- "#26a300"
         }
 
-        if(means_pd[means_pd$Group.1 == x_labs[[i]], 'x'] < 0) {
+        if (means_pd[means_pd$Group.1 == x_labs[[i]], 'x'] < 0) {
             star_color_pd <- "#a30000"
         } else {
             star_color_pd <- "#26a300"
@@ -1013,62 +1087,13 @@ CrossValidationAnalysisWtPredictors <- function(dat, n_ss, n_plots) {
 
         predictors_plot <- predictors_plot + ggplot2::annotate("text", x = meaning_bottom_x + i - 1,
                                                                y = meaning_bottom_y, size = 8,
-                                                               label = p_value_stars_meaning[[i]], color=star_color_m)
+                                                               label = p_value_stars_meaning[[i]], color = star_color_m)
         predictors_plot <- predictors_plot + ggplot2::annotate("text", x = pd_bottom_x + i - 1,
                                                                y = pd_bottom_y, size = 8,
-                                                               label = p_value_stars_pd[[i]], color=star_color_pd)
+                                                               label = p_value_stars_pd[[i]], color = star_color_pd)
     }
 
     print(predictors_plot)
-    return(predictors_plot)
-    #-------------------------------------------------------------------------------------------------------------------
-
-    # 4. Parallel Mediation 
-
-    # Check how well the predictors perform against one another via parallel mediation analysis 
-    # process(data = dat, y = "meaningfulness", x = "plot_names", m = predictors, model = 4, 
-    #         effsize = 1, total = 1, stand = 1, contrast = 1, boot = 10000 , modelbt = 1, seed = 123) 
-    # ERROR: No more than 10 mediators are allowed in a PROCESS command. 
-    # Try again with only the significant predictors or split in two.  
-
-    # i. Meaningfulness 
-
-    # Parallel mediation analysis with significant predictors. Takes about 5 minutes. 
-    meaning_sig_pred <- c() #define list for significant predictors 
-    for (i in x_labs) { #loop through the predictors, ordered from least to most accurate in predicting participant outcome
-        if (p_value_stars_meaning[[i]] >= "*") {
-            meaning_sig_pred <- append(meaning_sig_pred, names(p_value_stars_meaning[i]))
-        }
-    }
-    meaning_pred_process <- process(data = dat, y = "meaningfulness", x = "plot_names", m = meaning_sig_pred, model = 4,
-                                    effsize = 1, total = 1, stand = 1, contrast = 1, boot = 10000, modelbt = 1, seed = 123)
-
-    # Parallel mediation analysis with all predictors (split in two because process() can only take up to 10 mediators at a time)
-    # meaning_pred_process_1 <- process(data = dat, y = "meaningfulness", x = "plot_names", m = x_labs[1:10], model = 4, 
-    #                                   effsize = 1, total = 1, stand = 1, contrast = 1, boot = 10000 , modelbt = 1, seed = 123) 
-    # meaning_pred_process_2 <- process(data = dat, y = "meaningfulness", x = "plot_names", m = x_labs[11:20], model = 4, 
-    #                                   effsize = 1, total = 1, stand = 1, contrast = 1, boot = 10000 , modelbt = 1, seed = 123) 
-
-    # ii. Personal Desirability 
-
-    # Parallel mediation analysis with significant predictors. 
-    pd_sig_pred <- c() #define list for significant predictors 
-    for (i in x_labs) { #loop through the predictors, ordered from least to most accurate in predicting participant outcome
-        if (p_value_stars_pd[[i]] >= "*") {
-            pd_sig_pred <- append(pd_sig_pred, names(p_value_stars_pd[i]))
-        }
-    }
-    pd_pred_process <- process(data = dat, y = "personal_desirability", x = "plot_names", m = pd_sig_pred, model = 4,
-                               effsize = 1, total = 1, stand = 1, contrast = 1, boot = 10000, modelbt = 1, seed = 123)
-
-    # Parallel mediation analysis with all predictors (split in two because process() can only take up to 10 mediators at a time)
-    # pd_pred_process_1 <- process(data = dat, y = "personal_desirability", x = "plot_names", m = x_labs[1:10], model = 4, 
-    #                                   effsize = 1, total = 1, stand = 1, contrast = 1, boot = 10000 , modelbt = 1, seed = 123) 
-    # pd_pred_process_2 <- process(data = dat, y = "personal_desirability", x = "plot_names", m = x_labs[11:20], model = 4, 
-    #                                   effsize = 1, total = 1, stand = 1, contrast = 1, boot = 10000 , modelbt = 1, seed = 123) 
-
-    #-------------------------------------------------------------------------------------------------------------------
-
     return(predictors_plot)
 }
 
@@ -1304,7 +1329,7 @@ data_plot_long <- ProcessForPlots(data_long, n_plots, plot_names) #num_rows = nu
 dim(data_plot_long)
 
 calculate_sentiment <- FALSE
-if(calculate_sentiment) {
+if (calculate_sentiment) {
     data_long[, "sentiment_score"] <- sapply(data_long["word"], CalculateSentiment, model_type = 'ai')
     write.csv(data.frame(sentiment_score = data_long[, "sentiment_score"]), "./data/sentiment_scores.csv", row.names = FALSE)
 } else {

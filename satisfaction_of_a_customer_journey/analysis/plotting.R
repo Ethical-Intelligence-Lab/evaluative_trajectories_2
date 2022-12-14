@@ -137,7 +137,7 @@ MakeSentimentBarPlot <- function(data, n_plots, plot_names, title = "Satisfactio
     return(sentiment_bar_plot)
 }
 
-CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels) {
+CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, random_data) {
     "
     What this function does: creates a grouped box plot of the cross-validated prediction results
     Inputs: results_df, x_order, results_order, ques_type, x_labels
@@ -145,7 +145,7 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels) 
     "
 
     results_df[results_df['question_type'] == 'satisfaction_results', 'question_type'] = "Satisfaction"
-    results_df[results_df['question_type'] == 'pd_results', 'question_type'] = "Personal Desirability"
+    results_df[results_df['question_type'] == 'personal_desirability_results', 'question_type'] = "Personal Desirability"
 
     grouped_box_plot <- ggplot(data = results_df, aes(x = x_order, y = results_order, fill = question_type, color = question_type)) +
         scale_colour_manual(values = c("#3c7ea3", "#800000")) +
@@ -162,6 +162,8 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels) 
             labels = c("Satisfaction", "Personal Desirability"),
             values = c("#4b9ecc", "#006b4e"),
             guide = guide_legend(title.position = "top")) +
+        geom_hline(yintercept = absmean(random_data$random)) +
+        ggplot2::annotate("rect", xmin = -Inf, xmax = Inf, ymin = absse(random_data$random)$ymin, ymax = absse(random_data$random)$ymax, fill = "black", alpha = .2, color = NA) +
         theme_bw() +
         if (x_labels == "Predictors") {
             theme(element_blank(),
