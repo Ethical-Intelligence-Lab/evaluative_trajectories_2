@@ -98,7 +98,7 @@ MakeGroupedBarPlotImages <- function(LifelinesPlot, plot_names) {
 }
 
 
-CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels) {
+CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, random_data) {
     "
     What this function does: creates a box plot of the cross-validated prediction results
     Inputs: results_df, x_order, results_order, ques_type, x_labels, sum_hiring_likelihood
@@ -119,6 +119,8 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels) 
             labels = c("Hiring Likelihood"),
             values = c("#3c7ea3"),
             guide = guide_legend(title.position = "top")) +
+        geom_hline(yintercept = absmean(random_data$random)) +
+        ggplot2::annotate("rect", xmin = -Inf, xmax = Inf, ymin = absse(random_data$random)$ymin, ymax = absse(random_data$random)$ymax, fill = "black", alpha = .2, color = NA) +
         theme_bw() +
     if (x_labels == "Predictors") {
         theme(element_blank(),

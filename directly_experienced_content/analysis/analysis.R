@@ -620,12 +620,9 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
         # Create fold_amount random partitions with equal class distribution
         set.seed(1)
         folds <- createFolds(factor(dat$picked_movie), k = fold_amount, list = TRUE)
-
-
         all_indices <- createFolds(factor(dat$picked_movie), k = 1, list = TRUE)[[1]]
 
         # Train on all data instead of single fold with size n_ss / fold_amount
-
         results_raffle <- data.frame(matrix(NA, nrow = length(predictors), ncol = fold_amount))
         rownames(results_raffle) <- predictors
 
@@ -634,7 +631,7 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
                 ss_results <- c()
                 truths <- c()
 
-                trainIndeces <- c(setdiff(c(all_indices), c(folds[[j]])))
+                trainIndeces <- c(setdiff(c(all_indices), c(folds[[j]])))  # Select all data except the fold
                 fitpc <- glm(picked_movie ~ get(predictors[i]), data = dat, subset = trainIndeces, family = binomial, weights = fit_wts) #fit model on subset of train data
 
                 for (k in 1:length(folds[[j]])) {  # Predict each participant in fold

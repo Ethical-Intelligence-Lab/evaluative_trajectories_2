@@ -35,7 +35,8 @@ pacman::p_load('ggplot2', #plot stuff
                'tidyr', #for gather(), which takes multiple columns and collapses them into key-value pairs
                'tidyverse', #used in conjunction with tidyr; contains dplyr, used for select(); load last because of conflict!
                'slam', #utility functions for sparse matrices 
-               'broom' #install separately if does not work 
+               'broom', #install separately if does not work
+               'filesstrings'
 )
 
 # Call in the Lifelines_Generate_Plots.R script from the Lifelines folder for plot images
@@ -358,12 +359,9 @@ MakePCAFunction <- function(score_features_df) {
 
 }
 
-CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
+CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots, random=TRUE, fold_amount = 10, n_reps = 1, load_results = FALSE) {
     print("Running cross validation...")
-
-    # dat <- data_wt_PCs 
-    # dat_long <- data_long
-    # n_ss <- n_after_exclusions 
+    dir.create('cv_results', showWarnings = FALSE)
 
     predictors_old <- c("embeddings", "interestingness", "sentiment_score", "max", "min", "end_value", "number_peaks", "number_valleys", "number_extrema", "integral",
                         "d1_avg_unweight", "d1_avg_weight_prime", "d1_avg_weight_asc", "d1_avg_weight_des", "d1_avg_weight_end",
@@ -371,10 +369,15 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
     predictors <- c("Embeddings", "Interestingness", "Sentiment Score", "Maximum", "Minimum", "End Value", "Number of\nPeaks", "Number of\nValleys", "Number of\nExtrema", "Integral",
                     "1st Derivative", "1st Derivative\nPrime", "1st Derivative\nAscending", "1st Derivative\nDescending", "1st Derivative\nEnd",
                     "2nd Derivative", "2nd Derivative\nPrime", "2nd Derivative\nAscending", "2nd Derivative\nDescending", "2nd Derivative\nEnd")
-    setnames(dat, old = predictors_old, new = predictors)
 
-    set.seed(1)
+    if(!('Integral' %in% colnames(dat))) {
+        setnames(dat, old = predictors_old, new = predictors)
+    }
+
+
+    predictors <- c('random', predictors)
     n_folds <- n_ss
+
     folds <- cut(seq(1, nrow(dat)), breaks = n_folds, labels = FALSE)
     folds2 <- rep(seq(1, n_plots), times = n_folds) #plot x subjects folds
     indeces <- seq(1, (n_plots * n_folds))
@@ -383,46 +386,112 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
 
     #1. Hiring Likelihood
     results_hiring_likelihood <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
+    errors_hiring_likelihood <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
     rownames(results_hiring_likelihood) <- predictors
+    rownames(errors_hiring_likelihood) <- predictors
 
-    for (i in 1:length(predictors)) {
-        for (j in 1:n_folds) {
-            ss_results <- c()
-            truths <- c()
+    if(load_results) {
+        results_hiring_likelihood <- read.csv(paste0('cv_results/cv_', fold_amount, '_', n_reps, '_results.csv'), row.names = 1)
+        errors_hiring_likelihood <- read.csv(paste0('cv_results/cv_', fold_amount, '_', n_reps, '_errors.csv'), row.names = 1)
+    } else {
+        if(random) {
+        results_hl_list <- list()
+        errors_hl_list <- list()
 
-            for (k in 1:n_plots) {
-                trainIndeces <- indeces[(folds == j) & (folds2 != k)]
-                testIndeces <- indeces[(folds == j) & (folds2 == k)]
+        for(i in 1:n_reps) { # Replicate n_reps times to make sure our model is robust
+            print(paste("Running iteration ", i, "..."))
+            set.seed(i)
+            dat$random <- standardize(sample(100, size = nrow(dat), replace = TRUE))
 
-                if (predictors[i] == "Sentiment Score") { # Exclude train indexes that is not a word
-                    trainIndeces <- subset(trainIndeces, dat$is_word[trainIndeces])
-                }
+            results_hiring_likelihood <- data.frame(matrix(NA, nrow = length(predictors), ncol = fold_amount))
+            errors_hiring_likelihood <- data.frame(matrix(NA, nrow = length(predictors), ncol = fold_amount))
+            rownames(results_hiring_likelihood) <- predictors
+            rownames(errors_hiring_likelihood) <- predictors
 
-                if (predictors[i] == "Sentiment Score" && !dat$is_word[testIndeces]) { # Do not fit if not a word
-                    next
-                } else {
+            folds <- createFolds(factor(dat$hiring_likelihood), k = fold_amount, list = TRUE)
+            all_indices <- createFolds(factor(dat$hiring_likelihood), k = 1, list = TRUE)[[1]]
+
+            for (i in 1:length(predictors)) {
+                cat("...")
+                for (j in 1:fold_amount) {  # Number of folds
+                    ss_results <- c()
+                    truths <- c()
+
+                    trainIndeces <- c(setdiff(c(all_indices), c(folds[[j]])))
                     fitpc <- lm(hiring_likelihood ~ get(predictors[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
-                    ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
-                    truths <- c(truths, dat$hiring_likelihood[testIndeces])
+
+                    for (k in 1:length(folds[[j]])) {  # Predict each participant in fold
+                        testIndeces <- folds[[j]][k]
+                        ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
+                        truths <- c(truths, dat$hiring_likelihood[testIndeces])
+                    }
+
+                    errors_hiring_likelihood[i, j] <- RMSE(truths, ss_results)
+                    results_hiring_likelihood[i, j] <- cor(truths, ss_results)
                 }
+
+                #print(paste('random folds: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_hiring_likelihood[i,]), na.rm = TRUE)))
             }
 
-            #ct <- cor.test(truths, ss_results)
-            #if(ct$p.value < 0.05) {
-            results_hiring_likelihood[i, j] <- cor(truths, ss_results)
-            #}
+            results_hl_list <- append(results_hl_list, list(results_hiring_likelihood))
+            errors_hl_list <- append(errors_hl_list, list(errors_hiring_likelihood))
         }
 
-        print(paste('hiring likelihood: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_hiring_likelihood[i,]), na.rm = TRUE)))
+        results_hiring_likelihood <- Reduce('+', results_hl_list) / n_reps
+        errors_hiring_likelihood <- Reduce('+', errors_hl_list) / n_reps
+
+        write.csv(errors_hiring_likelihood, paste0('cv_results/cv_', fold_amount, '_', n_reps, '_errors.csv'))
+        write.csv(results_hiring_likelihood, paste0('cv_results/cv_', fold_amount, '_', n_reps, '_results.csv'))
+        } else {
+            for (i in 1:length(predictors)) {
+                for (j in 1:n_folds) {  # Each subject
+                    ss_results <- c()
+                    truths <- c()
+
+                    for (k in 1:n_plots) { # Each plot
+                        trainIndeces <- indeces[(folds == j) & (folds2 != k)]
+                        testIndeces <- indeces[(folds == j) & (folds2 == k)]
+
+                        if (predictors[i] == "Sentiment Score") { # Exclude train indexes that is not a word
+                            trainIndeces <- subset(trainIndeces, dat$is_word[trainIndeces])
+                        }
+
+                        if (predictors[i] == "Sentiment Score" && !dat$is_word[testIndeces]) { # Do not fit if not a word
+                            next
+                        } else {
+                            fitpc <- lm(hiring_likelihood ~ get(predictors[i]), data = dat, subset = trainIndeces) #fit model on subset of train data
+                            ss_results <- c(ss_results, predict(fitpc, dat)[testIndeces])
+                            truths <- c(truths, dat$hiring_likelihood[testIndeces])
+                        }
+                    }
+
+                    results_hiring_likelihood[i, j] <- cor(truths, ss_results)
+                    errors_hiring_likelihood[i, j] <- RMSE(truths, ss_results)
+                }
+
+                print(paste('hiring likelihood: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_hiring_likelihood[i,]), na.rm = TRUE)))
+            }
+        }
     }
+
+
 
     # Reorder predictors according to their significance 
     t_results_hiring_likelihood <- as.data.frame(t(results_hiring_likelihood))
+    random_data <- t_results_hiring_likelihood["random"]
+    t_results_hiring_likelihood <- t_results_hiring_likelihood[,!names(t_results_hiring_likelihood) %in% c("random")]
+    predictors <- predictors[!predictors %in% 'random']
     colnames(t_results_hiring_likelihood) <- predictors
     results_hiring_likelihood_long <- gather(t_results_hiring_likelihood, key = predictors, value = predictors_results, colnames(t_results_hiring_likelihood)) #length(predictors)*n_folds
 
     hiring_likelihood_new_order <- with(results_hiring_likelihood_long, reorder(predictors, predictors_results, absmean))
     results_hiring_likelihood_long["hiring_likelihood_new_order"] <- hiring_likelihood_new_order
+
+    means_h <- aggregate(results_hiring_likelihood_long$predictors_results, list(results_hiring_likelihood_long$predictors), FUN=mean)
+    ordered_pred <- means_h[order(-means_h$x), ]
+    for(i in ordered_pred$Group.1) {
+        print(sprintf("%-50s: %f *-*-*-*-* Mean RMSE:  %f", paste0('Mean predictor result, ', i), means_h[means_h$Group.1 == i, 'x'], mean(as.numeric(errors_hiring_likelihood[i,]))))
+    }
 
     #-------------------------------------------------------------------------------------------------------------------
 
@@ -432,7 +501,8 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
     predictors_results_long <- gather(predictors_results_ordered, key = question_type, value = results, hiring_likelihood_results)
 
     # Make boxplot from CV_plotter function
-    predictors_plot <- CV_plotter(predictors_results_long, predictors_results_long$predictors_order, predictors_results_long$results, predictors_results_long$question_type, "Predictors")
+    predictors_plot <- CV_plotter(predictors_results_long, predictors_results_long$predictors_order,
+                                  predictors_results_long$results, predictors_results_long$question_type, "Predictors", random_data)
 
     # Get the labels
     x_labs <- ggplot_build(predictors_plot)$layout$panel_params[[1]]$
@@ -449,8 +519,18 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
     print("Hiring Likelihood: --------------------------------------------------------------------------------------")
     for (i in x_labs) {
         print(paste0(i, " --------------------------------------------------------------------------------------"))
-        wilcox_test_wt_hiring_likelihood[[i]] <- wilcox.test(t_results_hiring_likelihood[, i], y = NULL, #alternative = "greater",
-                                                             conf.int = TRUE, data = t_results_hiring_likelihood)
+        vt <- var.test(as.numeric(errors_hiring_likelihood[i,]), as.numeric(errors_hiring_likelihood['random',]))
+
+        # Shapiro test first -> if it's normal, use t-test, if not, use wilcox test
+        if((shapiro.test(as.numeric(errors_hiring_likelihood[i,]))$p.value < 0.05) ||
+            (shapiro.test(as.numeric(errors_hiring_likelihood['random',]))$p.value < 0.05)) {
+            wilcox_test_wt_hiring_likelihood[[i]] <- wilcox.test(x=as.numeric(errors_hiring_likelihood[i,]),
+                                                                 y = as.numeric(errors_hiring_likelihood['random',]), alternative = "less")
+        } else {
+            wilcox_test_wt_hiring_likelihood[[i]] <- t.test(x=as.numeric(errors_hiring_likelihood[i,]),
+                                                            y = as.numeric(errors_hiring_likelihood['random',]), alternative = "less", var.equal = vt$p.value > 0.05)
+        }
+
         p_value_stars_hiring_likelihood[i] <- stars.pval(wilcox_test_wt_hiring_likelihood[[i]]$"p.value") #get stars
         print(wilcox_test_wt_hiring_likelihood[[i]])
     }
@@ -472,13 +552,13 @@ CrossValidationAnalysisWtPredictors <- function(dat, dat_long, n_ss, n_plots) {
         }
         predictors_plot <- predictors_plot + ggplot2::annotate("text", x = hiring_likelihood_bottom_x + i - 1,
                                                                y = hiring_likelihood_bottom_y, size = 8,
-                                                               label = p_value_stars_hiring_likelihood[[i]],
+                                                               label = p_value_stars_hiring_likelihood[[x_labs[i]]],
                                                                color = star_color)
     }
     #-------------------------------------------------------------------------------------------------------------------
 
     print(predictors_plot)
-    return(predictors_plot)
+    return(list(predictors_plot, mean(as.matrix(errors_hiring_likelihood)), mean(as.matrix(results_hiring_likelihood))))
 }
 
 ##======##
@@ -612,26 +692,14 @@ score_features_df <- CreateDataFeaturesDF(d_long, dat, features, n_after_exclusi
 
 ##### (3.3) RUN PREDICTIVE ANALYSES
 
-# Get performance of each predictor and PCA-reduced feature using cross-validation.
-if (FALSE) {
-    # Run regularized regression on all predictors
-    ridge_regression_wt_predictors <- AnalyzeRidgeRegression(score_features_df, metric = 'hiring_likelihood')
-
-    # Run mixed-effects regression on PCA-reduced features
-    data_wt_PCs <- MakePCAFunction(score_features_df)
-
-
-    cross_validation_analysis_wt_pcs <- CrossValidationAnalysisWtPCs(data_wt_PCs, d_long, n_after_exclusions, n_plots)
-    pdf(file = "./plots/analysis_plots/predictions_wt_pcs_cv_plot.pdf", width = 15, height = 9)
-    cross_validation_analysis_wt_pcs
-    dev.off()
-}
-
-cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(score_features_df, d_long, n_after_exclusions, n_plots)
-pdf(file = "./plots/analysis_plots/predictions_wt_predictors_cv_plot.pdf", width = 15, height = 9)
-cross_validation_analysis_wt_predictors
+error_hi <- c()
+avg_rs <- c()
+fold_amount <- 10
+cv_result <- CrossValidationAnalysisWtPredictors(score_features_df, d_long, n_after_exclusions, n_plots, random=TRUE, fold_amount = fold_amount)
+pdf(file = paste0("./plots/analysis_plots/predictions_wt_predictors_cv_plot_", fold_amount, ".pdf"), width = 15, height = 9)
+plot(cv_result[[1]])
 dev.off()
-# same note above
+
 
 print("**** For correlations across studies, please run 'between_experiment_analyses/analysis.R' ****")
 ## =========================================== (4) Move Files ====================================================
