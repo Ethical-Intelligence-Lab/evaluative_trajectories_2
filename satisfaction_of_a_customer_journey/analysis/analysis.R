@@ -35,7 +35,8 @@ pacman::p_load('data.table', #rename data frame columns
                'tidyr', #for gather(), which takes multiple columns and collapses them into key-value pairs
                'tidyverse', #used in conjunction with tidyr; contains dplyr, used for select(); load last because of conflict!
                'slam', #utility functions for sparse matrices
-               'broom' #install separately if does not work
+               'broom', #install separately if does not work
+               'hash'
 )
 
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #set working directory to current directory

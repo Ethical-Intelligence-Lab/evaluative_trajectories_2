@@ -20,8 +20,7 @@ pacman::p_load('data.table', #rename data frame columns
                'gridExtra', #make grids
                'sentimentr', #sentiment analysis
                'tm', #text mining 
-               'wordcloud', #visualize wordclouds for topic models 
-                           #'ldatuning', #find number of topics in topic models
+               'wordcloud', #visualize wordclouds for topic models
                'lme4', #run mixed effects linear regression
                'lmerTest', #used in conjunction with lme4; get p-values
                'robustHD', #for the standardize function
@@ -35,7 +34,8 @@ pacman::p_load('data.table', #rename data frame columns
                'tidyr', #for gather(), which takes multiple columns and collapses them into key-value pairs
                'tidyverse', #used in conjunction with tidyr; contains dplyr, used for select(); load last because of conflict!
                'slam', #utility functions for sparse matrices 
-               'broom' #install separately if does not work
+               'broom', #install separately if does not work
+               'hash'
 )
 
 source('../../tools/common_functions.R')
