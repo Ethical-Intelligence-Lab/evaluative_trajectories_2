@@ -479,7 +479,7 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
     results_df[results_df['question_type'] == 'personal_desirability_results', 'question_type'] = "Personal Desirability"
 
     grouped_box_plot <- ggplot(data = results_df, aes(x = x_order, y = results_order, fill = question_type, color = question_type)) +
-        scale_colour_manual(values = c("#3c7ea3", "#800000")) +
+        scale_colour_manual(values = c("#800000", "#3c7ea3")) +
         scale_x_discrete() +
         stat_summary(fun = absmean, geom = "point", shape = 20, size = 5, aes(group = question_type, color=question_type), position = position_dodge(.75)) +
         stat_summary(fun.data = absse, geom = "errorbar", size=1.2, aes(group = question_type, width=0.5, color=question_type), position = position_dodge(.75)) +
@@ -489,7 +489,9 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
         scale_y_continuous(breaks = round(seq(-1, 1, by = 0.2), 1)) +
         scale_fill_manual(
             name = "question_type",
-            values = c("#4b9ecc", "#006b4e"),
+            breaks = c("meaningfulness_results", "personal_desirability_results"),
+            labels = c("Meaningfulness", "Personal Desirability"),
+            values = c("#006b4e", "#4b9ecc"),
             guide = guide_legend(title.position = "top")) +
         geom_hline(yintercept = absmean(random_data$random)) +
         ggplot2::annotate("rect", xmin = -Inf, xmax = Inf, ymin = absse(random_data$random)$ymin,
