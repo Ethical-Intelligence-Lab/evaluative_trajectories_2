@@ -243,10 +243,10 @@ CrossValidationAnalysis <- function(dat, n_ss, n_plots, fold_amount = 10,
             get_labels()
 
         # Wilcoxon or t-tests
-        pd_bottom_x <- 0.8 #x value for bottom stars
-        pd_bottom_y <- -0.08 #y value for bottom stars
-        satisfaction_bottom_x <- 1.2 #x value for bottom stars
-        satisfaction_bottom_y <- pd_bottom_y - 0.05 #y value for bottom stars
+        satisfaction_bottom_x <- 0.8 #x value for bottom stars
+        satisfaction_bottom_y <- -0.08 #y value for bottom stars
+        pd_bottom_x <- 1.2 #x value for bottom stars
+        pd_bottom_y <- satisfaction_bottom_y - 0.05 #y value for bottom stars
 
         wilcox_test_wts <- hash()
         p_value_stars <- hash()

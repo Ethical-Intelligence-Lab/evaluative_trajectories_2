@@ -44,167 +44,167 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #set working directo
 source('../../tools/common_functions.R')
 source('./plotting.R')
 source('../../tools/Lifelines_Generate_Plots.R')
-
+dir.create("plots/analysis_plots", recursive=TRUE)
 
 ##================================================================================================================
 ##FUNCTIONS FOR PREPROCESSING##
 ##================================================================================================================
 
 PerformExclusions <- function(data) {
-    "
+  "
     Excludes participants if they do not finish the survey, finished it too quickly (under 120 seconds), 
     gave duplicate answers, or failed important attention and comprehension checks.
     Input: data   #num_rows = num_ss
     Output: data after it has been 'cleaned'
     "
-
-    # Exclude those who did not finish the survey
-    data <- subset(data, (data$Finished == TRUE))
-    n_before_exclusions <- dim(data)[1] #295
-
-    # Exclude those who finished it in less than 2 minutes
-    data <- subset(data, (data$Duration..in.seconds. > 120))
-
-    # Perform first round of attention checks
-    data$attention_check <- ifelse(((data$att_check_1 == 'Paul') &
-        (data$att_check_2 == 'Purple')), 0, 1)
-
-    # Perform second round of attention checks, if they failed the first
-    data$attention_check <- ifelse(((is.na(data$att_check_3_1 == TRUE)) |
-        ((data$att_check_4 == 0) &
-            (data$att_check_3_3 > data$att_check_3_2) &
-            (data$att_check_3_2 > data$att_check_3_1) &
-            (data$att_check_3_2 %% 10 == 0) &
-            (data$att_check_3_1 == 15))), 0, 1)
-
-    print(paste0("Number before exclusions (those who both finished the survey and passed all attention checks): ", dim(data)[1]))
-
-    # Perform comprehension checks
-    data$attention_check2 <- ifelse((data$comp_check_1 == 80 &
-        data$comp_check_2 == 0 &
-        data$comp_check_3 == 'I was highly unstressed by the candidate early in their interview, then highly stressed by the candidate later in their interview.'
-                                    ), 0, 1)
-
-    #Perform second round of comprehension checks, if they failed the first
-    data$comp_check <- ifelse(((is.na(data$comp_check_4 == TRUE))
-        &
-        (data$comp_check_7 == 'Perceived Performance') &
-        (data$comp_check_8 == 'Time') &
-        (data$comp_check_9 == 'Indicate how likely it was that you would hire the candidate')
-        |
-        ((data$comp_check_4 == 0) &
-            (data$comp_check_5 == 80)
-            &
-            (data$comp_check_6 == 'I was highly stressed by the candidate early in their interview, then highly unstressed by the candidate later in their interview.') &
-            (data$comp_check_7 == 'Perceived Performance') &
-            (data$comp_check_8 == 'Time') &
-            (data$comp_check_9 == 'Indicate how likely it was that you would hire the candidate')
-        )), 0, 1)
-
-
-    # Exclude those who failed either attention or comprehension checks
-    data <- subset(data, (data$attention_check == 0) & (data$comp_check == 0))
-
-    # Number of subjects after exclusions
-    n_after_exclusions <- dim(data)[1] #140
-    print(paste0("Number of participants excluded: ", n_before_exclusions - dim(data)[1]))
-
-    data$n_after_exclusions <- n_after_exclusions
-
-    print('Mean age:')
-    print(mean(as.numeric(data$age), trim = 0, na.rm = TRUE)) ## mean age
-
-    print('% Female:')
-    print(table(data$gender)[1] / sum(table(data$gender))) ## percentage of females
-
-
-    return(data)
+  
+  # Exclude those who did not finish the survey
+  data <- subset(data, (data$Finished == TRUE))
+  n_before_exclusions <- dim(data)[1] #295
+  
+  # Exclude those who finished it in less than 2 minutes
+  data <- subset(data, (data$Duration..in.seconds. > 120))
+  
+  # Perform first round of attention checks
+  data$attention_check <- ifelse(((data$att_check_1 == 'Paul') &
+                                    (data$att_check_2 == 'Purple')), 0, 1)
+  
+  # Perform second round of attention checks, if they failed the first
+  data$attention_check <- ifelse(((is.na(data$att_check_3_1 == TRUE)) |
+                                    ((data$att_check_4 == 0) &
+                                       (data$att_check_3_3 > data$att_check_3_2) &
+                                       (data$att_check_3_2 > data$att_check_3_1) &
+                                       (data$att_check_3_2 %% 10 == 0) &
+                                       (data$att_check_3_1 == 15))), 0, 1)
+  
+  print(paste0("Number before exclusions (those who both finished the survey and passed all attention checks): ", dim(data)[1]))
+  
+  # Perform comprehension checks
+  data$attention_check2 <- ifelse((data$comp_check_1 == 80 &
+                                     data$comp_check_2 == 0 &
+                                     data$comp_check_3 == 'I was highly unstressed by the candidate early in their interview, then highly stressed by the candidate later in their interview.'
+  ), 0, 1)
+  
+  #Perform second round of comprehension checks, if they failed the first
+  data$comp_check <- ifelse(((is.na(data$comp_check_4 == TRUE))
+                             &
+                               (data$comp_check_7 == 'Perceived Performance') &
+                               (data$comp_check_8 == 'Time') &
+                               (data$comp_check_9 == 'Indicate how likely it was that you would hire the candidate')
+                             |
+                               ((data$comp_check_4 == 0) &
+                                  (data$comp_check_5 == 80)
+                                &
+                                  (data$comp_check_6 == 'I was highly stressed by the candidate early in their interview, then highly unstressed by the candidate later in their interview.') &
+                                  (data$comp_check_7 == 'Perceived Performance') &
+                                  (data$comp_check_8 == 'Time') &
+                                  (data$comp_check_9 == 'Indicate how likely it was that you would hire the candidate')
+                               )), 0, 1)
+  
+  
+  # Exclude those who failed either attention or comprehension checks
+  data <- subset(data, (data$attention_check == 0) & (data$comp_check == 0))
+  
+  # Number of subjects after exclusions
+  n_after_exclusions <- dim(data)[1] #140
+  print(paste0("Number of participants excluded: ", n_before_exclusions - dim(data)[1]))
+  
+  data$n_after_exclusions <- n_after_exclusions
+  
+  print('Mean age:')
+  print(mean(as.numeric(data$age), trim = 0, na.rm = TRUE)) ## mean age
+  
+  print('% Female:')
+  print(table(data$gender)[1] / sum(table(data$gender))) ## percentage of females
+  
+  
+  return(data)
 }
 
 
 Preprocess <- function(data, n_plts, plt_names) {
-    " 
+  " 
     Since each plot is shown within-subjects, Qualtrics spits out data in wide format
     Let's convert it to long format, so that we have a row for every plot type
     Input: data_clean (dataframe with number of rows = n_subjects), n_plots, plot_names 
     Output: dataframe with number of rows = n_subjects*n_plot_types (=27)
     "
-
-    # data <- data_clean 
-    # n_plts <- n_plots 
-    # plt_names <- plot_names 
-
-    # Define new data frame that we'll extract preprocessed data into
-
-    # Define row and column names
-    data_subset <- which(colnames(data) == "lr_preference_1"):which(colnames(data) == "lrsfer_word_gen_1") #35:88
-    last_cols <- (which(colnames(data) == "lrsfer_word_gen_1") + 1):ncol(data) #89:105
-
-    column_names <- c('plot_names', 'hiring_likelihood', 'word_gen', 'subject')
-
-    df <- array(0, dim = c((nrow(data) * n_plts), length(column_names)))
-    df <- as.data.frame(df, stringsAsFactors = FALSE)
-    colnames(df) <- column_names
-
-    # Turning wide format into long format, then inserting the answers into the 'df' dataframe
-    final_data <- as.data.frame(t(data[data_subset])) #switch rows and columns in preparation for 'gather,' which collects info by columns
-    long_data <- gather(final_data, key = "subject", value = "answers")["answers"] #gather the answers of the subjects into one long column 
-
-    df[1] <- plt_names #plot_names
-    df[2] <- long_data[seq(1, nrow(long_data), 2),] #hiring_likelihood
-    df[3] <- long_data[seq(2, nrow(long_data), 2),] #word_gen
-    df[4] <- rep(1:dim(data)[1], each = n_plts) #subject
-
-    # Merge good data with first and last halves of the original data
-    data <- cbind(data[rep(seq_len(nrow(data)), each = n_plts), 1:n_plts], df, data[rep(seq_len(nrow(data)), each = n_plts), last_cols])
-
-    return(data)
+  
+  # data <- data_clean 
+  # n_plts <- n_plots 
+  # plt_names <- plot_names 
+  
+  # Define new data frame that we'll extract preprocessed data into
+  
+  # Define row and column names
+  data_subset <- which(colnames(data) == "lr_preference_1"):which(colnames(data) == "lrsfer_word_gen_1") #35:88
+  last_cols <- (which(colnames(data) == "lrsfer_word_gen_1") + 1):ncol(data) #89:105
+  
+  column_names <- c('plot_names', 'hiring_likelihood', 'word_gen', 'subject')
+  
+  df <- array(0, dim = c((nrow(data) * n_plts), length(column_names)))
+  df <- as.data.frame(df, stringsAsFactors = FALSE)
+  colnames(df) <- column_names
+  
+  # Turning wide format into long format, then inserting the answers into the 'df' dataframe
+  final_data <- as.data.frame(t(data[data_subset])) #switch rows and columns in preparation for 'gather,' which collects info by columns
+  long_data <- gather(final_data, key = "subject", value = "answers")["answers"] #gather the answers of the subjects into one long column 
+  
+  df[1] <- plt_names #plot_names
+  df[2] <- long_data[seq(1, nrow(long_data), 2),] #hiring_likelihood
+  df[3] <- long_data[seq(2, nrow(long_data), 2),] #word_gen
+  df[4] <- rep(1:dim(data)[1], each = n_plts) #subject
+  
+  # Merge good data with first and last halves of the original data
+  data <- cbind(data[rep(seq_len(nrow(data)), each = n_plts), 1:n_plts], df, data[rep(seq_len(nrow(data)), each = n_plts), last_cols])
+  
+  return(data)
 }
 
 
 ProcessForPlots <- function(data, n_plots, plot_names) {
-    "
+  "
     Create a new data frame to store the ascending hiring likelihood scores
     Input: data_long, n_plots, plot_names   #num_rows = num_ss*num_plots 
     Output: data_plot_long (in order of ascending hiring likelihood scores)   #num_rows = num_plots*num_questions
     "
-
-    # Get mean scores for all questions, then reshape data from wide to long format
-    stats <- Get_stats(data, n_plots)
-    data_plot <- data.frame(plot_names = plot_names,
-                            hiring_likelihood_score_avg = unlist(stats)[c(TRUE, FALSE)],
-                            hiring_likelihood_score_sd = unlist(stats)[c(FALSE, TRUE)])
-    data_plot_sorted <- data_plot[order(data_plot$hiring_likelihood_score_avg),] #order by hiring likelihood
-    data_plot_long <- gather(data_plot_sorted, key = question_type, #create separate entries for each question type, i.e., num_plots*num_questions
-                             value = score, hiring_likelihood_score_avg)
-
-    # Compile all standard deviation values
-    stan_dev <- gather(data_plot_sorted, key = question_type,
-                       value = sd, hiring_likelihood_score_sd)
-
-    # Bind the sd column to the rest of the dataframe
-    data_plot_long <- cbind(dplyr::select(data_plot_long, plot_names, question_type, score), sd = stan_dev$sd)
-    data_plot_long$plot_names <- factor(data_plot_long$plot_names, levels = data_plot_long$plot_names[1:27])
-
-    return(data_plot_long)
+  
+  # Get mean scores for all questions, then reshape data from wide to long format
+  stats <- Get_stats(data, n_plots)
+  data_plot <- data.frame(plot_names = plot_names,
+                          hiring_likelihood_score_avg = unlist(stats)[c(TRUE, FALSE)],
+                          hiring_likelihood_score_sd = unlist(stats)[c(FALSE, TRUE)])
+  data_plot_sorted <- data_plot[order(data_plot$hiring_likelihood_score_avg),] #order by hiring likelihood
+  data_plot_long <- gather(data_plot_sorted, key = question_type, #create separate entries for each question type, i.e., num_plots*num_questions
+                           value = score, hiring_likelihood_score_avg)
+  
+  # Compile all standard deviation values
+  stan_dev <- gather(data_plot_sorted, key = question_type,
+                     value = sd, hiring_likelihood_score_sd)
+  
+  # Bind the sd column to the rest of the dataframe
+  data_plot_long <- cbind(dplyr::select(data_plot_long, plot_names, question_type, score), sd = stan_dev$sd)
+  data_plot_long$plot_names <- factor(data_plot_long$plot_names, levels = data_plot_long$plot_names[1:27])
+  
+  return(data_plot_long)
 }
 
 
 Get_stats <- function(data, n_plots) {
-    #Find hiring likelihood means and standard deviations for every plot
-    # Every plot repeats every 27 times, since there are 27 plots title.
-    # Hence the 'seq' indeces for each calculation
-    # Input: data_long, n_plots
-    # Output: equations (a list of means and standard deviations of hiring likelihood scores for every plot)
-
-    hiring_likelihood_score <- as.numeric(data$hiring_likelihood)
-
-    equations <- c()
-    for (i in 1:27) {
-        equations[[i]] <- c(mean(hiring_likelihood_score[seq(i, length(hiring_likelihood_score), n_plots)]), sd(hiring_likelihood_score[seq(i, length(hiring_likelihood_score), n_plots)]))
-    }
-
-    return(equations)
+  #Find hiring likelihood means and standard deviations for every plot
+  # Every plot repeats every 27 times, since there are 27 plots title.
+  # Hence the 'seq' indeces for each calculation
+  # Input: data_long, n_plots
+  # Output: equations (a list of means and standard deviations of hiring likelihood scores for every plot)
+  
+  hiring_likelihood_score <- as.numeric(data$hiring_likelihood)
+  
+  equations <- c()
+  for (i in 1:27) {
+    equations[[i]] <- c(mean(hiring_likelihood_score[seq(i, length(hiring_likelihood_score), n_plots)]), sd(hiring_likelihood_score[seq(i, length(hiring_likelihood_score), n_plots)]))
+  }
+  
+  return(equations)
 }
 
 
@@ -212,85 +212,85 @@ Get_stats <- function(data, n_plots) {
 ##FUNCTIONS FOR ANALYSIS##
 ##================================================================================================================
 GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
-    data$plot_type_n <- as.numeric(factor(data$plot_names)) #create numeric version of plot_names
-    data$score_n <- as.numeric(data$score) #create numeric version of score (which are characters)
-    data$question_type_n <- as.numeric(factor(data$question_type, levels = unique(data$question_type)))
-    data$subject_n <- as.numeric(factor(data$subject))
-
-    print('*-*-*-*-*-*-*-*-* Did hiring likelihood scores vary depending on plot type? *-*-*-*-*-*-*-*-*')
-    effect_mod <- lm(data = data[data['question_type'] == "hiring_likelihood",], score ~ plot_type_n + subject_n)
-    print(summary(effect_mod))
-    print('-----------------------------------------------------')
-
-    return()
-
+  data$plot_type_n <- as.numeric(factor(data$plot_names)) #create numeric version of plot_names
+  data$score_n <- as.numeric(data$score) #create numeric version of score (which are characters)
+  data$question_type_n <- as.numeric(factor(data$question_type, levels = unique(data$question_type)))
+  data$subject_n <- as.numeric(factor(data$subject))
+  
+  print('*-*-*-*-*-*-*-*-* Did hiring likelihood scores vary depending on plot type? *-*-*-*-*-*-*-*-*')
+  effect_mod <- lm(data = data[data['question_type'] == "hiring_likelihood",], score ~ plot_type_n + subject_n)
+  print(summary(effect_mod))
+  print('-----------------------------------------------------')
+  
+  return()
+  
 }
 
 
 CreateDataFeaturesDF <- function(data, dat_final, features_df, n_after_exclusions, num_subjects_and_plots) {
-    #Bind the three dataframes: data, sentiment score, and standardize(features), i.e., the standardized plot features.
-    #Input: data_long, dat_final, features, n_after_exclusions, num_subjects_and_plots
-    #Output: score_features_df (which contains all of the predictors and participant scores)
-
-    score_features_df <- cbind(data,
-                               as.data.frame(do.call("rbind", replicate(n_after_exclusions, standardize(features_df), simplify = FALSE))))
-    score_features_df["hiring_likelihood"] <- as.data.frame(apply(score_features_df["hiring_likelihood"], 2, as.numeric))
-    score_features_df["subject"] <- as.data.frame(apply(score_features_df["subject"], 2, as.numeric))
-    score_features_df["plot_names"] <- as.data.frame(as.numeric(factor(score_features_df$plot_names)))
-    score_features_df["hiring_likelihood"] <- standardize(score_features_df["hiring_likelihood"])
-    score_features_df["sentiment_score"] <- standardize(score_features_df["sentiment_score"])
-    score_features_df["embeddings"] <- standardize(score_features_df["embeddings"])
-    score_features_df["interestingness"] <- standardize(score_features_df["interestingness"])
-
-    return(score_features_df)
-
+  #Bind the three dataframes: data, sentiment score, and standardize(features), i.e., the standardized plot features.
+  #Input: data_long, dat_final, features, n_after_exclusions, num_subjects_and_plots
+  #Output: score_features_df (which contains all of the predictors and participant scores)
+  
+  score_features_df <- cbind(data,
+                             as.data.frame(do.call("rbind", replicate(n_after_exclusions, standardize(features_df), simplify = FALSE))))
+  score_features_df["hiring_likelihood"] <- as.data.frame(apply(score_features_df["hiring_likelihood"], 2, as.numeric))
+  score_features_df["subject"] <- as.data.frame(apply(score_features_df["subject"], 2, as.numeric))
+  score_features_df["plot_names"] <- as.data.frame(as.numeric(factor(score_features_df$plot_names)))
+  score_features_df["hiring_likelihood"] <- standardize(score_features_df["hiring_likelihood"])
+  score_features_df["sentiment_score"] <- standardize(score_features_df["sentiment_score"])
+  score_features_df["embeddings"] <- standardize(score_features_df["embeddings"])
+  score_features_df["interestingness"] <- standardize(score_features_df["interestingness"])
+  
+  return(score_features_df)
+  
 }
 
 
 MakePCAFunction <- function(score_features_df) {
-    #Perform mixed-effects regression based on PCA-reduced features of our predictors.
-    #Input: score_features_df
-    #Output: the structure of the PCA fit, the PCA correlation values for hiring likelihood
-    #scores, and score_features_df (now with the addition of PC1 through PC5 scores)
-
-    # Define the columns that we want for the PCA: from embeddings to integral and the D1 & D2 predictors.
-    score_features_ss <- subset(score_features_df, select = c(embeddings:integral, d1_avg_unweight:d1_avg_weight_end, d2_avg_unweight:d2_avg_weight_end))
-
-    # Fit the PCA
-    my_PCA <- principal(score_features_ss, 5, rotate = "promax")
-    print(my_PCA)
-    colnames(my_PCA$Structure) <- c("PC1", "PC2", "PC3", "PC4", "PC5")
-    colnames(my_PCA$scores) <- c("PC1", "PC2", "PC3", "PC4", "PC5")
-
-    # Print, then save the features corrplot
-    corrplot(my_PCA$Structure, method = "circle", mar = c(0, 0, 2, 0))
-    mtext("Features Correlation Matrix \nover PCs", at = 1, line = 1, cex = 1.5)
-    pdf(file = "./plots/analysis_plots/features_corrplot.pdf")
-    corrplot(my_PCA$Structure, method = "circle", mar = c(0, 0, 4, 0))
-    mtext("Features Correlation Matrix \nover PCs", at = 1, line = 1, cex = 1.5)
-    dev.off()
-
-    print('principal components by features')
-    print(my_PCA$Structure)
-
-    # Bind the PC1 through PC5 scores to the score_features_df data frame
-    score_features_df <- cbind(score_features_df, my_PCA$scores)
-
-    # Fit mixed effects regression predicting hiring likelihood
-    hiring_likelihood_features <- lmer(data = score_features_df,
-                                       hiring_likelihood ~ PC1 +
-                                           PC2 +
-                                           PC3 +
-                                           PC4 +
-                                           PC5 +
-                                           (1 | subject) +
-                                           (1 | plot_names))
-
-    print('hiring likelihood vs. features:')
-    print(summary(hiring_likelihood_features, correlation = TRUE))
-
-    return(score_features_df)
-
+  #Perform mixed-effects regression based on PCA-reduced features of our predictors.
+  #Input: score_features_df
+  #Output: the structure of the PCA fit, the PCA correlation values for hiring likelihood
+  #scores, and score_features_df (now with the addition of PC1 through PC5 scores)
+  
+  # Define the columns that we want for the PCA: from embeddings to integral and the D1 & D2 predictors.
+  score_features_ss <- subset(score_features_df, select = c(embeddings:integral, d1_avg_unweight:d1_avg_weight_end, d2_avg_unweight:d2_avg_weight_end))
+  
+  # Fit the PCA
+  my_PCA <- principal(score_features_ss, 5, rotate = "promax")
+  print(my_PCA)
+  colnames(my_PCA$Structure) <- c("PC1", "PC2", "PC3", "PC4", "PC5")
+  colnames(my_PCA$scores) <- c("PC1", "PC2", "PC3", "PC4", "PC5")
+  
+  # Print, then save the features corrplot
+  corrplot(my_PCA$Structure, method = "circle", mar = c(0, 0, 2, 0))
+  mtext("Features Correlation Matrix \nover PCs", at = 1, line = 1, cex = 1.5)
+  pdf(file = "./plots/analysis_plots/features_corrplot.pdf")
+  corrplot(my_PCA$Structure, method = "circle", mar = c(0, 0, 4, 0))
+  mtext("Features Correlation Matrix \nover PCs", at = 1, line = 1, cex = 1.5)
+  dev.off()
+  
+  print('principal components by features')
+  print(my_PCA$Structure)
+  
+  # Bind the PC1 through PC5 scores to the score_features_df data frame
+  score_features_df <- cbind(score_features_df, my_PCA$scores)
+  
+  # Fit mixed effects regression predicting hiring likelihood
+  hiring_likelihood_features <- lmer(data = score_features_df,
+                                     hiring_likelihood ~ PC1 +
+                                       PC2 +
+                                       PC3 +
+                                       PC4 +
+                                       PC5 +
+                                       (1 | subject) +
+                                       (1 | plot_names))
+  
+  print('hiring likelihood vs. features:')
+  print(summary(hiring_likelihood_features, correlation = TRUE))
+  
+  return(score_features_df)
+  
 }
 
 ##======##
@@ -354,10 +354,10 @@ d_long <- cbind(d_long, interestingness)
 
 calculate_sentiment <- FALSE
 if(calculate_sentiment) {
-    d_long[, "sentiment_score"] <- sapply(d_long["word_gen"], CalculateSentiment, model_type = 'ai')
-    write.csv(data.frame(sentiment_score = d_long[, "sentiment_score"]), "./data/sentiment_scores.csv", row.names = FALSE)
+  d_long[, "sentiment_score"] <- sapply(d_long["word_gen"], CalculateSentiment, model_type = 'ai')
+  write.csv(data.frame(sentiment_score = d_long[, "sentiment_score"]), "./data/sentiment_scores.csv", row.names = FALSE)
 } else {
-    d_long[, "sentiment_score"] <- read.csv('./data/sentiment_scores.csv')
+  d_long[, "sentiment_score"] <- read.csv('./data/sentiment_scores.csv')
 }
 
 d_long$sentiment_score[is.na(d_long$sentiment_score)] <- 0
@@ -376,24 +376,24 @@ ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
 dev.off()
 
 if (FALSE) {  ## Takes some time
-    #### (2.2) MAKE WORD CLOUDS (WARNING: takes ~5 minutes; feel free to skip)
-    MakeWordClouds(d_long, n_plots, plot_names) #make word cloud images
-    arranged_word_clouds <- ArrangeWordClouds(d_long) #arrange word clouds into a grid
-
-    pdf(file = "./plots/analysis_plots/interview_performance_word_clouds.pdf", width = 18, height = 8)
-    plot(arranged_word_clouds)
-    dev.off()
-
-    #### (2.3) MAKE PLOT OF SENTIMENT SCORES, ORDERED BY HIRING LIKELIHOOD SCORES
-    sentiment_bar_plot <- MakeSentimentBarPlot(d_long, n_plots, plot_names, title = 'Hiring')
-    sentiment_plot_images <- MakeGroupedBarPlotImages(sentiment_bar_plot, plot_names) #the little interview performance icons
-
-    pdf(file = "./plots/analysis_plots/interview_performance_sentiment_plot.pdf", width = 17, height = 8)
-    ggdraw(insert_xaxis_grob(sentiment_bar_plot, sentiment_plot_images, position = "bottom"))
-    dev.off()
-
-    #### (2.4) MAKE FREQUENCY PLOTS FOR TOPIC MODELING
-    topic_modeling <- TopicModeling(d_long, n_plots, plot_names)
+  #### (2.2) MAKE WORD CLOUDS (WARNING: takes ~5 minutes; feel free to skip)
+  MakeWordClouds(d_long, n_plots, plot_names) #make word cloud images
+  arranged_word_clouds <- ArrangeWordClouds(d_long) #arrange word clouds into a grid
+  
+  pdf(file = "./plots/analysis_plots/interview_performance_word_clouds.pdf", width = 18, height = 8)
+  plot(arranged_word_clouds)
+  dev.off()
+  
+  #### (2.3) MAKE PLOT OF SENTIMENT SCORES, ORDERED BY HIRING LIKELIHOOD SCORES
+  sentiment_bar_plot <- MakeSentimentBarPlot(d_long, n_plots, plot_names, title = 'Hiring')
+  sentiment_plot_images <- MakeGroupedBarPlotImages(sentiment_bar_plot, plot_names) #the little interview performance icons
+  
+  pdf(file = "./plots/analysis_plots/interview_performance_sentiment_plot.pdf", width = 17, height = 8)
+  ggdraw(insert_xaxis_grob(sentiment_bar_plot, sentiment_plot_images, position = "bottom"))
+  dev.off()
+  
+  #### (2.4) MAKE FREQUENCY PLOTS FOR TOPIC MODELING
+  topic_modeling <- TopicModeling(d_long, n_plots, plot_names)
 }
 
 
@@ -425,7 +425,7 @@ score_features_df <- CreateDataFeaturesDF(d_long, dat, features, n_after_exclusi
 fold_amount <- 10
 n_reps <- 10
 cv_result <- CrossValidationAnalysis(score_features_df, n_after_exclusions, n_plots,
-                                                   fold_amount = fold_amount, dep_var='hiring_likelihood', n_reps=n_reps)
+                                     fold_amount = fold_amount, dep_var='hiring_likelihood', n_reps=n_reps, load_results = TRUE)
 pdf(file = paste0("./plots/analysis_plots/cv_fold_amt=", fold_amount, "n_reps=", n_reps, ".pdf"), width = 15, height = 9)
 plot(cv_result[[1]])
 dev.off()
