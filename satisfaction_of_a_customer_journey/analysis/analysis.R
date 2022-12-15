@@ -382,69 +382,6 @@ CreateDataFeaturesDF <- function(data, features_df, n_after_exclusions) {
 
 }
 
-MakePCAFunction <- function(score_features_df) {
-    "
-    Perform mixed-effects regression based on PCA-reduced features of our predictors.
-    Input: score_features_df
-    Output: the structure of the PCA fit, the PCA correlation values for both satisfaction and pd
-    scores, and score_features_df (now with the addition of PC1 through PC5 scores)
-    "
-
-    # Define the columns that we want for the PCA: from embeddings to integral and the D1 & D2 predictors.
-    score_features_ss <- subset(score_features_df, select = c(embeddings:integral, d1_avg_unweight:d1_avg_weight_end, d2_avg_unweight:d2_avg_weight_end))
-    score_features_ss$is_word <- NULL
-
-    # Fit the PCA
-    my_PCA <- principal(score_features_ss, 5, rotate = "promax")
-    print(my_PCA)
-    colnames(my_PCA$Structure) <- c("PC1", "PC2", "PC3", "PC4", "PC5")
-    colnames(my_PCA$scores) <- c("PC1", "PC2", "PC3", "PC4", "PC5")
-
-    # Print, then save the features corrplot
-    corrplot(my_PCA$Structure, method = "circle", mar = c(0, 0, 2, 0))
-    mtext("Features Correlation Matrix \nover PCs", at = 1, line = 1, cex = 1.5)
-    pdf(file = "./plots/analysis_plots/features_corrplot.pdf")
-    corrplot(my_PCA$Structure, method = "circle", mar = c(0, 0, 4, 0))
-    mtext("Features Correlation Matrix \nover PCs", at = 1, line = 1, cex = 1.5)
-    dev.off()
-
-    print('principal components by features')
-    print(my_PCA$Structure)
-
-    # Bind the PC1 through PC5 scores to the score_features_df data frame
-    score_features_df <- cbind(score_features_df, my_PCA$scores)
-
-    # 1. Fit mixed effects regression predicting satisfaction
-    satisfaction_features <- lmer(data = score_features_df,
-                                  satisfaction ~ PC1 +
-                                      PC2 +
-                                      PC3 +
-                                      PC4 +
-                                      PC5 +
-                                      (1 | subject) +
-                                      (1 | plot_names))
-
-    print('satisfaction vs. features:')
-    print(summary(satisfaction_features, correlation = TRUE))
-
-
-    # 2. Fit mixed effects regression predicting personal desirability
-    pd_features <- lmer(data = score_features_df,
-                        personal_desirability ~ PC1 +
-                            PC2 +
-                            PC3 +
-                            PC4 +
-                            PC5 +
-                            (1 | subject) +
-                            (1 | plot_names))
-
-    print('personal desirability vs. features:')
-    print(summary(pd_features, correlation = TRUE))
-
-    return(score_features_df)
-
-}
-
 ##======####======####======####======####======####======####======####======####======####======####======####======##
 ## MAIN #### MAIN #### MAIN #### MAIN #### MAIN #### MAIN #### MAIN #### MAIN #### MAIN #### MAIN #### MAIN #### MAIN ##
 ##======####======####======####======####======####======####======####======####======####======####======####======##
