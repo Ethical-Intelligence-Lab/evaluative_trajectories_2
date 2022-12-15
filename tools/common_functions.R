@@ -1,10 +1,11 @@
 pacman::p_load('qdapDictionaries')
+pacman::p_unload('hash')
 pacman::p_load('hash')
 #pacman::p_load('sentiment.ai')
 
 # Run only first time if you are using this package::
-#install_sentiment.ai()
 #init_sentiment.ai()
+#install_sentiment.ai()
 
 CrossValidationAnalysis <- function(dat, n_ss, n_plots, fold_amount = 10,
                                     n_reps = 1, load_results = FALSE, dep_var = 'hiring_likelihood') {

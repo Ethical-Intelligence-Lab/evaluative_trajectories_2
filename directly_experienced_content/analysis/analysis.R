@@ -1,3 +1,5 @@
+rm(list=ls())
+
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #set working directory to current directory
 
 ## Import libraries

@@ -1,5 +1,6 @@
 ## Analysis Script for 'Evaluative Summaries'
 # Experiment 5: Interview Performance 
+rm(list=ls())
 
 ## Needed for semantic analysis: https://colab.research.google.com/drive/1ZUl0yQQ0n0_zki-l8fEb2fTz40DQfTA1?usp=sharing
 

@@ -1,3 +1,5 @@
+rm(list=ls())
+
 ### Set working directory to current directory ###
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 

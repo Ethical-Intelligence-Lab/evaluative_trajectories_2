@@ -1,3 +1,5 @@
+rm(list=ls())
+
 # Set working directory to current file location
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 source('../../tools/Lifelines_Generate_Plots.R')
