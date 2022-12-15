@@ -51,3 +51,6 @@ directly_experienced_content/analysis/plots/individual/
 directly_experienced_content/analysis/plots/individual_noaxes/
 directly_experienced_content/analysis/TimeSeriesClustering.py
 .vscode/
+
+*.png
+*.pdf
