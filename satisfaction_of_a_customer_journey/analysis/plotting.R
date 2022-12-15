@@ -163,7 +163,8 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
             values = c("#4b9ecc", "#006b4e"),
             guide = guide_legend(title.position = "top")) +
         geom_hline(yintercept = absmean(random_data$random)) +
-        ggplot2::annotate("rect", xmin = -Inf, xmax = Inf, ymin = absse(random_data$random)$ymin, ymax = absse(random_data$random)$ymax, fill = "black", alpha = .2, color = NA) +
+        ggplot2::annotate("rect", xmin = -Inf, xmax = Inf, ymin = absse(random_data$random)$ymin,
+                          ymax = absse(random_data$random)$ymax, fill = "black", alpha = .2, color = NA) +
         theme_bw() +
         if (x_labels == "Predictors") {
             theme(element_blank(),

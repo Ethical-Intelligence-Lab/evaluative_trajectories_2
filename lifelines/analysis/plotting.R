@@ -468,15 +468,15 @@ TopicModeling <- function(dat_long, n_plots, plot_names) {
 
 }
 
-CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, sum_meaning, sum_pd) {
+CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, random_data) {
     "
     What this function does: creates a grouped box plot of the cross-validated prediction results
     Inputs: results_df, x_order, results_order, ques_type, x_labels, sum_meaning, sum_pd
     Output: a boxplot of participant rating predictions with either principal components or predictors
     "
 
-    results_df[results_df['question_type'] == 'meaning_results', 'question_type'] = "Meaningfulness"
-    results_df[results_df['question_type'] == 'pd_results', 'question_type'] = "Personal Desirability"
+    results_df[results_df['question_type'] == 'meaningfulness_results', 'question_type'] = "Meaningfulness"
+    results_df[results_df['question_type'] == 'personal_desirability_results', 'question_type'] = "Personal Desirability"
 
     grouped_box_plot <- ggplot(data = results_df, aes(x = x_order, y = results_order, fill = question_type, color = question_type)) +
         scale_colour_manual(values = c("#3c7ea3", "#800000")) +
@@ -491,6 +491,9 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
             name = "question_type",
             values = c("#4b9ecc", "#006b4e"),
             guide = guide_legend(title.position = "top")) +
+        geom_hline(yintercept = absmean(random_data$random)) +
+        ggplot2::annotate("rect", xmin = -Inf, xmax = Inf, ymin = absse(random_data$random)$ymin,
+                          ymax = absse(random_data$random)$ymax, fill = "black", alpha = .2, color = NA) +
         theme_bw() +
         theme(element_blank(),
                   plot.title = element_blank(), #element_text(color = "black", size=32, face = "bold", hjust = 0.5),
