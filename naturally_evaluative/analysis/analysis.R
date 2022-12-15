@@ -546,7 +546,7 @@ Get_noise_ceiling <- function(dat_long, question_type, n_ss) {
 }
 
 
-CrossValidationAnalysis <- function(sentiment_data, dat_long, n_plts, plt_names, n_ss) {
+CrossValidationAnalysisNat <- function(sentiment_data, dat_long, n_plts, plt_names, n_ss) {
     # ------ 
     
     dat_s1 <- read.csv("../../satisfaction_of_a_customer_journey/analysis/data/d_long.csv")
@@ -849,7 +849,7 @@ t.test(sentiment_df[[2]][sentiment_df[[2]]$question_type == 'sentence', 'sentime
        sentiment_df[[2]][sentiment_df[[2]]$question_type == 'word', 'sentiment_score'])
 
 n_ss <- dim(data_long)[1] / n_plots
-cross_validation_analysis <- CrossValidationAnalysis(sentiment_df, data_long, n_plots, plot_names, n_ss)
+cross_validation_analysis <- CrossValidationAnalysisNat(sentiment_df, data_long, n_plots, plot_names, n_ss)
 pdf(file = "predictions_wt_cv_plot.pdf", width = 10, height = 7)
 cross_validation_analysis
 dev.off()

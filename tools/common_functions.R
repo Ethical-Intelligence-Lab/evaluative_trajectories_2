@@ -6,7 +6,7 @@ pacman::p_load('hash')
 #install_sentiment.ai()
 #init_sentiment.ai()
 
-CrossValidationAnalysis <- function(dat, n_ss, n_plots, random = TRUE, fold_amount = 10,
+CrossValidationAnalysis <- function(dat, n_ss, n_plots, fold_amount = 10,
                                     n_reps = 1, load_results = FALSE, dep_var = 'hiring_likelihood') {
     print("Running cross validation...")
     dir.create('cv_results', showWarnings = FALSE)
@@ -50,7 +50,7 @@ CrossValidationAnalysis <- function(dat, n_ss, n_plots, random = TRUE, fold_amou
             errors_hl_list <- list()
 
             for (p in 1:n_reps) { # Replicate n_reps times to make sure our model is robust
-                print(paste("Running iteration ", p, "..."))
+                print(paste("Running iteration ", p, "-", dv, "..."))
                 set.seed(p)
                 dat$random <- standardize(sample(100, size = nrow(dat), replace = TRUE))
 

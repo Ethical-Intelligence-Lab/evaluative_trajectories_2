@@ -417,17 +417,16 @@ pdf(file = "linear_vs_quadratic_fit.pdf", width = 13, height = 6.5)
 #dev.off()
 
 
-#### (3.2) RUN DESCRIPTIVE ANALYSES
-
 # Create a dataframe of features and subject scores 
 score_features_df <- CreateDataFeaturesDF(d_long, dat, features, n_after_exclusions, num_subjects_and_plots)
 
 ##### (3.3) RUN PREDICTIVE ANALYSES
 
 fold_amount <- 10
-cv_result <- CrossValidationAnalysis(score_features_df, n_after_exclusions, n_plots, random=TRUE,
-                                                   fold_amount = fold_amount, dep_var='hiring_likelihood', n_reps=10)
-pdf(file = paste0("./plots/analysis_plots/predictions_wt_predictors_cv_plot_", fold_amount, ".pdf"), width = 15, height = 9)
+n_reps <- 10
+cv_result <- CrossValidationAnalysis(score_features_df, n_after_exclusions, n_plots,
+                                                   fold_amount = fold_amount, dep_var='hiring_likelihood', n_reps=n_reps)
+pdf(file = paste0("./plots/analysis_plots/cv_fold_amt=", fold_amount, "n_reps=", n_reps, ".pdf"), width = 15, height = 9)
 plot(cv_result[[1]])
 dev.off()
 
