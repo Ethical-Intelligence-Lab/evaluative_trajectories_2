@@ -244,33 +244,6 @@ Get_stats <- function(data, n_plots) {
 ##FUNCTIONS FOR PLOTTING SENTIMENT BAR PLOT##
 ##================================================================================================================
 
-Get_sentiment_stats <- function(data, n_plots) {
-    "
-    Find sentiment score means and standard deviations for every plot 
-    Input: data_long, n_plots 
-    Output: sentiment_list (a list of average mean and standard deviation sentiment scores for every plot)
-    "
-
-    # Clean words 
-    word_clean <- word(tolower(data$word), 1) #make all words lowercase, and collect only the first word of a given sentence
-    word_gen <- gsub("[^a-z]", "", word_clean) #get rid of numbers and special characters, leaving only letters a-z
-
-    # Organize words by plot 
-    equations <- c()
-    for (i in 1:n_plots) {
-        equations[[i]] <- word_gen[seq(i, length(word_gen), n_plots)]
-    }
-
-    # Get sentiment score means and standard deviations for every plot 
-    sentiment_list <- c()
-    for (i in 1:n_plots) {
-        sentiment_list[[i]] <- c(mean(sentiment_by(equations[[i]])$ave_sentiment),
-                                 sd(sentiment_by(equations[[i]])$ave_sentiment))
-    }
-
-    return(sentiment_list)
-}
-
 
 CreateSentimentDataframe <- function(data, n_plots, plot_names) {
     "
@@ -428,17 +401,17 @@ GetMainEffects <- function(data, data_long, n_plots, plot_names, my_embeddings) 
 }
 
 
-CreateDataFeaturesDF <- function(data, dat_final, features_df, n_after_exclusions, num_subjects_and_plots) {
+CreateDataFeaturesDF <- function(data, features_df, n_after_exclusions, num_subjects_and_plots) {
     "
     Bind the three dataframes: data, sentiment score, and standardize(features), i.e., the standardized plot features.
     Input: data_long, dat_final, features, n_after_exclusions, num_subjects_and_plots
     Output: score_features_df (which contains all of the predictors and participant scores)
     "
 
-    score_features_df <- cbind(data, sentiment_score = dat_final$sentiment_score[1:num_subjects_and_plots],
+    score_features_df <- cbind(data,
                                as.data.frame(do.call("rbind", replicate(n_after_exclusions, standardize(features_df), simplify = FALSE))))
-    score_features_df["meaningfulness"] <- as.data.frame(apply(score_features_df["meaningfulness"], 2, as.numeric))
-    score_features_df["personal_desirability"] <- as.data.frame(apply(score_features_df["personal_desirability"], 2, as.numeric))
+    score_features_df["meaningfulness"] <- as.data.frame(standardize(apply(score_features_df["meaningfulness"], 2, as.numeric)))
+    score_features_df["personal_desirability"] <- as.data.frame(standardize(apply(score_features_df["personal_desirability"], 2, as.numeric)))
     score_features_df["subject"] <- as.data.frame(apply(score_features_df["subject"], 2, as.numeric))
     score_features_df["plot_names"] <- as.data.frame(as.numeric(factor(score_features_df$plot_names)))
     score_features_df["meaningfulness"] <- standardize(score_features_df["meaningfulness"])
@@ -1386,15 +1359,10 @@ Get main statistical effects, and run descriptive and predictive analyses
 # Get dataframe for analysis (dat_final), with nrows = num_ss*num_plots*num_questions
 dat <- gather(data_long, key = question_type, value = score, meaningfulness, personal_desirability)
 dat <- dplyr::select(dat, subject, plot_names, question_type, score) #rows = num_ss*num_plots*num_questions
-sentiment_scores <- CreateSentimentDataframe(data_long, n_plots, plot_names)
-dat_final <- cbind(dat, sentiment_score = sentiment_scores[rep(seq_len(nrow(sentiment_scores)), n_after_exclusions),]$mean)
-
-write.csv(data.frame(word = dat_final), "./data/d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
+write.csv(data.frame(word = dat), "./data/d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
 
 # Get main statistical effects
 main_effects <- GetMainEffects(dat, data_long, n_plots, plot_names, my_embeddings)
-#See error: 486 not defined because of singularities; checked for perfect correlation but did not find any
-
 pdf(file = "linear_vs_quadratic_fit.pdf", width = 13, height = 6.5)
 plot(main_effects)
 main_effects
@@ -1404,13 +1372,15 @@ dev.off()
 #### (3.2) RUN DESCRIPTIVE ANALYSES
 
 # Create a dataframe of features and subject scores 
-d_long <- CreateDataFeaturesDF(data_long, dat_final, features, n_after_exclusions, num_subjects_and_plots)
+d_long <- CreateDataFeaturesDF(data_long, features, n_after_exclusions, num_subjects_and_plots)
 
-cross_validation_analysis_wt_predictors <- CrossValidationAnalysisWtPredictors(d_long, n_after_exclusions, n_plots)
-pdf(file = "predictions_wt_predictors_cv_plot.pdf", width = 16, height = 9)
-plot(cross_validation_analysis_wt_predictors)
+fold_amount <- 10
+cv_result <- CrossValidationAnalysis(score_features_df, n_after_exclusions, n_plots, random=TRUE,
+                                                   fold_amount = fold_amount, dep_var=c("meaningfulness",
+                                                                                        "personal_desirability"), n_reps=10, load_results=FALSE)
+pdf(file = paste0("./plots/analysis_plots/predictions_wt_predictors_cv_plot_", fold_amount, ".pdf"), width = 15, height = 9)
+plot(cv_result[[1]])
 dev.off()
-# same note above 
 
 ## =========================================== (4) Move Files ====================================================
 
