@@ -54,8 +54,10 @@ ProcessForPlots <- function(data, n_plots, plot_names) {
     # Get mean scores for all questions, then reshape data from wide to long format
     stats <- Get_stats(data, n_plots)
     data_plot <- data.frame(cluster_names = cluster_names,
-                            willing_score_avg = unlist(stats)[c(TRUE, FALSE)],
-                            willing_score_sd = unlist(stats)[c(FALSE, TRUE)])
+                            willing_score_avg = unlist(stats)[c(TRUE, FALSE, FALSE)],
+                            willing_score_sd = unlist(stats)[c(FALSE, TRUE, FALSE)],
+                            raffle_percentage = unlist(stats)[c(FALSE, FALSE, TRUE)]
+                            )
     data_plot_sorted <- data_plot[order(data_plot$willing_score_avg),] #order by willing
     data_plot_long <- gather(data_plot_sorted, key = question_type, #create separate entries for each question type, i.e., num_plots*num_questions
                              value = score, willing_score_avg)
@@ -65,7 +67,7 @@ ProcessForPlots <- function(data, n_plots, plot_names) {
                        value = sd, willing_score_sd)
 
     # Bind the SE column to the rest of the dataframe
-    data_plot_long <- cbind(dplyr::select(data_plot_long, cluster_names, question_type, score), sd = stan_dev$sd)
+    data_plot_long <- cbind(dplyr::select(data_plot_long, cluster_names, question_type, score), sd = stan_dev$sd, raffle_percentage = data_plot_sorted$raffle_percentage)
     data_plot_long$cluster_names <- factor(data_plot_long$cluster_names, levels = data_plot_long$cluster_names[1:n_clusters])
 
     return(data_plot_long)
@@ -110,7 +112,9 @@ Get_stats <- function(data, n_plots) {
     # Get means and standard deviations
     equations <- c()
     for (i in 0:(n_clusters - 1)) {
-        equations[[i + 1]] <- c(mean(data[data$cluster_labels == i, 'willing']), sd(data[data$cluster_labels == i, 'willing']))
+        equations[[i + 1]] <- c(mean(data[data$cluster_labels == i, 'willing']),
+                                sd(data[data$cluster_labels == i, 'willing']),
+                                mean(data[data$cluster_labels == i, 'picked_movie']))
     }
 
     return(equations)
@@ -587,6 +591,37 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
     return(list(predictors_plot, mean(as.matrix(t_results_raffle)), max(cm)))
 }
 
+GetInterestingness <- function(data, n_plots) {
+    "
+    Group 'clean' words (only lowercase letters a-z) together into individual dataframes by plot type,
+    then stem words to get the root/lemmatized words only. Calculate the length of each stemmed word
+    to get the 'interestingness' predictor.
+    Input: data_long, n_plots
+    Output: stemmed_words_df (dataframe of length of stemmed words from each participant for each plot)
+    "
+
+    # Clean words
+    word_clean <- word(tolower(data$word), 1) #make all words lowercase, and collect only the first word of a given sentence
+    word_gen <- gsub("[^a-z]", "", word_clean) #get rid of numbers and special characters, leaving only letters a-z
+
+    # Group words together into individual dataframes by plot type
+    equations <- c()
+    for (i in 0:(n_plots - 1)) {
+        equations[[i + 1]] <- word_gen[data[data$cluster_labels == i, 'X'] + 1]
+    }
+
+    # Stem words
+    stemmed_words <- c()
+    length_stemmed_words <- c()
+    for (i in 1:n_plots) {
+        stemmed_words[[i]] <- table(wordStem(equations[[i]]))
+        length_stemmed_words[[i]] <- length(stemmed_words[[i]])
+        stemmed_words_df <- data.frame(interestingness = unlist(length_stemmed_words))
+    }
+
+    return(stemmed_words_df)
+}
+
 ##======##
 ## MAIN ##
 ##======##
@@ -636,13 +671,18 @@ my_embeddings <- read.csv(fname, header = TRUE)
 embeddings_avg <- data.frame(embeddings = rowMeans(my_embeddings)) #create a dataframe
 
 
-### (iii) CREATE INTERESTINGNESS DATAFRAME
-interestingness <- GetInterestingness(d_long, n_plots)
+pm <- as.numeric(d_long$genre == genres[match(d_long$movie_choice, movies)])
+d_long$picked_movie <- pm
 
+### (iii) CREATE INTERESTINGNESS DATAFRAME
+interestingness <- GetInterestingness(d_long, 27)
+
+for( i in 0:26 ) {
+    d_long[d_long$cluster_label == i, 'interestingness'] <- interestingness[i + 1,]
+}
 
 ### (iv) PROCESS FOR PLOTS
 d_long <- cbind(d_long, embeddings_avg)
-d_long <- cbind(d_long, interestingness)
 data_plot_long = NULL
 
 calculate_sentiment <- FALSE
@@ -667,10 +707,21 @@ data_plot_long <- ProcessForPlots(d_long, n_plots, plot_names)
 #### (2.1) MAKE BAR PLOT OF willing SCORES
 grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long)
 plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot, data_plot_long) #the little customer journey icons
-
 pdf(file = paste0("./plots/analysis_plots/customer_journeys_bar_plot_", "k=", n_clusters, ".pdf"), width = 17, height = 8)
 ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
 dev.off()
+
+grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long, raffle_percentage=TRUE)
+plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot, data_plot_long) #the little customer journey icons
+pdf(file = paste0("./plots/analysis_plots/customer_journeys_bar_plot_", "k=", n_clusters, "_raffle.pdf"), width = 17, height = 8)
+ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
+dev.off()
+
+print("Does percentages of raffle choices predict cluster type?")
+summary(lm(data_plot_long$score ~ data_plot_long$raffle_percentage))
+
+print("Does percentages of raffle choices correlate with mean WTP?")
+cor.test(data_plot_long$score, data_plot_long$raffle_percentage)
 
 ## ============================================== (2) Analysis =====================================================
 print("-----------------------------------------------------------------------------------------------------------------------------------------")
@@ -702,9 +753,7 @@ write.csv(data.frame(word = d_for_comparison), "./data/dat_for_comparison.csv", 
 ##### RUN PREDICTIVE ANALYSES
 fold_amount <- 10
 n_reps <- 10
-cv_result <- CrossValidationAnalysis(d_long, n_after_exclusions, n_plots,
-                                                   fold_amount = fold_amount, dep_var="willing",
-                                                    n_reps=n_reps, load_results=TRUE)
+cv_result <- CrossValidationAnalysis(d_long, fold_amount = fold_amount, dep_var="willing", n_reps=n_reps, load_results=FALSE)
 pdf(file = paste0("./plots/analysis_plots/cv_fold_amt=", fold_amount, "n_reps=", n_reps, ".pdf"), width = 15, height = 9)
 plot(cv_result[[1]])
 dev.off()
@@ -712,8 +761,7 @@ dev.off()
 avg_f1s <- c()
 max_f1s <- c()
 fold_amount <- 10
-results_list <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE,
-                                                                                   random = TRUE, fold_amount = fold_amount,
+results_list <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE, random = TRUE, fold_amount = fold_amount,
                                                                                    perf_metric = "F1", max_wtp = FALSE)
 pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_f1_", fold_amount, ".pdf"), width = 17, height = 9)
 plot(results_list[[1]])

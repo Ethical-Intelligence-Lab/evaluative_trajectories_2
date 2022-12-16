@@ -7,7 +7,7 @@ pacman::p_load('hash')
 #init_sentiment.ai()
 #install_sentiment.ai()
 
-CrossValidationAnalysis <- function(dat, n_ss, n_plots, fold_amount = 10,
+CrossValidationAnalysis <- function(dat, fold_amount = 10,
                                     n_reps = 1, load_results = FALSE, dep_var = 'hiring_likelihood') {
     print("Running cross validation...")
     dir.create('cv_results', showWarnings = FALSE)
@@ -24,19 +24,6 @@ CrossValidationAnalysis <- function(dat, n_ss, n_plots, fold_amount = 10,
     }
 
     predictors <- c('random', predictors)
-    n_folds <- n_ss
-
-    folds <- cut(seq(1, nrow(dat)), breaks = n_folds, labels = FALSE)
-    folds2 <- rep(seq(1, n_plots), times = n_folds) #plot x subjects folds
-    indeces <- seq(1, (n_plots * n_folds))
-
-    #-------------------------------------------------------------------------------------------------------------------
-
-    results_e <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
-    errors_e <- data.frame(matrix(NA, nrow = length(predictors), ncol = n_folds))
-    rownames(results_e) <- predictors
-    rownames(errors_e) <- predictors
-
     dv_results <- hash()
     if (load_results) {
         for (dv in dep_var) {

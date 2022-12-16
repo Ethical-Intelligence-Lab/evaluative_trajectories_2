@@ -508,8 +508,7 @@ d_long <- CreateDataFeaturesDF(data_long, features, n_after_exclusions, num_subj
 
 fold_amount <- 10
 n_reps <- 10
-cv_result <- CrossValidationAnalysis(d_long, n_after_exclusions, n_plots,
-                                                   fold_amount = fold_amount, dep_var=c("meaningfulness",
+cv_result <- CrossValidationAnalysis(d_long, fold_amount = fold_amount, dep_var=c("meaningfulness",
                                                                                         "personal_desirability"),
                                                                                          n_reps=n_reps, load_results=TRUE)
 pdf(file = paste0("./plots/analysis_plots/cv_fold_amt=", fold_amount, "n_reps=", n_reps, ".pdf"), width = 15, height = 9)

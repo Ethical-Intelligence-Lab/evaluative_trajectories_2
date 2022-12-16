@@ -66,14 +66,40 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
 }
 
 
-MakeGroupedBarPlot <- function(data_plot_long) {
+MakeGroupedBarPlot <- function(data_plot_long, raffle_percentage=FALSE) {
     "
     Plot the grouped bar graph in order of ascending willing scores
     Input: data_plot_long
     Output: grouped_bar_plot (the grouped bar graph)
     "
 
-    grouped_bar_plot <- ggplot(data_plot_long, aes(x = cluster_names, y = score, fill = question_type)) +
+    if(raffle_percentage) {
+        grouped_bar_plot <- ggplot(data_plot_long, aes(x = cluster_names, y = raffle_percentage, fill = question_type)) +
+        geom_bar(position = "dodge", stat = "identity") +
+        ggtitle("Summarizing the willing of Different Customer Journeys") +
+        xlab("Trailer Experience Clusters") +
+        ylab("Mean Rating") +
+        theme(
+            plot.title = element_blank(),
+            legend.title = element_blank(),
+            legend.text = element_text(color = "black", size = 28),
+            legend.position = "top",
+            legend.title.align = 0.5,
+            text = element_text(color = "black", size = 25),
+            axis.title.y = element_text(color = "black", size = 30, face = "bold"),
+            axis.title.x = element_text(color = "black", size = 30, face = "bold"),
+            axis.text.x = element_blank(),
+            axis.ticks.x = element_blank()
+        ) +
+        scale_fill_manual(
+            name = "Judgment Type",
+            breaks = c("willing_score_avg"),
+            labels = c("Percentage of Raffle Choices"),
+            values = c("#a36e3c"),
+            guide = guide_legend(title.position = "top")
+        )
+    } else {
+        grouped_bar_plot <- ggplot(data_plot_long, aes(x = cluster_names, y = score, fill = question_type)) +
         geom_bar(position = "dodge", stat = "identity") +
         geom_errorbar(aes(ymin = score - sd, ymax = score + sd), width = .2,
                       position = position_dodge(.9)) +
@@ -99,6 +125,8 @@ MakeGroupedBarPlot <- function(data_plot_long) {
             values = c("#3c7ea3"),
             guide = guide_legend(title.position = "top")
         )
+    }
+
     return(grouped_bar_plot)
 }
 
