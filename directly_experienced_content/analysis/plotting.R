@@ -78,13 +78,11 @@ MakeGroupedBarPlot <- function(data_plot_long, raffle_percentage=FALSE) {
         geom_bar(position = "dodge", stat = "identity") +
         ggtitle("Summarizing the willing of Different Customer Journeys") +
         xlab("Trailer Experience Clusters") +
-        ylab("Mean Rating") +
+        ylab("Percentage") +
         theme(
             plot.title = element_blank(),
             legend.title = element_blank(),
-            legend.text = element_text(color = "black", size = 28),
-            legend.position = "top",
-            legend.title.align = 0.5,
+            legend.position = "none",
             text = element_text(color = "black", size = 25),
             axis.title.y = element_text(color = "black", size = 30, face = "bold"),
             axis.title.x = element_text(color = "black", size = 30, face = "bold"),
@@ -94,7 +92,6 @@ MakeGroupedBarPlot <- function(data_plot_long, raffle_percentage=FALSE) {
         scale_fill_manual(
             name = "Judgment Type",
             breaks = c("willing_score_avg"),
-            labels = c("Percentage of Raffle Choices"),
             values = c("#a36e3c"),
             guide = guide_legend(title.position = "top")
         )
