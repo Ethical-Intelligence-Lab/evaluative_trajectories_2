@@ -34,6 +34,7 @@ Julian De Freitas, Pechthida Kim, Tomer Ullman
     #### Other Analysis Files
   * For exclusions, converting timeseries data to lines, plotting each participant line, calculating features of each line (e.g., num of peaks, derivative): Run `directly_experienced_content/main.ipynb`
   * For clustering, run `directly_experienced_content/TimeSeriesClustering.ipynb`
+  * For re-generating the data file containing the features, run `calculate_predictors.R`, `main.ipynb`, and then `TimeSeriesClustering.ipynb`  
 
 ### Study S1 - Naturally Evaluative
 * Run `naturally_evaluative/analysis/analysis.R`
