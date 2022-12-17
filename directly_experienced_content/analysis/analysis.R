@@ -1,4 +1,4 @@
-rm(list=ls())
+rm(list = ls())
 
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #set working directory to current directory
 
@@ -20,7 +20,7 @@ pacman::p_load('data.table', #rename data frame columns
                'sentimentr', #sentiment analysis
                'tm', #text mining
                'wordcloud', #visualize wordclouds for topic models
-               #'ldatuning', #find number of topics in topic models
+                   #'ldatuning', #find number of topics in topic models
                'lme4', #run mixed effects linear regression
                'lmerTest', #used in conjunction with lme4; get p-values
                'robustHD', #for the standardize function
@@ -57,7 +57,7 @@ ProcessForPlots <- function(data, n_plots, plot_names) {
                             willing_score_avg = unlist(stats)[c(TRUE, FALSE, FALSE)],
                             willing_score_sd = unlist(stats)[c(FALSE, TRUE, FALSE)],
                             raffle_percentage = unlist(stats)[c(FALSE, FALSE, TRUE)]
-                            )
+    )
     data_plot_sorted <- data_plot[order(data_plot$willing_score_avg),] #order by willing
     data_plot_long <- gather(data_plot_sorted, key = question_type, #create separate entries for each question type, i.e., num_plots*num_questions
                              value = score, willing_score_avg)
@@ -541,8 +541,8 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
                                   "Predictors", y_axis = paste0(perf_metric, " Score"), no_kfold = no_kfold)
 
     x_labs <- ggplot_build(predictors_plot)$layout$panel_params[[1]]$
-            x$
-            get_labels()
+        x$
+        get_labels()
 
     # Loop through the predictors, comparing each to a null distribution
     # willing: One-sided Wilcox test
@@ -557,18 +557,18 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
             vt <- var.test(as.numeric(t_results_raffle[, i]), rep(0.222, length(t_results_raffle[, i])))
 
             # Shapiro test first -> if it's normal, use t-test, if not, use wilcox test
-            if((shapiro.test(as.numeric(t_results_raffle[, i]))$p.value < 0.05) ||
+            if ((shapiro.test(as.numeric(t_results_raffle[, i]))$p.value < 0.05) ||
                 (shapiro.test(as.numeric(t_results_raffle[, i]))$p.value < 0.05)) {
                 wilcox_test_wt_willing[[i]] <- wilcox.test(x = t_results_raffle[, i],
-                                                     y = rep(0.222, length(t_results_raffle[, i])), alternative = "greater")
+                                                           y = rep(0.222, length(t_results_raffle[, i])), alternative = "greater")
             } else {
                 wilcox_test_wt_willing[[i]] <- t.test(x = t_results_raffle[, i],
-                                                     y = rep(0.222, length(t_results_raffle[, i])),
-                                                alternative = "greater", var.equal = vt$p.value > 0.05)
+                                                      y = rep(0.222, length(t_results_raffle[, i])),
+                                                      alternative = "greater", var.equal = vt$p.value > 0.05)
             }
 
             wilcox_test_wt_willing[[i]] <- wilcox.test(t_results_raffle[, i], y = rep(0.222, length(t_results_raffle[, i])),
-                                                       conf.int = TRUE, alternative="greater")  # Comparing with .222 (all 1's)
+                                                       conf.int = TRUE, alternative = "greater")  # Comparing with .222 (all 1's)
             p_value_stars_willing[i] <- stars.pval(wilcox_test_wt_willing[[i]]$"p.value") #get stars
             print(paste0("---------------", i))
             print(wilcox_test_wt_willing[[i]])
@@ -580,7 +580,7 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
     willing_bottom_y <- 0 #y value for bottom stars
 
     rw <- results_raffle_long[!is.na(results_raffle_long$predictors_results),]
-    means <- aggregate(rw$predictors_results, list(rw$predictors), FUN=mean)
+    means <- aggregate(rw$predictors_results, list(rw$predictors), FUN = mean)
 
     for (i in 1:length(predictors)) {
         predictors_plot <- predictors_plot + ggplot2::annotate("text", x = willing_bottom_x + i - 1,
@@ -677,7 +677,7 @@ d_long$picked_movie <- pm
 ### (iii) CREATE INTERESTINGNESS DATAFRAME
 interestingness <- GetInterestingness(d_long, 27)
 
-for( i in 0:26 ) {
+for (i in 0:26) {
     d_long[d_long$cluster_label == i, 'interestingness'] <- interestingness[i + 1,]
 }
 
@@ -686,7 +686,7 @@ d_long <- cbind(d_long, embeddings_avg)
 data_plot_long = NULL
 
 calculate_sentiment <- FALSE
-if(calculate_sentiment) {
+if (calculate_sentiment) {
     d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment, model_type = 'ai')
     write.csv(data.frame(sentiment_score = d_long[, "sentiment_score"]), "./data/sentiment_scores.csv", row.names = FALSE)
 } else {
@@ -711,7 +711,7 @@ pdf(file = paste0("./plots/analysis_plots/customer_journeys_bar_plot_", "k=", n_
 ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
 dev.off()
 
-grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long, raffle_percentage=TRUE)
+grouped_bar_plot <- MakeGroupedBarPlot(data_plot_long, raffle_percentage = TRUE)
 plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot, data_plot_long) #the little customer journey icons
 pdf(file = paste0("./plots/analysis_plots/customer_journeys_bar_plot_", "k=", n_clusters, "_raffle.pdf"), width = 17, height = 8)
 ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
@@ -753,7 +753,7 @@ write.csv(data.frame(word = d_for_comparison), "./data/dat_for_comparison.csv", 
 ##### RUN PREDICTIVE ANALYSES
 fold_amount <- 10
 n_reps <- 10
-cv_result <- CrossValidationAnalysis(d_long, fold_amount = fold_amount, dep_var="willing", n_reps=n_reps, load_results=FALSE)
+cv_result <- CrossValidationAnalysis(d_long, fold_amount = fold_amount, dep_var = "willing", n_reps = n_reps, load_results = TRUE)
 pdf(file = paste0("./plots/analysis_plots/cv_fold_amt=", fold_amount, "n_reps=", n_reps, ".pdf"), width = 15, height = 9)
 plot(cv_result[[1]])
 dev.off()
@@ -762,7 +762,7 @@ avg_f1s <- c()
 max_f1s <- c()
 fold_amount <- 10
 results_list <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE, random = TRUE, fold_amount = fold_amount,
-                                                                                   perf_metric = "F1", max_wtp = FALSE)
+                                                 perf_metric = "F1", max_wtp = FALSE)
 pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_f1_", fold_amount, ".pdf"), width = 17, height = 9)
 plot(results_list[[1]])
 dev.off()

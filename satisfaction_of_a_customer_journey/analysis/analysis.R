@@ -1,6 +1,6 @@
 ## Analysis script for 'Evaluative Summaries'
 ## For Study: Customer Journeys
-rm(list=ls())
+rm(list = ls())
 
 ## Import libraries
 if (!require(pacman)) { install.packages("pacman") }
@@ -20,7 +20,7 @@ pacman::p_load('data.table', #rename data frame columns
                'sentimentr', #sentiment analysis
                'tm', #text mining
                'wordcloud', #visualize wordclouds for topic models
-               #'ldatuning', #find number of topics in topic models
+                   #'ldatuning', #find number of topics in topic models
                'lme4', #run mixed effects linear regression
                'lmerTest', #used in conjunction with lme4; get p-values
                'robustHD', #for the standardize function
@@ -286,7 +286,7 @@ GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
     data$subject_n <- as.numeric(factor(data$subject))
 
     print('*-*-*-*-*-*-*-*-* Did answers vary depending on question and plot type? *-*-*-*-*-*-*-*-*')
-    effect_mod <- lmer(score_n ~ question_type_n + plot_type_n + (1 | subject_n), data=data)
+    effect_mod <- lmer(score_n ~ question_type_n + plot_type_n + (1 | subject_n), data = data)
     print(summary(effect_mod))
 
     print('*-*-*-*-*-*-*-*-* Does willingness to pay correlate with satisfaction ratings? *-*-*-*-*-*-*-*-*')
@@ -350,7 +350,7 @@ GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
     print('-----------------------------------------------------')
 
     linear_quad <- ggarrange(linear_plot, quadratic_plot, nrow = 1, ncol = 2)
-     theme(plot.margin = margin(0.1,0.1,-0.5,0.1, "cm"))
+    theme(plot.margin = margin(0.1, 0.1, -0.5, 0.1, "cm"))
     linear_quad <- annotate_figure(linear_quad,
                                    left = text_grob("Difference Between Satisfaction and Desirability", color = "black", face = "bold", size = 20, rot = 90),
                                    bottom = text_grob("Plot Ordered by Satisfaction Scores", color = "black", face = "bold", size = 20, vjust = 0.4))
@@ -448,7 +448,7 @@ data_plot_long = NULL
 data_plot_long <- ProcessForPlots(d_long, n_plots, plot_names) #num_rows = num_plots*num_questions
 
 calculate_sentiment <- FALSE
-if(calculate_sentiment) {
+if (calculate_sentiment) {
     d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment, model_type = 'ai')
     write.csv(data.frame(sentiment_score = d_long[, "sentiment_score"]), "./data/sentiment_scores.csv", row.names = FALSE)
 } else {
@@ -530,8 +530,9 @@ score_features_df <- CreateDataFeaturesDF(d_long, features, n_after_exclusions)
 
 fold_amount <- 10
 n_reps <- 10
-cv_result <- CrossValidationAnalysis(score_features_df, fold_amount = fold_amount, dep_var=c("satisfaction",
-                                                                                        "personal_desirability"), n_reps=n_reps, load_results=TRUE)
+cv_result <- CrossValidationAnalysis(score_features_df, fold_amount = fold_amount, dep_var = c("satisfaction",
+                                                                                               "personal_desirability"),
+                                     n_reps = n_reps, load_results = TRUE)
 pdf(file = paste0("./plots/analysis_plots/cv_fold_amt=", fold_amount, "n_reps=", n_reps, ".pdf"), width = 15, height = 9)
 plot(cv_result[[1]])
 dev.off()
