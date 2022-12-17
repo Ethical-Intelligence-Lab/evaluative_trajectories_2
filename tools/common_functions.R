@@ -12,10 +12,10 @@ CrossValidationAnalysis <- function(dat, fold_amount = 10,
     print("Running cross validation...")
     dir.create('cv_results', showWarnings = FALSE)
 
-    predictors_old <- c("embeddings", "interestingness", "sentiment_score", "max", "min", "end_value", "number_peaks", "number_valleys", "number_extrema", "integral",
+    predictors_old <- c("embeddings", "interestingness", "sentiment_score", "max", "min", "end_value", "start_value", "number_peaks", "number_valleys", "number_extrema", "integral",
                         "d1_avg_unweight", "d1_avg_weight_prime", "d1_avg_weight_asc", "d1_avg_weight_des", "d1_avg_weight_end",
                         "d2_avg_unweight", "d2_avg_weight_prime", "d2_avg_weight_asc", "d2_avg_weight_des", "d2_avg_weight_end")
-    predictors <- c("Embeddings", "Interestingness", "Sentiment Score", "Maximum", "Minimum", "End Value", "Number of\nPeaks", "Number of\nValleys", "Number of\nExtrema", "Integral",
+    predictors <- c("Embeddings", "Interestingness", "Sentiment Score", "Maximum", "Minimum", "End Value", "Start Value", "Number of\nPeaks", "Number of\nValleys", "Number of\nExtrema", "Integral",
                     "1st Derivative", "1st Derivative\nPrime", "1st Derivative\nAscending", "1st Derivative\nDescending", "1st Derivative\nEnd",
                     "2nd Derivative", "2nd Derivative\nPrime", "2nd Derivative\nAscending", "2nd Derivative\nDescending", "2nd Derivative\nEnd")
 
@@ -169,8 +169,7 @@ CrossValidationAnalysis <- function(dat, fold_amount = 10,
         means <- aggregate(rh$predictors_results, list(rh$predictors), FUN = mean)
 
         # Add to the plot: stars indicating significance
-
-        for (i in 1:20) {
+        for (i in 1:21) {
             predictors_plot <- predictors_plot + ggplot2::annotate("text", x = bottom_x + i - 1,
                                                                    y = bottom_y, size = 8,
                                                                    label = p_value_stars_e[[x_labs[i]]])
@@ -259,7 +258,7 @@ CrossValidationAnalysis <- function(dat, fold_amount = 10,
                 print(wilcox_test_wts[[dv]][[label]])
             }
 
-            for (i in 1:20) {
+            for (i in 1:21) {
                 # Add stars to the plot
                 if (dv == 'personal_desirability') {
                     predictors_plot <- predictors_plot + ggplot2::annotate("text", x = pd_bottom_x + i - 1,

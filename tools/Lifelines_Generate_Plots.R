@@ -20,7 +20,7 @@ pacman::p_load('rlang', 'dplyr', 'matrixStats', 'ggplot2', 'ggpubr',
 ## DEFINING THE FUNCTION FEATURES ARRAY
 
 # Define equation feature array
-feature_names <- c("max", "min", "end_value", "number_peaks", "number_valleys", "number_extrema", "integral", "d1_sum_unweight", "d1_sum_weight_prime",
+feature_names <- c("max", "min", "end_value", "start_value", "number_peaks", "number_valleys", "number_extrema", "integral", "d1_sum_unweight", "d1_sum_weight_prime",
                    "d1_sum_weight_asc", "d1_sum_weight_des", "d1_sum_weight_end", "d1_avg_unweight", "d1_avg_weight_prime",
                    "d1_avg_weight_asc", "d1_avg_weight_des", "d1_avg_weight_end", "d2_sum_unweight", "d2_sum_weight_prime",
                    "d2_sum_weight_asc", "d2_sum_weight_des", "d2_sum_weight_end", "d2_avg_unweight", "d2_avg_weight_prime",
@@ -274,6 +274,17 @@ get_max_27 <- function(end_age) {
 get_integral <- function(equation, end_age) {
     answer <- integrate(equation, start_age, end_age)
     return(answer$value)
+}
+
+get_start_value <- function(equations) {
+    start_value <- list()
+    for (i in 1:length(equations)) {
+        options(scipen = 999)
+        start_value[[i]] <- equations[[i]](0)
+
+    }
+
+    return(start_value)
 }
 
 # End Value
@@ -613,6 +624,7 @@ D1_equations_1_to_21 <- create_D1()[1:21]
 features[, "min"] <- sapply(equations, get_min, start_age, end_age)
 features[, "max"] <- c(sapply(equations[1:26], get_max, start_age, end_age), get_max_27(end_age))
 features[, "integral"] <- sapply(equations, get_integral, end_age)
+features[, "start_value"] <- unlist(get_start_value(equations))
 features[, "end_value"] <- unlist(get_end_value(equations, end_age))
 
 features[, "d1_sum_unweight"] <- c(sapply(equations[1:num_normal_plots], my_unweight_sum), unlist(my_unweight_sum_D1_2()[seq(1, length(my_unweight_sum_D1_2()), 5)]))
@@ -721,172 +733,4 @@ if (plot_experiment_figures == TRUE) {
 }
 
 
-## END -------------------------------------------------------------------------------------------------------------------
-
-## EARLY CUTOFFS (POTENTIAL STUDY 2)
-
-## -------------------------------------------------------------------------------------------------------------
-# DEFINE DATA ARRAY
-## -------------------------------------------------------------------------------------------------------------
-
-## DEFINING THE FUNCTION FEATURE ARRAY
-
-# Define features_2 array
-feature_names_2 <- c("max", "min", "end_value", "number_peaks", "number_valleys", "number_extrema", "integral",
-                     "d1_sum_unweight", "d1_sum_weight_prime", "d1_sum_weight_asc", "d1_sum_weight_des",
-                     "d1_avg_unweight", "d1_avg_weight_prime", "d1_avg_weight_asc", "d1_avg_weight_des",
-                     "d2_sum_unweight", "d2_sum_weight_prime", "d2_sum_weight_asc", "d2_sum_weight_des",
-                     "d2_avg_unweight", "d2_avg_weight_prime", "d2_avg_weight_asc", "d2_avg_weight_des")
-
-#fyi:FRFR = Fall, Rise, Fall, Rise
-plot_names_2 <- c("linear_cut_rise", "linear_cut_fall",
-                  "linear_cut_low", "linear_cut_middle", "linear_cut_high",
-                  "exp_cut_rise_convex", "exp_cut_fall_convex", "exp_cut_rise_concave", "exp_cut_fall_concave",
-                  "sin_cut_fr_full", "sin_cut_fr_partial", "sin_cut_rf_full", "sin_cut_rf_partial",
-                  "sin_cut_rfr_full", "sin_cut_rfr_partial",
-                  "sin_cut_frf_full", "sin_cut_frf_partial",
-                  "sin_cut_frfr", "sin_cut_rfrf",
-                  "logistic_cut_rise", "logistic_cut_fall")
-
-
-features_2 <- array(0, dim = c(length(plot_names_2), length(feature_names_2)))
-colnames(features_2) <- feature_names_2
-rownames(features_2) <- plot_names_2
-
-## -------------------------------------------------------------------------------------------------------------
-# DEFINE EQUATIONS FOR GRAPHING
-## -------------------------------------------------------------------------------------------------------------
-
-# Because the early cutoff functions are just the defined functions above cut off at x = 40, we will reuse functions 
-# 1-21 from "create_equations", "create_D1", and "create_D2". We are not including piecewise equations 22-27 because 
-# their changes cannot be captured on the interval 0 < x < 40, and they would just look like their non-piecewise counterparts.
-
-# Subtracting the values of the first derivative and averaging them is the same as
-# integrating (finding the area of) and averaging the second derivative. 
-# As for the first derivatives, we implement custom solutions for the linear functions. 
-
-## -------------------------------------------------------------------------------------------------------------
-# DEFINE FUNCTIONS FOR GETTING FIRST DERIVATIVE-RELATED FEATURES
-## -------------------------------------------------------------------------------------------------------------
-
-# Find unweighted sum of the first derivative: this is equal to subtracting
-# the values of the original function (i.e., integrating f'(x) from 0 to 40 = f(40)-f(0)).
-my_unweight_sum_cutoffs <- function(equation) {
-    a <- equation(cutoff_age) - equation(start_age)
-    return(a)
-}
-
-# Find sum of first derivative with weighted "prime years of life" (ages 18-30)
-my_prime_sum_cutoffs <- function(equation) {
-    a <- equation(prime_age_start) - equation(start_age)
-    b <- 2 * (equation(prime_age_end) - equation(prime_age_start))
-    c <- equation(cutoff_age) - equation(prime_age_end)
-    d <- a + b + c
-    return(d)
-}
-
-# Find sum of first derivative with ascending weights (0.25, 0.5, 0.75, and 1), i.e.,
-# later yrs. matter more
-my_ascending_sum_cutoffs <- function(equation) {
-    a <- 0.25 * (equation(cutoff_age / 2) - equation(start_age))
-    b <- 0.5 * (equation(cutoff_age) - equation(cutoff_age / 2))
-    c <- a + b
-    return(c)
-}
-
-# Find sum of first derivative with descending weights (1, 0.75, 0.5, and 0.25)
-# i.e., earlier years matter more
-my_descending_sum_cutoffs <- function(equation) {
-    a <- 1 * (equation(cutoff_age / 2) - equation(start_age))
-    b <- 0.75 * (equation(cutoff_age) - equation(cutoff_age / 2))
-    c <- a + b
-    return(c)
-}
-
-## -------------------------------------------------------------------------------------------------------------
-# DEFINE FUNCTIONS FOR GETTING SECOND DERIVATIVE-RELATED FEATURES
-## -------------------------------------------------------------------------------------------------------------
-
-# Define equations to find sums and averages of second derivative
-# To find these values, we will use the first derivatives of the functions (defined above 
-# as "D1_cutoff_functions").
-
-## -------------------------------------------------------------------------------------------------------------
-# DEFINE OTHER FUNCTIONS
-## -------------------------------------------------------------------------------------------------------------
-
-## Plot functions using "plotter" defined above
-#create cutoff plots
-plot_cutoffs <- function(equation, x_label, y_label, x_range, y_range) {
-    plot(equation, 0, x_range[2] / 2, lwd = 7, xlim = x_range, ylim = y_range, main = "",
-         xlab = x_label, ylab = y_label, col = "firebrick3", cex.lab = 1.5, cex.axis = 1.5)
-
-    return(plot_cutoffs)
-}
-
-## -------------------------------------------------------------------------------------------------------------
-# MAIN SCRIPT
-## -------------------------------------------------------------------------------------------------------------
-
-### ----- Create equations
-early_cutoffs <- create_equations()[1:21]
-D1_equations_cutoffs <- create_D1()[1:21]
-
-### ----- Get equation features
-features_2[, "min"] <- sapply(early_cutoffs, get_min, start_age, cutoff_age)
-features_2[, "max"] <- sapply(early_cutoffs, get_max, start_age, cutoff_age)
-features_2[, "integral"] <- sapply(early_cutoffs, get_integral, cutoff_age)
-features_2[, "end_value"] <- unlist(get_end_value(early_cutoffs, cutoff_age))
-
-features_2[, "d1_sum_unweight"] <- sapply(early_cutoffs, my_unweight_sum_cutoffs)
-features_2[, "d1_sum_weight_prime"] <- sapply(early_cutoffs, my_prime_sum_cutoffs)
-features_2[, "d1_sum_weight_asc"] <- sapply(early_cutoffs, my_ascending_sum_cutoffs)
-features_2[, "d1_sum_weight_des"] <- sapply(early_cutoffs, my_descending_sum_cutoffs)
-features_2[, "d1_avg_unweight"] <- features_2[, "d1_sum_unweight"] / cutoff_age
-features_2[, "d1_avg_weight_prime"] <- features_2[, "d1_sum_weight_prime"] / cutoff_age
-features_2[, "d1_avg_weight_asc"] <- features_2[, "d1_sum_weight_asc"] / cutoff_age
-features_2[, "d1_avg_weight_des"] <- features_2[, "d1_sum_weight_des"] / cutoff_age
-
-features_2[, "d2_sum_unweight"] <- sapply(D1_equations_cutoffs, my_unweight_sum_cutoffs)
-features_2[, "d2_sum_weight_prime"] <- sapply(D1_equations_cutoffs, my_prime_sum_cutoffs)
-features_2[, "d2_sum_weight_asc"] <- sapply(D1_equations_cutoffs, my_ascending_sum_cutoffs)
-features_2[, "d2_sum_weight_des"] <- sapply(D1_equations_cutoffs, my_descending_sum_cutoffs)
-features_2[, "d2_avg_unweight"] <- features_2[, "d2_sum_unweight"] / cutoff_age
-features_2[, "d2_avg_weight_prime"] <- features_2[, "d2_sum_weight_prime"] / cutoff_age
-features_2[, "d2_avg_weight_asc"] <- features_2[, "d2_sum_weight_asc"] / cutoff_age
-features_2[, "d2_avg_weight_des"] <- features_2[, "d2_sum_weight_des"] / cutoff_age
-
-# R's max and min functions count graph endpoints, but we just want the number of valleys and peaks (different from abs. max/min).
-#Hence we hand-coded them. Note valleys = minima, peaks = maxima.
-
-features_2[, "number_valleys"] <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0)
-features_2[, "number_peaks"] <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0)
-features_2[, "number_extrema"] <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 2, 2, 0, 0)
-
-### --- Standardize their features
-df <- z_scorer(features_2)
-write.csv(df, 'featuresZ_early_cutoff.csv')
-
-### ----- Plot the functions
-plot_array <- c("early", "d1", "d2")
-
-for (plot in plot_array) {
-    pdf(file = paste0(plot, "_cutoff_plots.pdf", ""))
-    par(mfrow = c(3, 3))
-    if (plot == 'early') {
-        sapply(create_equations()[1:21], plot_cutoffs, "Age", "Fulfillment", c(0, end_age), c(0, end_y_axis))
-    }
-    else if (plot == 'd1') {
-        sapply(create_D1()[1:21], plot_cutoffs, "", "", c(0, end_age), c(-10, 10))
-    }
-    else if (plot == 'd2') {
-        sapply(create_D2()[1:21], plot_cutoffs, "", "", c(0, end_age), c(-2, 2))
-    }
-    dev.off()
-}
-
-dir.create("early_cutoffs/lifeline_plots", recursive = TRUE)
-files_2 <- c("early_cutoff_plots.pdf", "d1_cutoff_plots.pdf", "d2_cutoff_plots.pdf", "featuresZ_early_cutoff.csv")
-file.move(files_2, "early_cutoffs/lifeline_plots", overwrite = TRUE)
-
-## END -------------------------------------------------------------------------------------------------------------------
+## END -----------------------------------------------------------------------------------------------------------------
