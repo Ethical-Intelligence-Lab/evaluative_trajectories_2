@@ -301,10 +301,10 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
     print(paste0('Average willingness of the picked movie: ',
                  mean(choices$willing), ', SD: ', sd(choices$willing)))
 
-    predictors_old <- c("embeddings", "interestingness", "sentiment_score", "max", "min", "end_value", "number_peaks", "number_valleys", "number_extrema", "integral",
+    predictors_old <- c("embeddings", "interestingness", "sentiment_score", "max", "min", "end_value", "start_value", "number_peaks", "number_valleys", "number_extrema", "integral",
                         "d1_avg_unweight", "d1_avg_weight_prime", "d1_avg_weight_asc", "d1_avg_weight_des", "d1_avg_weight_end",
                         "d2_avg_unweight", "d2_avg_weight_prime", "d2_avg_weight_asc", "d2_avg_weight_des", "d2_avg_weight_end")
-    predictors <- c("Embeddings", "Interestingness", "Sentiment Score", "Maximum", "Minimum", "End Value", "Number of\nPeaks", "Number of\nValleys", "Number of\nExtrema", "Integral",
+    predictors <- c("Embeddings", "Interestingness", "Sentiment Score", "Maximum", "Minimum", "End Value", "Start Value", "Number of\nPeaks", "Number of\nValleys", "Number of\nExtrema", "Integral",
                     "1st Derivative", "1st Derivative\nPrime", "1st Derivative\nAscending", "1st Derivative\nDescending", "1st Derivative\nEnd",
                     "2nd Derivative", "2nd Derivative\nPrime", "2nd Derivative\nAscending", "2nd Derivative\nDescending", "2nd Derivative\nEnd")
     if (colnames(dat)[10] != "Integral") {
@@ -753,7 +753,7 @@ write.csv(data.frame(word = d_for_comparison), "./data/dat_for_comparison.csv", 
 ##### RUN PREDICTIVE ANALYSES
 fold_amount <- 10
 n_reps <- 10
-cv_result <- CrossValidationAnalysis(d_long, fold_amount = fold_amount, dep_var="willing", n_reps=n_reps, load_results=TRUE)
+cv_result <- CrossValidationAnalysis(d_long, fold_amount = fold_amount, dep_var="willing", n_reps=n_reps, load_results=FALSE)
 pdf(file = paste0("./plots/analysis_plots/cv_fold_amt=", fold_amount, "n_reps=", n_reps, ".pdf"), width = 15, height = 9)
 plot(cv_result[[1]])
 dev.off()
