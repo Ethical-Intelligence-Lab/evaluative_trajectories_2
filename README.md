@@ -45,6 +45,7 @@ Julian De Freitas, Pechthida Kim, Tomer Ullman
 ------------
 
 ## Troubleshooting
+* If you get `Error in hash() : argument "x" is missing, with no default`, try running `pacman::p_unload('hash')` and then `pacman::p_load('hash')`
 * sentiment.ai setup probably won't work on an ARM based macbook, I will probably need to find a workaround for that.
 * If you run into this error while setting up sentiment.ai: `‘~/.virtualenvs/r-sentiment-ai/bin/python’ was not built with a shared library.
 reticulate can only bind to copies of Python built with ‘--enable-shared’.`, install pyenv and run `$ env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install 3.8.10`
