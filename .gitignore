@@ -54,3 +54,4 @@ directly_experienced_content/analysis/TimeSeriesClustering.py
 
 *.png
 *.pdf
+!survey.pdf
