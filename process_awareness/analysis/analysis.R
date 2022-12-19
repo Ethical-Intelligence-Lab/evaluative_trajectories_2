@@ -219,7 +219,7 @@ d_n_after_exclusions <- d$d_n_after_exclusions[1]
 rankings <- GetRankings(d, old_names, new_names)
 
 true_ranking <- c('sentiment_score', 'end_value', 'd1_avg_unweight', 'embeddings', 'min', 'integral', 'max', 'number_peaks', 'interestingness', 'number_valleys', 'number_extrema', 'd2_avg_unweight')
-labels <- c('Sentiment Score', 'End Value', 'Slope', 'Embeddings', 'Minimum', 'Integral', 'Maximum', 'Number of Peaks', 'Interestingness',  'Number of Valleys', 'Number of\nTotal Extrema', 'Acceleration')
+labels <- c('Sentiment Score', 'End Value', 'Slope', 'Embeddings', 'Minimum', 'Integral', 'Maximum', 'Number of Peaks', 'Interestingness',  'Num. of Valleys', 'Number of\nTotal Extrema', 'Acceleration')
 GetTrueRank <- function(x) {
   return( which(x == true_ranking)[[1]] ); 
 }

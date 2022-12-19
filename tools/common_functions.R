@@ -15,7 +15,7 @@ CrossValidationAnalysis <- function(dat, fold_amount = 10,
     predictors_old <- c("embeddings", "interestingness", "sentiment_score", "max", "min", "end_value", "start_value", "number_peaks", "number_valleys", "number_extrema", "integral",
                         "d1_avg_unweight", "d1_avg_weight_prime", "d1_avg_weight_asc", "d1_avg_weight_des", "d1_avg_weight_end",
                         "d2_avg_unweight", "d2_avg_weight_prime", "d2_avg_weight_asc", "d2_avg_weight_des", "d2_avg_weight_end")
-    predictors <- c("Embeddings", "Interestingness", "Sentiment Score", "Maximum", "Minimum", "End Value", "Start Value", "Number of\nPeaks", "Number of\nValleys", "Number of\nExtrema", "Integral",
+    predictors <- c("Embeddings", "Interestingness", "Sentiment Score", "Maximum", "Minimum", "End Value", "Start Value", "Num. of Peaks", "Number of\nValleys", "Number of\nExtrema", "Integral",
                     "2nd Deriv.", "2nd Deriv. Prime", "2nd Deriv. Asc.", "2nd Deriv. Desc.", "2nd Deriv. End",
                     "1st Deriv.", "1st Deriv. Prime", "1st Deriv. Asc.", "1st Deriv. Desc.", "1st Deriv. End")
 

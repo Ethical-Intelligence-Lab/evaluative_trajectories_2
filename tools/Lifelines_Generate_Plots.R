@@ -649,7 +649,7 @@ features[, "d2_avg_weight_asc"] <- features[, "d2_sum_weight_asc"] / end_age
 features[, "d2_avg_weight_des"] <- features[, "d2_sum_weight_des"] / end_age
 features[, "d2_avg_weight_end"] <- features[, "d2_sum_weight_end"] / end_age
 
-# R's max and min functions count graph endpoints, but we just want the number of valleys and peaks (different from abs. max/min).
+# R's max and min functions count graph endpoints, but we just want the Num. of Valleys and peaks (different from abs. max/min).
 #Hence we hand-coded them. Note valleys = minima, peaks = maxima.
 features[, "number_valleys"] <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 2, 1, 1, 1, 0, 0, 0, 0)
 features[, "number_peaks"] <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 2, 0, 0, 1, 1, 1, 1)
