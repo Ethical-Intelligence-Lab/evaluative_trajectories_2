@@ -16,8 +16,8 @@ CrossValidationAnalysis <- function(dat, fold_amount = 10,
                         "d1_avg_unweight", "d1_avg_weight_prime", "d1_avg_weight_asc", "d1_avg_weight_des", "d1_avg_weight_end",
                         "d2_avg_unweight", "d2_avg_weight_prime", "d2_avg_weight_asc", "d2_avg_weight_des", "d2_avg_weight_end")
     predictors <- c("Embeddings", "Interestingness", "Sentiment Score", "Maximum", "Minimum", "End Value", "Start Value", "Number of\nPeaks", "Number of\nValleys", "Number of\nExtrema", "Integral",
-                    "1st Derivative", "1st Derivative\nPrime", "1st Derivative\nAscending", "1st Derivative\nDescending", "1st Derivative\nEnd",
-                    "2nd Derivative", "2nd Derivative\nPrime", "2nd Derivative\nAscending", "2nd Derivative\nDescending", "2nd Derivative\nEnd")
+                    "1st Deriv.", "1st Deriv.\nPrime", "1st Deriv.\nAscending", "1st Deriv.\nDescending", "1st Deriv.\nEnd",
+                    "2nd Deriv.", "2nd Deriv.\nPrime", "2nd Deriv.\nAscending", "2nd Deriv.\nDescending", "2nd Deriv.\nEnd")
 
     if (!('Integral' %in% colnames(dat))) {
         setnames(dat, old = predictors_old, new = predictors)

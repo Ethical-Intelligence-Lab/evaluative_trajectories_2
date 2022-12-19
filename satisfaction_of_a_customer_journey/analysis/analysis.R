@@ -370,8 +370,8 @@ CreateDataFeaturesDF <- function(data, features_df, n_after_exclusions) {
     score_features_df <- cbind(data,
                                as.data.frame(do.call("rbind", replicate(n_after_exclusions, standardize(features_df), simplify = FALSE))))
     score_features_df["satisfaction"] <- as.data.frame(standardize(apply(score_features_df["satisfaction"], 2, as.numeric)))
-    score_features_df["personal_desirability"] <- as.data.frame(apply(score_features_df["personal_desirability"], 2, as.numeric))
-    score_features_df["willingness_to_pay"] <- as.data.frame(apply(score_features_df["willingness_to_pay"], 2, as.numeric))
+    score_features_df["personal_desirability"] <- as.data.frame(standardize(apply(score_features_df["personal_desirability"], 2, as.numeric)))
+    score_features_df["willingness_to_pay"] <- as.data.frame(standardize(apply(score_features_df["willingness_to_pay"], 2, as.numeric)))
     score_features_df["subject"] <- as.data.frame(apply(score_features_df["subject"], 2, as.numeric))
     score_features_df["plot_names"] <- as.data.frame(as.numeric(factor(score_features_df$plot_names)))
     score_features_df["sentiment_score"] <- standardize(score_features_df["sentiment_score"])
