@@ -16,7 +16,7 @@ CrossValidationAnalysis <- function(dat, fold_amount = 10,
                         "d1_avg_unweight", "d1_avg_weight_prime", "d1_avg_weight_asc", "d1_avg_weight_des", "d1_avg_weight_end",
                         "d2_avg_unweight", "d2_avg_weight_prime", "d2_avg_weight_asc", "d2_avg_weight_des", "d2_avg_weight_end")
     predictors <- c("Embeddings", "Interestingness", "Sentiment Score", "Maximum", "Minimum", "End Value", "Start Value", "Number of\nPeaks", "Number of\nValleys", "Number of\nExtrema", "Integral",
-                    "2nd Deriv.", "2nd Deriv. Prime", "2nd Deriv. Asc.", "2nd Deriv. Desc.", "2nd Deriv. End"
+                    "2nd Deriv.", "2nd Deriv. Prime", "2nd Deriv. Asc.", "2nd Deriv. Desc.", "2nd Deriv. End",
                     "1st Deriv.", "1st Deriv. Prime", "1st Deriv. Asc.", "1st Deriv. Desc.", "1st Deriv. End")
 
     if (!('Integral' %in% colnames(dat))) {
