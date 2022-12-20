@@ -528,30 +528,30 @@ ordered_d <- sentiment_df[[1]] %>%
     arrange(factor(plot_names, levels = d_s1_order[, 1]))
 
 print("Do sentiment scores from study 1 correlate with study S1 sentiment results (word)?")
-cor.test(d_s1_order$word.sentiment_score, ordered_d[ordered_d$question_type == 'word', 'mean'])
+print(cor.test(d_s1_order$word.sentiment_score, ordered_d[ordered_d$question_type == 'word', 'mean']))
 
 print("Do sentiment scores from study 1 correlate with study S1 sentiment results (sentence)?")
-cor.test(d_s1_order$word.sentiment_score, ordered_d[ordered_d$question_type == 'sentence', 'mean'])
+print(cor.test(d_s1_order$word.sentiment_score, ordered_d[ordered_d$question_type == 'sentence', 'mean']))
 
 print("Do satisfaction scores from study 1 correlate with study S1 sentiment results (word)?")
-cor.test(d_s1_order_satisfaction$word.score, ordered_d[ordered_d$question_type == 'word', 'mean'])
+print(cor.test(d_s1_order_satisfaction$word.score, ordered_d[ordered_d$question_type == 'word', 'mean']))
 
 print("Do satisfaction scores from study 1 correlate with study S1 sentiment results (sentence)?")
-cor.test(d_s1_order_satisfaction$word.score, ordered_d[ordered_d$question_type == 'sentence', 'mean'])
+print(cor.test(d_s1_order_satisfaction$word.score, ordered_d[ordered_d$question_type == 'sentence', 'mean']))
 
 print("Do personal desirability scores from study 1 correlate with study S1 sentiment results (word)?")
-cor.test(d_s1_order_pd$word.score, ordered_d[ordered_d$question_type == 'word', 'mean'])
+print(cor.test(d_s1_order_pd$word.score, ordered_d[ordered_d$question_type == 'word', 'mean']))
 
 print("Do personal desirability scores from study 1 correlate with study S1 sentiment results (sentence)?")
-cor.test(d_s1_order_pd$word.score, ordered_d[ordered_d$question_type == 'sentence', 'mean'])
+print(cor.test(d_s1_order_pd$word.score, ordered_d[ordered_d$question_type == 'sentence', 'mean']))
 
 
 vt <- var.test(sentiment_df[[2]][sentiment_df[[2]]$question_type == 'sentence', 'sentiment_score'],
                sentiment_df[[2]][sentiment_df[[2]]$question_type == 'word', 'sentiment_score'])
 
 print("Sentence vs. Word:")
-t.test(sentiment_df[[2]][sentiment_df[[2]]$question_type == 'sentence', 'sentiment_score'],
-       sentiment_df[[2]][sentiment_df[[2]]$question_type == 'word', 'sentiment_score'])
+print(t.test(sentiment_df[[2]][sentiment_df[[2]]$question_type == 'sentence', 'sentiment_score'],
+       sentiment_df[[2]][sentiment_df[[2]]$question_type == 'word', 'sentiment_score']))
 
 n_ss <- dim(data_long)[1] / n_plots
 
