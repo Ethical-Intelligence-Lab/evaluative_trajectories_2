@@ -151,20 +151,20 @@ print("****** CORRELATIONS BETWEEN RATINGS ACROSS STUDIES 1, 3, S2 AND 4 ******"
 print('***** Customer Journey Satisfaction v. WTP *****')
 d_ll$corresponding_plots <- sapply(d_first_person$word.cluster_labels, FUN = get_corr_plot)
 d_cj <- d_customer_journeys[d_customer_journeys$word.question_type == "satisfaction",]
-cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
-         aggregate(d_ll, list(d_ll$corresponding_plots), mean)$word.score)
+print(cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
+         aggregate(d_ll, list(d_ll$corresponding_plots), mean)$word.score))
 
 print('***** Customer Journey PD v. WTP *****')
 d_cj <- d_customer_journeys[d_customer_journeys$word.question_type == "personal_desirability",]
-cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
-         aggregate(d_ll, list(d_ll$corresponding_plots), mean)$word.score)
+print(cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
+         aggregate(d_ll, list(d_ll$corresponding_plots), mean)$word.score))
 
 ############## Check if corresponding clusters correlate in Hiring ##############
 
 print('***** Hiring v. WTP *****')
 d_cj <- d_interview_performance[d_interview_performance$word.question_type == "hiring_likelihood",]
-cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
-         aggregate(d_ll, list(d_ll$corresponding_plots), mean)$word.score)
+print(cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
+         aggregate(d_ll, list(d_ll$corresponding_plots), mean)$word.score))
 
 })
 
@@ -172,10 +172,10 @@ cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
 
 print('***** Lifelines Meaningfulness v. WTP *****')
 d_cj <- d_lifelines[d_lifelines$word.question_type == "meaningfulness",]
-cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
-         aggregate(d_ll, list(d_ll$corresponding_plots), mean)$word.score)
+print(cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
+         aggregate(d_ll, list(d_ll$corresponding_plots), mean)$word.score))
 
 print('***** Lifelines PD v. WTP *****')
 d_cj <- d_lifelines[d_lifelines$word.question_type == "personal_desirability",]
-cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
-         aggregate(d_ll, list(d_ll$corresponding_plots), mean)$word.score)
+print(cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
+         aggregate(d_ll, list(d_ll$corresponding_plots), mean)$word.score))
