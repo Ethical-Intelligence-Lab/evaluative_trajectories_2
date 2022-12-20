@@ -41,8 +41,11 @@ get_integral <- function(equation, end_age) {
 get_start_value <- function(equations) {
     end_value <- list()
     for (i in 1:length(equations)) {
+
+#        curve(equations[[i]], from=1, to=90, , xlab="x", ylab="y")
+
         options(scipen = 999)
-        end_value[[i]] <- equations[[i]](0)
+        end_value[[i]] <- integrate(equations[[i]], 0, 3)$value
 
     }
     return(end_value)

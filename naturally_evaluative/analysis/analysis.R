@@ -473,18 +473,6 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
     return(grouped_box_plot)
 }
 
-Get_spearman_brown_correction <- function(cor_value) {
-    "
-    Adjusting correlation value with the Spearman-Brown prophecy formula: (2 * r) / (1 + r)
-    Input: cor_value (any correlation value)
-    Output: cor_value_adj (the adjusted correlation value from the formula)
-    "
-
-    cor_value_adj <- (2 * cor_value) / (1 + cor_value)
-
-    return(cor_value_adj)
-}
-
 
 ##======##
 ## MAIN ##

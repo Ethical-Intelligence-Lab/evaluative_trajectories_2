@@ -10,10 +10,6 @@ Julian De Freitas, Pechthida Kim, Tomer Ullman
 <br><br>
 * This step is only needed if you want to re-run sentiment analysis (not required for main analyses): 
   * Setup sentiment.ai (For more information: https://benwiseman.github.io/sentiment.ai/#Installation__Setup)
-  * Uncomment these lines in `tools/common_functions.R`:
-    * pacman::p_load('sentiment.ai')
-    * install_sentiment.ai()
-    * init_sentiment.ai()
   * Set calculate_sentiment to TRUE.
 
 ### For Analyses Comparing Different Studies:

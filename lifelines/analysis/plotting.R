@@ -481,8 +481,8 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
     grouped_box_plot <- ggplot(data = results_df, aes(x = x_order, y = results_order, fill = question_type, color = question_type)) +
         scale_colour_manual(values = c("#800000", "#3c7ea3")) +
         scale_x_discrete() +
-        stat_summary(fun = absmean, geom = "point", shape = 20, size = 5, aes(group = question_type, color=question_type), position = position_dodge(.75)) +
-        stat_summary(fun.data = absse, geom = "errorbar", size=1.2, aes(group = question_type, width=0.5, color=question_type), position = position_dodge(.75)) +
+        stat_summary(fun = get_mean, geom = "point", shape = 20, size = 5, aes(group = question_type, color=question_type), position = position_dodge(.75)) +
+        stat_summary(fun.data = get_se, geom = "errorbar", size=1.2, aes(group = question_type, width=0.5, color=question_type), position = position_dodge(.75)) +
         ggtitle(paste0("Meaningfulness and Desirability Predictions with ", x_labels)) +
         xlab(x_labels) +
         ylab("Prediction Performance\n(Cross Validated Pearson's r)") +
@@ -493,9 +493,9 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
             labels = c("Meaningfulness", "Personal Desirability"),
             values = c("#006b4e", "#4b9ecc"),
             guide = guide_legend(title.position = "top")) +
-        geom_hline(yintercept = absmean(random_data$random)) +
-        ggplot2::annotate("rect", xmin = -Inf, xmax = Inf, ymin = absse(random_data$random)$ymin,
-                          ymax = absse(random_data$random)$ymax, fill = "black", alpha = .2, color = NA) +
+        geom_hline(yintercept = get_mean(random_data$random)) +
+        ggplot2::annotate("rect", xmin = -Inf, xmax = Inf, ymin = get_se(random_data$random)$ymin,
+                          ymax = get_se(random_data$random)$ymax, fill = "black", alpha = .2, color = NA) +
         theme_bw() +
         theme(element_blank(),
                   plot.title = element_blank(), #element_text(color = "black", size=32, face = "bold", hjust = 0.5),

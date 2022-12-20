@@ -107,8 +107,8 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
 
     grouped_box_plot <- ggplot(data = results_df, aes(x = x_order, y = results_order)) +
         scale_x_discrete() +
-        stat_summary(fun = absmean, geom = "point", color="#3c7ea3", shape = 20, size = 5, position = position_dodge(.75)) +
-        stat_summary(fun.data = absse, geom = "errorbar", color="#3c7ea3", aes(group = question_type, width = 0.5), position = position_dodge(.75)) +
+        stat_summary(fun = get_mean, geom = "point", color="#3c7ea3", shape = 20, size = 5, position = position_dodge(.75)) +
+        stat_summary(fun.data = get_se, geom = "errorbar", color="#3c7ea3", aes(group = question_type, width = 0.5), position = position_dodge(.75)) +
         ggtitle(paste0("Hiring Likelihood Predictions with ", x_labels)) +
         xlab(x_labels) +
         ylab("Prediction Performance\n(Cross-Validated Pearson's r)") +
@@ -119,8 +119,8 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
             labels = c("Hiring Likelihood"),
             values = c("#3c7ea3"),
             guide = guide_legend(title.position = "top")) +
-        geom_hline(yintercept = absmean(random_data$random)) +
-        ggplot2::annotate("rect", xmin = -Inf, xmax = Inf, ymin = absse(random_data$random)$ymin, ymax = absse(random_data$random)$ymax, fill = "black", alpha = .2, color = NA) +
+        geom_hline(yintercept = get_mean(random_data$random)) +
+        ggplot2::annotate("rect", xmin = -Inf, xmax = Inf, ymin = get_se(random_data$random)$ymin, ymax = get_se(random_data$random)$ymax, fill = "black", alpha = .2, color = NA) +
         theme_bw() +
     if (x_labels == "Predictors") {
         theme(element_blank(),

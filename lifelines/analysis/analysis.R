@@ -435,6 +435,12 @@ dim(data_plot_long)
 
 calculate_sentiment <- FALSE
 if (calculate_sentiment) {
+    pacman::p_load('sentiment.ai')
+
+    ####### Run only first time if you are using this package #######
+    #init_sentiment.ai()
+    #install_sentiment.ai()
+
     data_long[, "sentiment_score"] <- sapply(data_long["word"], CalculateSentiment, model_type = 'ai')
     write.csv(data.frame(sentiment_score = data_long[, "sentiment_score"]), "./data/sentiment_scores.csv", row.names = FALSE)
 } else {
@@ -467,17 +473,9 @@ if (FALSE) {
     plot(arranged_word_clouds)
     dev.off()
 
-
-    #### (2.3) MAKE PLOT OF SENTIMENT SCORES, ORDERED BY MEANINGFULNESS SCORES
-    sentiment_bar_plot <- MakeSentimentBarPlot(data_long, n_plots, plot_names)
-    sentiment_plot_images <- MakeGroupedBarPlotImages(sentiment_bar_plot, plot_names) #the little lifeline icons
-
-    pdf(file = "lifelines_sentiment_plot.pdf", width = 17, height = 8)
-    ggdraw(insert_xaxis_grob(sentiment_bar_plot, sentiment_plot_images, position = "bottom"))
-    dev.off()
-
     #### (2.4) MAKE FREQUENCY PLOTS FOR TOPIC MODELING
-    topic_modeling <- TopicModeling(data_long, n_plots, plot_names)
+    pacman::p_load('topicmodels')
+    topic_modeling <- TopicModeling(data_long, n_plots, plot_names, "lifelines")
 }
 
 

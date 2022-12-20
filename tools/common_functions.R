@@ -1,11 +1,6 @@
 pacman::p_load('qdapDictionaries')
 pacman::p_unload('hash')
 pacman::p_load('hash')
-#pacman::p_load('sentiment.ai')
-
-# Run only first time if you are using this package::
-#init_sentiment.ai()
-#install_sentiment.ai()
 
 CrossValidationAnalysis <- function(dat, fold_amount = 10,
                                     n_reps = 1, load_results = FALSE, dep_var = 'hiring_likelihood') {
@@ -16,8 +11,8 @@ CrossValidationAnalysis <- function(dat, fold_amount = 10,
                         "d1_avg_unweight", "d1_avg_weight_prime", "d1_avg_weight_asc", "d1_avg_weight_des", "d1_avg_weight_end",
                         "d2_avg_unweight", "d2_avg_weight_prime", "d2_avg_weight_asc", "d2_avg_weight_des", "d2_avg_weight_end")
     predictors <- c("Embeddings", "Interestingness", "Sentiment Score", "Maximum", "Minimum", "End Value", "Start Value", "Num. of Peaks", "Num. of Valleys", "Num. of Extrema", "Integral",
-                    "1st Deriv.", "1st Deriv. Prime", "1st Deriv. Asc.", "1st Deriv. Desc.", "1st Deriv. End",
-                    "2nd Deriv.", "2nd Deriv. Prime", "2nd Deriv. Asc.", "2nd Deriv. Desc.", "2nd Deriv. End")
+                    "1st Deriv.", "1st Deriv. Early", "1st Deriv. Asc.", "1st Deriv. Desc.", "1st Deriv. End",
+                    "2nd Deriv.", "2nd Deriv. Early", "2nd Deriv. Asc.", "2nd Deriv. Desc.", "2nd Deriv. End")
 
     if (!('Integral' %in% colnames(dat))) {
         setnames(dat, old = predictors_old, new = predictors)
@@ -34,8 +29,8 @@ CrossValidationAnalysis <- function(dat, fold_amount = 10,
         }
     } else {
         for (dv in dep_var) {
-            results_hl_list <- list()
-            errors_hl_list <- list()
+            results_list <- list()
+            errors_list <- list()
 
             for (p in 1:n_reps) { # Replicate n_reps times to make sure our model is robust
                 print(paste("Running iteration ", p, "-", dv, "..."))
@@ -72,30 +67,30 @@ CrossValidationAnalysis <- function(dat, fold_amount = 10,
                     }
                 }
 
-                results_hl_list <- append(results_hl_list, list(results_e))
-                errors_hl_list <- append(errors_hl_list, list(errors_e))
+                results_list <- append(results_list, list(results_e))
+                errors_list <- append(errors_list, list(errors_e))
             }
 
             # Collect mean r's of each run
-            results_means_bw_runs <- data.frame("1" = results_hl_list[[1]])
+            results_all <- data.frame("1" = results_list[[1]])
             for (i in 2:n_reps) {
                 col_name <- i
-                results_means_bw_runs <- cbind(results_means_bw_runs, data.frame(col_name = results_hl_list[[i]]))
+                results_all <- cbind(results_all, data.frame(col_name = results_list[[i]]))
             }
 
-            names(results_means_bw_runs) <- (1:n_reps * fold_amount)
+            names(results_all) <- (1:n_reps * fold_amount)
 
             # Collect mean RMSE's of each run
-            errors_means_bw_runs <- data.frame("1" = errors_hl_list[[1]])
+            errors_all <- data.frame("1" = errors_list[[1]])
             for (i in 2:n_reps) {
                 col_name <- i
-                errors_means_bw_runs <- cbind(errors_means_bw_runs, data.frame(col_name = errors_hl_list[[i]]))
+                errors_all <- cbind(errors_all, data.frame(col_name = errors_list[[i]]))
             }
 
-            names(errors_means_bw_runs) <- (1:n_reps * fold_amount)
+            names(errors_all) <- (1:n_reps * fold_amount)
 
-            results_e <- results_means_bw_runs
-            errors_e <- errors_means_bw_runs
+            results_e <- results_all
+            errors_e <- errors_all
 
             write.csv(errors_e, paste0('cv_results/cv_', fold_amount, '_', n_reps, '_', dv, '_errors.csv'))
             write.csv(results_e, paste0('cv_results/cv_', fold_amount, '_', n_reps, '_', dv, '_results.csv'))
@@ -114,7 +109,7 @@ CrossValidationAnalysis <- function(dat, fold_amount = 10,
         t_results_e <- t_results_e[, !names(t_results_e) %in% c("random")]
         colnames(t_results_e) <- predictors
         results_e_long <- gather(t_results_e, key = predictors, value = predictors_results, colnames(t_results_e))
-        results_e_long["new_order"] <- with(results_e_long, reorder(predictors, predictors_results, absmean))
+        results_e_long["new_order"] <- with(results_e_long, reorder(predictors, predictors_results, mean))
 
         means_h <- aggregate(results_e_long$predictors_results, list(results_e_long$predictors), FUN = mean)
         ordered_pred <- means_h[order(-means_h$x),]
@@ -188,7 +183,7 @@ CrossValidationAnalysis <- function(dat, fold_amount = 10,
             colnames(t_results) <- predictors[!predictors %in% 'random']
             results_long <- gather(t_results, key = predictors,
                                    value = predictors_results, colnames(t_results))
-            new_order <- with(results_long, reorder(predictors, predictors_results, absmean))
+            new_order <- with(results_long, reorder(predictors, predictors_results, mean))
             results_long[paste0(dv, "_new_order")] <- new_order
             if (dv != 'personal_desirability') {
                 results_prime <- results_long
@@ -279,23 +274,14 @@ CrossValidationAnalysis <- function(dat, fold_amount = 10,
 }
 
 # Return absolute value of the mean
-absmean <- function(x) {
-    return(abs(mean(na.omit(x))))
+get_mean <- function(x) {
+    return(mean(na.omit(x)))
 }
 
-# Return absolute value of the SE
 # mean-se is 1.96 * std err (https://stulp.gmw.rug.nl/ggplotworkshop/comparinggroupstatistics.html)
-absse <- function(x) {
-    result <- mean_se(na.omit(x), 1.96)
-    if (result[2] * result[3] < 0) {
-        if (mean(na.omit(x)) < 0) {
-            return(mean_se(na.omit(x), 1.96) * -1)
-        }
-        return(result)
-    }
-    return(abs(result))
+get_se <- function(x) {
+    return(mean_se(na.omit(x), 1.96))
 }
-
 
 CleanWord <- function(word) {
     word <- word(tolower(word), 1)
@@ -334,146 +320,147 @@ MakeWordClouds <- function(data, n_plots, plot_names) {
     super high-quality images necessary for producing small word clouds
     "
 
+    set.seed(1)
+
     if (n_plots != 27) { # Directly experienced content
-        print("TODO: Word Clouds for Directly Experienced Content!")
+        print("Error: n_plots should be 27!")
+        return()
     }
 
     plot_word_clouds <- function(data) {
         # Define word clouds
         LR <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[1]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(
-                #mask = png::readPNG("ggwordcloud_mask.png"), #mask does not work
-                shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
         LF <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[2]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
         LL <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[3]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
         LM <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[4]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
         LH <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[5]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
         ERCV <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[6]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
         EFCV <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[7]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
         ERCC <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[8]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
         EFCC <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[9]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
         SFR_FULL <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[10]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
         SFR_PAR <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[11]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
         SRF_FULL <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[12]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
         SRF_PAR <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[13]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
         SRFR_FULL <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[14]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
         SRFR_PAR <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[15]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
         SFRF_FULL <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[16]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
         SFRF_PAR <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[17]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
         SFRFR <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[18]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
         SRFRF <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[19]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
         LOG_RISE <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[20]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
         LOG_FALL <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[21]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
         POS_FULL <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[22]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
         POS_PAR <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[23]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
         NEG_FULL <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[24]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
         NEG_PAR <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[25]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
         LRSF <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[26]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
         LRSFER <- ggplot(arrange(as.data.frame(Get_word_stats(data, n_plots)[[27]]), -Freq), aes(label = Var1, size = Freq, color = Freq)) +
-            geom_text_wordcloud_area(shape = "square") +
+            geom_text_wordcloud_area(shape = "square", rm_outside=TRUE) +
             scale_size_area(max_size = 30) +
             theme_minimal() +
             scale_color_gradient(low = "mistyrose1", high = "firebrick3")
@@ -639,196 +626,16 @@ ArrangeWordClouds <- function(data_plot_long) {
     return(wc_plot)
 }
 
-AnalyzeRidgeRegression <- function(score_features_df, metric = 'satisfaction') {
-    "
-    Measure the performance of individual predictors by doing cross-validated (nfold = 10) ridge regression
-    Input: score_features_df
-    Output: Ridge regression results for satisfaction and personal desirability scores and their plots
-    "
-
-    # Define the columns that we want for the regression: from embeddings to integral and the D1 & D2 predictors.
-    score_features_ss <- subset(score_features_df, select = c(embeddings:integral, d1_avg_unweight:d1_avg_weight_end, d2_avg_unweight:d2_avg_weight_end))
-    my_predictors <- data.matrix(score_features_ss)
-
-    # 1. Satisfaction
-    satisfaction_scores <- score_features_df[[metric]]
-
-    # Create testing and training data
-    set.seed(1)
-    indeces <- sample(nrow(my_predictors), nrow(my_predictors) * 0.8)
-
-    my_predictors_train <- my_predictors[indeces,]
-    satisfaction_scores_train <- satisfaction_scores[indeces]
-
-    my_predictors_test <- my_predictors[-indeces,]
-    satisfaction_scores_test <- satisfaction_scores[-indeces]
-
-    # Standardize data
-    my_predictors_train_stdz <- apply(my_predictors_train, 2, scale)
-    satisfaction_scores_train_stdz <- scale(satisfaction_scores_train)
-
-    my_predictors_test_stdz <- apply(my_predictors_test, 2, scale)
-    satisfaction_scores_test_stdz <- scale(satisfaction_scores_test)
-
-    # Run regular regression
-    lm_satisfaction_features <- glmnet(my_predictors_train_stdz, satisfaction_scores_train_stdz,
-                                       alpha = 0, lambda = 0)
-
-    # Run ridge regression
-    set.seed(123)
-    lambdas <- seq(1, 10e-5, length = 100)
-    ridge_satisfaction_features <- cv.glmnet(my_predictors_train_stdz, satisfaction_scores_train_stdz,
-                                             nfolds = 10, alpha = 0, lambda = lambdas)
-    plot(ridge_satisfaction_features)
-    lambda_best <- ridge_satisfaction_features$lambda.min
-    ridge_satisfaction_features1 <- glmnet(my_predictors_train_stdz, satisfaction_scores_train_stdz,
-                                           alpha = 0, lambda = lambda_best)
-
-    # Order the regression results from most to least important predictors (rounded to 5 digits)
-    satisfaction_features_rounded <- round(coef(ridge_satisfaction_features1), 5)
-    x_satisfaction_ordered = order(satisfaction_features_rounded@x, decreasing = TRUE)
-    satisfaction_features_rounded@Dimnames[[1]] <- satisfaction_features_rounded@Dimnames[[1]][x_satisfaction_ordered]
-    satisfaction_features_rounded@x <- satisfaction_features_rounded@x[x_satisfaction_ordered]
-
-    print('satisfaction vs. features:')
-    print(satisfaction_features_rounded)
-
-    # Compare standard regression to ridge regression
-    predict_satisfaction_lm <- predict(lm_satisfaction_features, my_predictors_test_stdz)
-    mse_satisfaction_lm <- mean((satisfaction_scores_test_stdz - predict_satisfaction_lm)^2)
-    mse_satisfaction_lm
-    predict_satisfaction_ridge <- predict(ridge_satisfaction_features1, my_predictors_test_stdz)
-    mse_satisfaction_ridge <- mean((satisfaction_scores_test_stdz - predict_satisfaction_ridge)^2)
-    mse_satisfaction_ridge
-    #Hmm, linear regression seems to perform a bit better than ridge regression
-
-    # Plot functions
-    plot_Fit <- function(y_test, y_predicted, my_title) {
-        g2 <- ggplot(data.frame(cbind(y_predicted, y_test)),
-                     aes(x = y_test, y = y_predicted)) + geom_point()
-
-        theme1 <- theme(
-            plot.background = element_blank(),
-            panel.grid.major = element_blank(),
-            panel.grid.minor = element_blank(),
-            panel.border = element_blank(),
-            panel.background = element_blank(),
-            axis.line = element_line(size = .4)
-        )
-
-        textlab = cor.test(y_test, y_predicted)$estimate[[1]]
-        textlab = round(textlab^2, digits = 5)
-        textlab = as.character(paste("R^2 ==", textlab))
-
-        data.label <- data.frame(x = 5,
-                                 y = 2,
-                                 label = textlab)
-
-        g3 = g2 +
-            theme1 +
-            labs(x = "Actual Score",
-                 y = "Predicted Score", title = my_title) +
-            theme(plot.title = element_text(color = "black", hjust = 0.5)) +
-            geom_smooth(aes(), method = "lm", se = FALSE) +
-            geom_text(
-                data = data.label,
-                aes(x = x, y = y, label = label),
-                size = 4,
-                family = "Times",
-                parse = TRUE,
-                face = "italic"
-            )
-
-        g3
-
-    }
-
-    plot_Fit(satisfaction_scores_test_stdz, predict_satisfaction_lm, my_title = "LM: Satisfaction")
-    plot_Fit(satisfaction_scores_test_stdz, predict_satisfaction_ridge, my_title = "RIDGE: Satisfaction")
-
-    #------------------------------------------------------------------------------------------------
-
-    if (metric == 'satisfaction') {
-        # 2. Personal Desirability
-        pd_scores <- score_features_df$personal_desirability
-
-        # Create testing and training data
-        set.seed(1)
-        indeces <- sample(nrow(my_predictors), nrow(my_predictors) * 0.8)
-
-        my_predictors_train <- my_predictors[indeces,]
-        pd_scores_train <- pd_scores[indeces]
-
-        my_predictors_test <- my_predictors[-indeces,]
-        pd_scores_test <- pd_scores[-indeces]
-
-        # Standardize data
-        my_predictors_train_stdz <- apply(my_predictors_train, 2, scale)
-        pd_scores_train_stdz <- scale(pd_scores_train)
-
-        my_predictors_test_stdz <- apply(my_predictors_test, 2, scale)
-        pd_scores_test_stdz <- scale(pd_scores_test)
-
-        # Run regular regression
-        lm_pd_features <- glmnet(my_predictors_train_stdz, pd_scores_train_stdz,
-                                 alpha = 0, lambda = 0)
-
-        # Run ridge regression
-        set.seed(123)
-        lambdas <- seq(1, 10e-5, length = 100)
-        ridge_pd_features <- cv.glmnet(my_predictors_train_stdz, pd_scores_train_stdz,
-                                       nfolds = 10, alpha = 0, lambda = lambdas)
-        plot(ridge_pd_features)
-        lambda_best <- ridge_pd_features$lambda.min
-        ridge_pd_features1 <- glmnet(my_predictors_train_stdz, pd_scores_train_stdz,
-                                     alpha = 0, lambda = lambda_best)
-
-        # Order the regression results from most to least important predictors (rounded to 5 digits)
-        pd_features_rounded <- round(coef(ridge_pd_features1), 5)
-        x_pd_ordered = order(pd_features_rounded@x, decreasing = TRUE)
-        pd_features_rounded@Dimnames[[1]] <- pd_features_rounded@Dimnames[[1]][x_pd_ordered]
-        pd_features_rounded@x <- pd_features_rounded@x[x_pd_ordered]
-
-        print('personal desirability vs. features:')
-        print(pd_features_rounded)
-
-        # Compare standard regression to ridge regression
-        predict_pd_lm <- predict(lm_pd_features, my_predictors_test_stdz)
-        mse_pd_lm <- mean((pd_scores_test_stdz - predict_pd_lm)^2)
-        mse_pd_lm
-        predict_pd_ridge <- predict(ridge_pd_features1, my_predictors_test_stdz)
-        mse_pd_ridge <- mean((pd_scores_test_stdz - predict_pd_ridge)^2)
-        mse_pd_ridge
-        #Again, linear regression does slightly better than ridge regression.
-
-        # Plot functions
-        plot_Fit(pd_scores_test_stdz, predict_pd_lm, my_title = "LM: Personal Desirability")
-        plot_Fit(pd_scores_test_stdz, predict_pd_ridge, my_title = "RIDGE: Personal Desirability")
-    }
-
-}
-
-Get_spearman_brown_correction <- function(cor_value) {
-    "
-    Adjusting correlation value with the Spearman-Brown prophecy formula: (2 * r) / (1 + r)
-    Input: cor_value (any correlation value)
-    Output: cor_value_adj (the adjusted correlation value from the formula)
-    "
-
-    cor_value_adj <- (2 * cor_value) / (1 + cor_value)
-
-    return(cor_value_adj)
-}
-
-TopicModeling <- function(dat_long, n_plots, plot_names) {
+TopicModeling <- function(dat_long, n_plots, plot_names, study='satisfaction') {
     "
     Clean words, then plot topics models.
     Input: data_long, n_plots, plot_names
     Output: topic model word clouds
     "
 
-    # 1. Topic Modeling
+    print("Running topic modelling...")
 
+    # 1. Topic Modeling
     # Create list of all participant words categorized by customer journeys
     words_raw <- c()
     for (i in 1:n_plots) {
@@ -919,10 +726,18 @@ TopicModeling <- function(dat_long, n_plots, plot_names) {
         freq_df_list[[i]] <- ggplot(data = freq_df_each, mapping = aes(x = freq, y = terms)) +
             theme_classic() +
             geom_col() +
-            scale_y_discrete(limits = rev(levels(freq_df_each$terms))) +
+            scale_y_discrete(limits = rev(levels(freq_df_each$terms)))
+
+        if(study == 'hiring' || study == 'lifelines') {
+            x_ax_size = 15
+        } else {
+            x_ax_size = 25
+        }
+
+        freq_df_list[[i]] <- freq_df_list[[i]] +
             theme(axis.text = element_text(color = "black", size = 25),
                   axis.title.y = element_blank(),
-                  axis.title.x = element_blank())
+                  axis.title.x = element_blank(), axis.text.x = element_text(size=x_ax_size))
     }
 
     # Using topics(words_lda), automatically assign plots to their respective topic model
@@ -986,42 +801,6 @@ TopicModeling <- function(dat_long, n_plots, plot_names) {
         draw_image(paste0("./plots/analysis_plots/", rownames(words_df_3)[11], "_plot.png"), scale = image_size, x = start + 10 * spacing_3) +
         draw_image(paste0("./plots/analysis_plots/", rownames(words_df_3)[12], "_plot.png"), scale = image_size, x = start + 11 * spacing_3)
 
-    # Frequency Plot 4
-    # words_df_4 <- as.data.frame(topics(words_lda)[as.data.frame(topics(words_lda)) == 4])
-    # end_4 <- (sort(freq_df[, 4], decreasing = TRUE)[1])-0.5005
-    # spacing_4 <- (end_4 - start)/(length(rownames(words_df_4))-1)
-    # plots_by_topic_4 <- axis_canvas(freq_df_list[[4]], axis = 'x') +
-    #   draw_image(paste0(rownames(words_df_4)[1], "_plot.png"), x = start) +
-    #   draw_image(paste0(rownames(words_df_4)[2], "_plot.png"), x = start + spacing_4) +
-    #   draw_image(paste0(rownames(words_df_4)[3], "_plot.png"), x = start + 2*spacing_4) +
-    #   draw_image(paste0(rownames(words_df_4)[4], "_plot.png"), x = start + 3*spacing_4) +
-    #   draw_image(paste0(rownames(words_df_4)[5], "_plot.png"), x = start + 4*spacing_4) +
-    #   draw_image(paste0(rownames(words_df_4)[6], "_plot.png"), x = start + 5*spacing_4) +
-    #   draw_image(paste0(rownames(words_df_4)[7], "_plot.png"), x = start + 6*spacing_4) +
-    #   draw_image(paste0(rownames(words_df_4)[8], "_plot.png"), x = start + 7*spacing_4) +
-    #   draw_image(paste0(rownames(words_df_4)[9], "_plot.png"), x = start + 8*spacing_4) +
-    #   draw_image(paste0(rownames(words_df_4)[10], "_plot.png"), x = start + 9*spacing_4) +
-    #   draw_image(paste0(rownames(words_df_4)[11], "_plot.png"), x = start + 10*spacing_4) +
-    #   draw_image(paste0(rownames(words_df_4)[12], "_plot.png"), x = start + 11*spacing_4)
-
-    # Frequency Plot 5
-    # words_df_5 <- as.data.frame(topics(words_lda)[as.data.frame(topics(words_lda)) == 5])
-    # end_5 <- (sort(freq_df[, 5], decreasing = TRUE)[1])-0.5005
-    # spacing_5 <- (end_5 - start)/(length(rownames(words_df_5))-1)
-    # plots_by_topic_5 <- axis_canvas(freq_df_list[[5]], axis = 'x') +
-    #   draw_image(paste0(rownames(words_df_5)[1], "_plot.png"), x = start) +
-    #   draw_image(paste0(rownames(words_df_5)[2], "_plot.png"), x = start + spacing_5) +
-    #   draw_image(paste0(rownames(words_df_5)[3], "_plot.png"), x = start + 2*spacing_5) +
-    #   draw_image(paste0(rownames(words_df_5)[4], "_plot.png"), x = start + 3*spacing_5) +
-    #   draw_image(paste0(rownames(words_df_5)[5], "_plot.png"), x = start + 4*spacing_5) +
-    #   draw_image(paste0(rownames(words_df_5)[6], "_plot.png"), x = start + 5*spacing_5) +
-    #   draw_image(paste0(rownames(words_df_5)[7], "_plot.png"), x = start + 6*spacing_5) +
-    #   draw_image(paste0(rownames(words_df_5)[8], "_plot.png"), x = start + 7*spacing_5) +
-    #   draw_image(paste0(rownames(words_df_5)[9], "_plot.png"), x = start + 8*spacing_5) +
-    #   draw_image(paste0(rownames(words_df_5)[10], "_plot.png"), x = start + 9*spacing_5) +
-    #   draw_image(paste0(rownames(words_df_5)[11], "_plot.png"), x = start + 10*spacing_5) +
-    #   draw_image(paste0(rownames(words_df_5)[12], "_plot.png"), x = start + 11*spacing_5)
-
     plot_1 <- ggdraw(insert_xaxis_grob(freq_df_list[[1]], plots_by_topic_1, position = "top"))
     plot_2 <- ggdraw(insert_xaxis_grob(freq_df_list[[2]], plots_by_topic_2, position = "top"))
     plot_3 <- ggdraw(insert_xaxis_grob(freq_df_list[[3]], plots_by_topic_3, position = "top"))
@@ -1084,35 +863,6 @@ GetWordAnalysis <- function(data, n_plots) {
     return(equations)
 }
 
-MakeSentimentBarPlot <- function(data, n_plots, plot_names, title = "Satisfaction") {
-    "
-    Plot the sentiment bar graph in order of ascending satisfaction scores.
-    Input: data_long, n_plots, plot_names
-    Output: the sentiment bar graph by ascending satisfaction scores
-    "
-
-    if (title == 'Hiring') { x_label <- 'Interview Performance Plots' } else { x_label <- "Customer Journey Plots" }
-
-    sentiment_df <- OrderSentimentDataframe(data, n_plots, plot_names)
-    sentiment_bar_plot <- ggplot(sentiment_df, aes(x = plot_names, y = mean)) +
-        geom_bar(position = "dodge", stat = "identity", fill = "darkorange") +
-        geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), width = .2,
-                      position = position_dodge(.9)) +
-        ggtitle(paste("Mean Sentiment Scores by Ascending", title, "Scores")) +
-        xlab(x_label) +
-        ylab("Mean Sentiment Score") +
-        theme(
-            plot.title = element_blank(), #element_text(color = "black", size=31, face="bold", hjust = 0.5),
-            text = element_text(color = "black", size = 25),
-            axis.title.y = element_text(color = "black", size = 30, face = "bold"),
-            axis.title.x = element_text(color = "black", size = 30, face = "bold"),
-            axis.text.x = element_blank(),
-            axis.ticks.x = element_blank()
-        )
-
-    return(sentiment_bar_plot)
-}
-
 Get_word_stats <- function(data, n_plots) {
     "
     Group 'clean' words (only lowercase letters a-z) together into individual dataframes by plot type
@@ -1131,4 +881,32 @@ Get_word_stats <- function(data, n_plots) {
     equations$word_gen <- word_gen
 
     return(equations)
+}
+
+OrderSentimentDataframe <- function(data, n_plots, plot_names) {
+    "
+    Create a new data frame to store the sentiment scores by ascending willing scores
+    Input: data_long, n_plots, plot_names
+    Output: sentiment_df_sorted (the sentiment_df ordered by levels in the function factor())
+    "
+
+    # Get the order of willing scores
+    stats <- Get_stats(data, n_plots)
+    data_plot <- data.frame(plot_names = plot_names,
+                            willing_score_avg = unlist(stats)[c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE)],
+                            willing_score_sd = unlist(stats)[c(FALSE, TRUE, FALSE, FALSE, FALSE, FALSE)],
+                            pd_score_avg = unlist(stats)[c(FALSE, FALSE, TRUE, FALSE, FALSE, FALSE)],
+                            pd_score_sd = unlist(stats)[c(FALSE, FALSE, FALSE, TRUE, FALSE, FALSE)],
+                            wtp_score_avg = unlist(stats)[c(FALSE, FALSE, FALSE, FALSE, TRUE, FALSE)],
+                            wtp_score_sd = unlist(stats)[c(FALSE, FALSE, FALSE, FALSE, FALSE, TRUE)])
+
+    # Create sentiment data frame ordered by ascending willing scores
+    sentiment_stats <- Get_sentiment_stats(data, n_plots)
+    sentiment_df <- data.frame(plot_names = plot_names,
+                               mean = unlist(sentiment_stats)[c(TRUE, FALSE)],
+                               sd = unlist(sentiment_stats)[c(FALSE, TRUE)])
+    sentiment_df_sorted <- sentiment_df[order(data_plot$willing_score_avg),]
+    sentiment_df_sorted$plot_names <- factor(sentiment_df_sorted$plot_names, levels = data_plot_long$plot_names[1:n_plots])
+
+    return(sentiment_df_sorted)
 }

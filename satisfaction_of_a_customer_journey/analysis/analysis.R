@@ -449,6 +449,12 @@ data_plot_long <- ProcessForPlots(d_long, n_plots, plot_names) #num_rows = num_p
 
 calculate_sentiment <- FALSE
 if (calculate_sentiment) {
+    pacman::p_load('sentiment.ai')
+
+    ####### Run only first time if you are using this package #######
+    #init_sentiment.ai()
+    #install_sentiment.ai()
+
     d_long[, "sentiment_score"] <- sapply(d_long["word"], CalculateSentiment, model_type = 'ai')
     write.csv(data.frame(sentiment_score = d_long[, "sentiment_score"]), "./data/sentiment_scores.csv", row.names = FALSE)
 } else {
@@ -472,7 +478,6 @@ if (FALSE) {
     Create bar plot, word clouds, and sentiment plot
     "
 
-
     grouped_bar_plot_wtp <- MakeGroupedBarPlot(data_plot_long, wtp = TRUE)
     plot_images <- MakeGroupedBarPlotImages(grouped_bar_plot_wtp, plot_names) #the little customer journey icons
 
@@ -488,16 +493,8 @@ if (FALSE) {
     plot(arranged_word_clouds)
     dev.off()
 
-
-    #### (2.3) MAKE PLOT OF SENTIMENT SCORES, ORDERED BY SATISFACTION SCORES
-    sentiment_bar_plot <- MakeSentimentBarPlot(d_long, n_plots, plot_names)
-    sentiment_plot_images <- MakeGroupedBarPlotImages(sentiment_bar_plot, plot_names) #the little customer journey icons
-
-    pdf(file = "customer_journeys_sentiment_plot.pdf", width = 17, height = 8)
-    ggdraw(insert_xaxis_grob(sentiment_bar_plot, sentiment_plot_images, position = "bottom"))
-    dev.off()
-
     #### (2.4) MAKE FREQUENCY PLOTS FOR TOPIC MODELING
+    pacman::p_load('topicmodels')
     topic_modeling <- TopicModeling(d_long, n_plots, plot_names)
 
     plot_files <- list.files(pattern = c("(.pdf|.png)"))
@@ -519,8 +516,9 @@ pdf(file = "linear_vs_quadratic_fit.pdf", width = 13, height = 6.5)
 main_effects
 dev.off()
 
-write.csv(data.frame(word = d_long), "./data/d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
-write.csv(data.frame(word = dat), "./data/dat.csv", row.names = FALSE) #create word analysis csv for google colab code
+#create word analysis csv for google colab code
+write.csv(data.frame(word = d_long), "./data/d_long.csv", row.names = FALSE) 
+write.csv(data.frame(word = dat), "./data/dat.csv", row.names = FALSE)
 
 
 #### (3.2) RUN DESCRIPTIVE ANALYSES

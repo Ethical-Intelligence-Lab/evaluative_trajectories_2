@@ -20,7 +20,7 @@ pacman::p_load('data.table', #rename data frame columns
                'sentimentr', #sentiment analysis
                'tm', #text mining
                'wordcloud', #visualize wordclouds for topic models
-                   #'ldatuning', #find number of topics in topic models
+                       #'ldatuning', #find number of topics in topic models
                'lme4', #run mixed effects linear regression
                'lmerTest', #used in conjunction with lme4; get p-values
                'robustHD', #for the standardize function
@@ -118,38 +118,6 @@ Get_stats <- function(data, n_plots) {
     }
 
     return(equations)
-}
-
-##===========================================##
-## FUNCTIONS FOR PLOTTING SENTIMENT BAR PLOT ##
-##===========================================##
-
-OrderSentimentDataframe <- function(data, n_plots, plot_names) {
-    "
-    Create a new data frame to store the sentiment scores by ascending willing scores
-    Input: data_long, n_plots, plot_names
-    Output: sentiment_df_sorted (the sentiment_df ordered by levels in the function factor())
-    "
-
-    # Get the order of willing scores
-    stats <- Get_stats(data, n_plots)
-    data_plot <- data.frame(plot_names = plot_names,
-                            willing_score_avg = unlist(stats)[c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE)],
-                            willing_score_sd = unlist(stats)[c(FALSE, TRUE, FALSE, FALSE, FALSE, FALSE)],
-                            pd_score_avg = unlist(stats)[c(FALSE, FALSE, TRUE, FALSE, FALSE, FALSE)],
-                            pd_score_sd = unlist(stats)[c(FALSE, FALSE, FALSE, TRUE, FALSE, FALSE)],
-                            wtp_score_avg = unlist(stats)[c(FALSE, FALSE, FALSE, FALSE, TRUE, FALSE)],
-                            wtp_score_sd = unlist(stats)[c(FALSE, FALSE, FALSE, FALSE, FALSE, TRUE)])
-
-    # Create sentiment data frame ordered by ascending willing scores
-    sentiment_stats <- Get_sentiment_stats(data, n_plots)
-    sentiment_df <- data.frame(plot_names = plot_names,
-                               mean = unlist(sentiment_stats)[c(TRUE, FALSE)],
-                               sd = unlist(sentiment_stats)[c(FALSE, TRUE)])
-    sentiment_df_sorted <- sentiment_df[order(data_plot$willing_score_avg),]
-    sentiment_df_sorted$plot_names <- factor(sentiment_df_sorted$plot_names, levels = data_plot_long$plot_names[1:n_plots])
-
-    return(sentiment_df_sorted)
 }
 
 ##========================##
@@ -266,7 +234,9 @@ simulate_f1_score <- function(dat) {
 
 #simulate_f1_score(d_long)
 
-CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, random = FALSE, fold_amount = 180, perf_metric = "F1", max_wtp = FALSE, predicted_willing = data.frame(), sample_all_ones = FALSE, weight = 7) {
+CrossValidationAnalysisForRaffle <- function(dat, n_plots, fold_amount = 10,
+                                             perf_metric = "F1", predicted_willing = data.frame(),
+                                             sample_all_ones = FALSE, weight = 7, n_reps = 10, load_results = FALSE) {
     print("----------- Running cross validation analysis for raffle choice... -----------")
     choices <- data.frame()
 
@@ -274,7 +244,6 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
     dat$picked_movie <- pm
 
     if (dim(predicted_willing)[1] != 0) { predicted_willing$picked_movie <- pm }
-
 
     maxs <- aggregate(dat$willing, by = list(dat$Unnamed..0), max)
     maxs <- maxs[rep(seq_len(nrow(maxs)), each = 8),]
@@ -305,215 +274,75 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
                         "d1_avg_unweight", "d1_avg_weight_prime", "d1_avg_weight_asc", "d1_avg_weight_des", "d1_avg_weight_end",
                         "d2_avg_unweight", "d2_avg_weight_prime", "d2_avg_weight_asc", "d2_avg_weight_des", "d2_avg_weight_end")
     predictors <- c("Embeddings", "Interestingness", "Sentiment Score", "Maximum", "Minimum", "End Value", "Start Value", "Num. of Peaks", "Num. of Valleys", "Num. of Extrema", "Integral",
-                    "1st Deriv.", "1st Deriv. Prime", "1st Deriv. Asc.", "1st Deriv. Desc.", "1st Deriv. End",
-                    "2nd Deriv.", "2nd Deriv. Prime", "2nd Deriv. Asc.", "2nd Deriv. Desc.", "2nd Deriv. End")
+                    "1st Deriv.", "1st Deriv. Early", "1st Deriv. Asc.", "1st Deriv. Desc.", "1st Deriv. End",
+                    "2nd Deriv.", "2nd Deriv. Early", "2nd Deriv. Asc.", "2nd Deriv. Desc.", "2nd Deriv. End")
     if (colnames(dat)[10] != "Integral") {
         setnames(dat, old = predictors_old, new = predictors)
     }
 
-    set.seed(1)
     n_participants <- dim(dat)[1] / n_plots
-    folds <- cut(seq(1, nrow(dat)), breaks = n_participants, labels = FALSE)
-    folds2 <- rep(seq(1, n_plots), times = n_participants) #plot x subjects folds
-    indeces <- seq(1, (n_plots * n_participants))
-
-    #-------------------------------------------------------------------------------------------------------------------
-    p_value_stars_willing <- c()
     fit_wts = ifelse(dat$picked_movie == TRUE, weight, 1)
-    if (max_wtp) {
-        fit_wts = ifelse(dat$max_willing == TRUE, weight, 1)
 
-        # Create fold_amount random partitions with equal class distribution
-        set.seed(1)
-        folds <- createFolds(factor(dat$max_willing), k = fold_amount, list = TRUE)
+    if (load_results) {
+        results_raffle <- read.csv(paste0('cv_results/cv_', fold_amount, '_', n_reps, '_raffle', '.csv'), row.names = 1)
+    } else {
+        scores_list <- list()
+        for (p in 1:n_reps) {
+            # Create fold_amount random partitions with equal class distribution
+            print(paste("Running iteration ", p, "..."))
+            set.seed(p)
+            folds <- createFolds(factor(dat$picked_movie), k = fold_amount, list = TRUE)
+            all_indices <- createFolds(factor(dat$picked_movie), k = 1, list = TRUE)[[1]]
 
-        results_raffle <- data.frame(matrix(NA, nrow = length(predictors), ncol = fold_amount))
-        rownames(results_raffle) <- predictors
+            # Train on all data instead of single fold with size n_ss / fold_amount
+            results_raffle <- data.frame(matrix(NA, nrow = length(predictors), ncol = fold_amount))
+            rownames(results_raffle) <- predictors
 
-        for (i in 1:length(predictors)) {
-            for (j in 1:fold_amount) {  # Number of folds
-                ss_results <- c()
-                truths <- c()
-                for (k in 1:length(folds[[j]])) {  # Predict each participant in fold
-                    trainIndeces <- folds[[j]]
-                    testIndeces <- folds[[j]][k]
-                    trainIndeces <- trainIndeces[trainIndeces != testIndeces]
+            for (i in 1:length(predictors)) {
+                for (j in 1:fold_amount) {  # Number of folds
+                    ss_results <- c()
+                    truths <- c()
 
-                    fitpc <- glm(max_willing ~ get(predictors[i]), data = dat, subset = trainIndeces, family = binomial, weights = fit_wts) #fit model on subset of train data
-
-                    probabilities <- fitpc %>% predict(dat[testIndeces,], type = "response")
-                    predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
-
-                    ss_results <- c(ss_results, predicted.classes)
-                    truths <- c(truths, dat$max_willing[testIndeces])
-                }
-
-                cm <- confusionMatrix(as.factor(c(matrix(ss_results))), as.factor(c(truths)), mode = "everything", positive = "1")
-
-                if (perf_metric == "Accuracy") {
-                    score <- cm$overall[perf_metric]
-                } else {
-                    score <- cm$byClass[perf_metric]
-                }
-
-                if (is.na(score)) { score <- 0 }
-
-                results_raffle[i, j] <- score
-            }
-
-            print(paste('willing: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_raffle[i,]), na.rm = TRUE)))
-        }
-
-    } else if (dim(predicted_willing)[1] != 0) {
-
-        # Create fold_amount random partitions with equal class distribution
-        set.seed(1)
-        folds <- createFolds(factor(predicted_willing$picked_movie), k = fold_amount, list = TRUE)
-
-        results_raffle <- data.frame(matrix(NA, nrow = length(predictors), ncol = fold_amount))
-        rownames(results_raffle) <- predictors
-
-        for (i in 1:length(predictors)) {
-            for (j in 1:fold_amount) {  # Number of folds
-                ss_results <- c()
-                truths <- c()
-                for (k in 1:length(folds[[j]])) {  # Predict each participant in fold
-                    trainIndeces <- folds[[j]]
-                    testIndeces <- folds[[j]][k]
-                    trainIndeces <- trainIndeces[trainIndeces != testIndeces]
-
-                    fitpc <- glm(picked_movie ~ get(predictors[i]), data = predicted_willing, subset = trainIndeces, family = binomial, weights = fit_wts) #fit model on subset of train data
-
-                    probabilities <- fitpc %>% predict(predicted_willing[testIndeces,], type = "response")
-                    predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
-
-                    ss_results <- c(ss_results, predicted.classes)
-                    truths <- c(truths, predicted_willing$picked_movie[testIndeces])
-                }
-
-                cm <- confusionMatrix(as.factor(c(matrix(ss_results))), as.factor(c(truths)), mode = "everything", positive = "1")
-
-                if (perf_metric == "Accuracy") {
-                    score <- cm$overall[perf_metric]
-                } else {
-                    score <- cm$byClass[perf_metric]
-                }
-
-                if (is.na(score)) { score <- 0 }
-
-                results_raffle[i, j] <- score
-            }
-
-            print(paste('willing: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_raffle[i,]), na.rm = TRUE)))
-        }
-
-    } else if (no_kfold) {  # Just simple logistic regression
-        results_raffle <- data.frame(matrix(NA, nrow = length(predictors), ncol = 1))
-
-        for (i in 1:length(predictors)) {
-            # Just fit logistic regression model on all data
-            fitpc <- glm(picked_movie ~ get(predictors[i]), data = dat, family = binomial, weights = fit_wts) #fit model on subset of train data
-            probabilities <- fitpc %>% predict(dat, type = "response")
-            predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
-
-            ss_results <- predicted.classes
-            truths <- dat$picked_movie
-
-            cm <- confusionMatrix(as.factor(c(matrix(ss_results))), as.factor(c(truths)), mode = "everything", positive = "1")
-
-            if (perf_metric == "Accuracy") {
-                score <- cm$overall[perf_metric]
-            } else {
-                score <- cm$byClass[perf_metric]
-            }
-
-            if (is.na(score)) { score <- 0 }
-            results_raffle[i, 1] <- score
-
-            # Save p-value!
-            p_value_stars_willing[i] <- stars.pval(coef(summary(fitpc))[2, 4]) #get stars
-        }
-    } else if (random) {
-        # Create fold_amount random partitions with equal class distribution
-        set.seed(1)
-        folds <- createFolds(factor(dat$picked_movie), k = fold_amount, list = TRUE)
-        all_indices <- createFolds(factor(dat$picked_movie), k = 1, list = TRUE)[[1]]
-
-        # Train on all data instead of single fold with size n_ss / fold_amount
-        results_raffle <- data.frame(matrix(NA, nrow = length(predictors), ncol = fold_amount))
-        rownames(results_raffle) <- predictors
-
-        for (i in 1:length(predictors)) {
-            for (j in 1:fold_amount) {  # Number of folds
-                ss_results <- c()
-                truths <- c()
-
-                trainIndeces <- c(setdiff(c(all_indices), c(folds[[j]])))  # Select all data except the fold
-                fitpc <- glm(picked_movie ~ get(predictors[i]), data = dat, subset = trainIndeces, family = binomial, weights = fit_wts) #fit model on subset of train data
-
-                for (k in 1:length(folds[[j]])) {  # Predict each participant in fold
-                    testIndeces <- folds[[j]][k]
-                    probabilities <- fitpc %>% predict(dat[testIndeces,], type = "response")
-                    predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
-                    ss_results <- c(ss_results, predicted.classes)
-                    truths <- c(truths, dat$picked_movie[testIndeces])
-                }
-
-                cm <- confusionMatrix(as.factor(c(matrix(ss_results))), as.factor(c(truths)), mode = "everything", positive = "1")
-
-                if (perf_metric == "Accuracy") {
-                    score <- cm$overall[perf_metric]
-                } else {
-                    score <- cm$byClass[perf_metric]
-                }
-
-                if (is.na(score)) { score <- 0 }
-
-                results_raffle[i, j] <- score
-            }
-
-            print(paste('willing: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_raffle[i,]), na.rm = TRUE)))
-        }
-    } else if (sample_all_ones) {
-        # Sample all ones and 10% of zeros:
-        print(0)
-    } else { # Train on each participant separately
-        results_raffle <- data.frame(matrix(NA, nrow = length(predictors), ncol = fold_amount))
-        rownames(results_raffle) <- predictors
-
-        for (i in 1:length(predictors)) {
-            for (j in 1:fold_amount) {
-                ss_results <- c()
-                truths <- c()
-
-                for (k in 1:n_plots) {  # Now
-                    trainIndeces <- indeces[(folds == j) & (folds2 != k)]  # Select fold j, but exclude test index (k)
-                    testIndeces <- indeces[(folds == j) & (folds2 == k)]
+                    trainIndeces <- c(setdiff(c(all_indices), c(folds[[j]])))  # Select all data except the fold
                     fitpc <- glm(picked_movie ~ get(predictors[i]), data = dat, subset = trainIndeces, family = binomial, weights = fit_wts) #fit model on subset of train data
 
-                    probabilities <- fitpc %>% predict(dat[testIndeces,], type = "response")
-                    predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+                    for (k in 1:length(folds[[j]])) {  # Predict each participant in fold
+                        testIndeces <- folds[[j]][k]
+                        probabilities <- fitpc %>% predict(dat[testIndeces,], type = "response")
+                        predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+                        ss_results <- c(ss_results, predicted.classes)
+                        truths <- c(truths, dat$picked_movie[testIndeces])
+                    }
 
-                    ss_results <- c(ss_results, predicted.classes)
-                    truths <- c(truths, dat$picked_movie[testIndeces])
+                    cm <- confusionMatrix(as.factor(c(matrix(ss_results))), as.factor(c(truths)), mode = "everything", positive = "1")
 
+                    if (perf_metric == "Accuracy") {
+                        score <- cm$overall[perf_metric]
+                    } else {
+                        score <- cm$byClass[perf_metric]
+                    }
+
+                    if (is.na(score)) { score <- 0 }
+
+                    results_raffle[i, j] <- score
                 }
 
-                cm <- confusionMatrix(as.factor(c(matrix(ss_results))), as.factor(c(truths)), mode = "everything", positive = "1")
-
-                if (perf_metric == "Accuracy") {
-                    score <- cm$overall[perf_metric]
-                } else {
-                    score <- cm$byClass[perf_metric]
-                }
-
-                if (is.na(score)) { score <- 0 }
-
-                results_raffle[i, j] <- score
+                #print(paste('Raffle: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_raffle[i,]), na.rm = TRUE)))
             }
 
-            print(paste('willing: mean predictor result,', predictors[i], ': ', mean(as.numeric(results_raffle[i,]), na.rm = TRUE)))
+            scores_list <- append(scores_list, list(results_raffle))
         }
+
+        results_df <- data.frame("1" = scores_list[[1]])
+        for (i in 2:n_reps) {
+            col_name <- i
+            results_df <- cbind(results_df, data.frame(col_name = scores_list[[i]]))
+        }
+
+        names(results_df) <- (1:n_reps * fold_amount)
+
+        results_raffle <- results_df
+        write.csv(results_raffle, paste0('cv_results/cv_', fold_amount, '_', n_reps, '_raffle', '.csv'))
     }
 
     # Reorder predictors according to their significance
@@ -525,9 +354,16 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
 
     colnames(t_results_raffle) <- predictors
     results_raffle_long <- gather(t_results_raffle, key = predictors, value = predictors_results, colnames(t_results_raffle)) #length(predictors)*n_folds
-    willing_new_order <- with(results_raffle_long, reorder(predictors, predictors_results, absmean))
+    willing_new_order <- with(results_raffle_long, reorder(predictors, predictors_results, get_mean))
     results_raffle_long["willing_new_order"] <- willing_new_order
 
+
+    means_h <- aggregate(results_raffle_long$predictors_results, list(results_raffle_long$predictors), FUN = mean)
+    ordered_pred <- means_h[order(-means_h$x),]
+    cat("\n")
+    for (i in ordered_pred$Group.1) {
+        print(sprintf("%-20s *-*-*-*-* Mean Score:  %f", i, means_h[means_h$Group.1 == i, 'x']))
+    }
     #-------------------------------------------------------------------------------------------------------------------
     #-------------------------------------------------------------------------------------------------------------------
     #3. Plotting
@@ -538,7 +374,7 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
     # Make boxplot from CV_plotter function
     predictors_plot <- CV_plotter(predictors_results_long, predictors_results_long$predictors_order,
                                   predictors_results_long$results, predictors_results_long$question_type,
-                                  "Predictors", y_axis = paste0(perf_metric, " Score"), no_kfold = no_kfold)
+                                  "Predictors", y_axis = paste0(perf_metric, " Score"), no_kfold = FALSE)
 
     x_labs <- ggplot_build(predictors_plot)$layout$panel_params[[1]]$
         x$
@@ -547,32 +383,30 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, no_kfold = FALSE, ran
     # Loop through the predictors, comparing each to a null distribution
     # willing: One-sided Wilcox test
     print("RAFFLE CHOICE: --------------------------------------------------------------------------------------")
-    if (!no_kfold) {
-        wilcox_test_wt_willing <- c()
-        p_value_stars_willing <- c()
-        wilcox_test_wt_pd <- c()
-        p_value_stars_pd <- c()
+    wilcox_test_wt_willing <- c()
+    p_value_stars_willing <- c()
+    wilcox_test_wt_pd <- c()
+    p_value_stars_pd <- c()
 
-        for (i in x_labs) {
-            vt <- var.test(as.numeric(t_results_raffle[, i]), rep(0.222, length(t_results_raffle[, i])))
+    for (i in x_labs) {
+        vt <- var.test(as.numeric(t_results_raffle[, i]), rep(0.222, length(t_results_raffle[, i])))
 
-            # Shapiro test first -> if it's normal, use t-test, if not, use wilcox test
-            if ((shapiro.test(as.numeric(t_results_raffle[, i]))$p.value < 0.05) ||
-                (shapiro.test(as.numeric(t_results_raffle[, i]))$p.value < 0.05)) {
-                wilcox_test_wt_willing[[i]] <- wilcox.test(x = t_results_raffle[, i],
-                                                           y = rep(0.222, length(t_results_raffle[, i])), alternative = "greater")
-            } else {
-                wilcox_test_wt_willing[[i]] <- t.test(x = t_results_raffle[, i],
-                                                      y = rep(0.222, length(t_results_raffle[, i])),
-                                                      alternative = "greater", var.equal = vt$p.value > 0.05)
-            }
-
-            wilcox_test_wt_willing[[i]] <- wilcox.test(t_results_raffle[, i], y = rep(0.222, length(t_results_raffle[, i])),
-                                                       conf.int = TRUE, alternative = "greater")  # Comparing with .222 (all 1's)
-            p_value_stars_willing[i] <- stars.pval(wilcox_test_wt_willing[[i]]$"p.value") #get stars
-            print(paste0("---------------", i))
-            print(wilcox_test_wt_willing[[i]])
+        # Shapiro test first -> if it's normal, use t-test, if not, use wilcox test
+        if ((shapiro.test(as.numeric(t_results_raffle[, i]))$p.value < 0.05) ||
+            (shapiro.test(as.numeric(t_results_raffle[, i]))$p.value < 0.05)) {
+            wilcox_test_wt_willing[[i]] <- wilcox.test(x = t_results_raffle[, i],
+                                                       y = rep(0.222, length(t_results_raffle[, i])), alternative = "greater")
+        } else {
+            wilcox_test_wt_willing[[i]] <- t.test(x = t_results_raffle[, i],
+                                                  y = rep(0.222, length(t_results_raffle[, i])),
+                                                  alternative = "greater", var.equal = vt$p.value > 0.05)
         }
+
+        wilcox_test_wt_willing[[i]] <- wilcox.test(t_results_raffle[, i], y = rep(0.222, length(t_results_raffle[, i])),
+                                                   conf.int = TRUE, alternative = "greater")  # Comparing with .222 (all 1's)
+        p_value_stars_willing[i] <- stars.pval(wilcox_test_wt_willing[[i]]$"p.value") #get stars
+        print(paste0("---------------", i))
+        print(wilcox_test_wt_willing[[i]])
     }
 
     # Define heights of annotations
@@ -761,11 +595,15 @@ dev.off()
 avg_f1s <- c()
 max_f1s <- c()
 fold_amount <- 10
-results_list <- CrossValidationAnalysisForRaffle(dat, n_plots, no_kfold = FALSE, random = TRUE, fold_amount = fold_amount,
-                                                 perf_metric = "F1", max_wtp = FALSE)
+results_list <- CrossValidationAnalysisForRaffle(dat, n_plots, fold_amount = fold_amount,
+                                                 perf_metric = "F1", load_results = TRUE)
 pdf(file = paste0("./plots/analysis_plots/raffle_kfold_random_f1_", fold_amount, ".pdf"), width = 17, height = 9)
 plot(results_list[[1]])
 dev.off()
+
+print("Same significant features predicting willingness to pay were significant for predicting the raffle choice")
+cor.test(c(0.75, 0.73, 0.72, 0.71, 0.67, 0.63, 0.63, 0.56, 0.54, 0.44, 0.17),
+         c(0.37, 0.36, 0.37, 0.35, 0.36, 0.34, 0.35, 0.30, 0.33, 0.28, 0.23))
 
 avg_f1s <- append(avg_f1s, results_list[[2]])
 max_f1s <- append(max_f1s, results_list[[3]])

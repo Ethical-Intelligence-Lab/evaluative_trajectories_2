@@ -8,6 +8,8 @@ MakeGroupedBarPlot <- function(data_plot_long, wtp = FALSE) {
     Output: grouped_bar_plot (the grouped bar graph)
     "
 
+    print("Generating bar plot...")
+
     if (wtp) {
         data_plot_long <- data_plot_long[data_plot_long$question_type == "wtp_score_avg",]
         grouped_bar_plot <- ggplot(data_plot_long, aes(x = plot_names, y = score, fill = question_type)) +
@@ -110,33 +112,6 @@ MakeGroupedBarPlotImages <- function(LifelinesPlot, plot_names) {
     return(plot_images)
 }
 
-MakeSentimentBarPlot <- function(data, n_plots, plot_names, title = "Satisfaction") {
-    "
-    Plot the sentiment bar graph in order of ascending satisfaction scores.
-    Input: data_long, n_plots, plot_names
-    Output: the sentiment bar graph by ascending satisfaction scores
-    "
-
-    sentiment_df <- OrderSentimentDataframe(data, n_plots, plot_names)
-    sentiment_bar_plot <- ggplot(sentiment_df, aes(x = plot_names, y = mean)) +
-        geom_bar(position = "dodge", stat = "identity", fill = "darkorange") +
-        geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), width = .2,
-                      position = position_dodge(.9)) +
-        ggtitle(paste("Mean Sentiment Scores by Ascending", title, "Scores")) +
-        xlab("Customer Journey Plots") +
-        ylab("Mean Sentiment Score") +
-        theme(
-            plot.title = element_blank(), #element_text(color = "black", size=31, face="bold", hjust = 0.5),
-            text = element_text(color = "black", size = 25),
-            axis.title.y = element_text(color = "black", size = 30, face = "bold"),
-            axis.title.x = element_text(color = "black", size = 30, face = "bold"),
-            axis.text.x = element_blank(),
-            axis.ticks.x = element_blank()
-        )
-
-    return(sentiment_bar_plot)
-}
-
 CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, random_data) {
     "
     What this function does: creates a grouped box plot of the cross-validated prediction results
@@ -150,17 +125,17 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
     grouped_box_plot <- ggplot(data = results_df, aes(x = x_order, y = results_order)) +
         scale_colour_manual(values = c("#800000", "#3c7ea3")) +
         scale_x_discrete() +
-        stat_summary(fun = absmean, geom = "point", shape = 20, size = 5, aes(group = question_type, color=question_type), position = position_dodge(.75)) +
-        stat_summary(fun.data = absse, geom = "errorbar", size=1.2, aes(group = question_type, width=0.5, color=question_type), position = position_dodge(.75)) +
+        stat_summary(fun = get_mean, geom = "point", shape = 20, size = 5, aes(group = question_type, color=question_type), position = position_dodge(.75)) +
+        stat_summary(fun.data = get_se, geom = "errorbar", size=1.2, aes(group = question_type, width=0.5, color=question_type), position = position_dodge(.75)) +
         ggtitle(paste0("Satisfaction and Desirability Predictions with ", x_labels)) +
         xlab(x_labels) +
         ylab("Prediction Performance\n(Cross-Validated Pearson's r)") +
         scale_y_continuous(breaks = round(seq(-1, 1, by = 0.2), 1)) +
         scale_fill_manual(
             guide = guide_legend(title.position = "top")) +
-        geom_hline(yintercept = absmean(random_data$random)) +
-        ggplot2::annotate("rect", xmin = -Inf, xmax = Inf, ymin = absse(random_data$random)$ymin,
-                          ymax = absse(random_data$random)$ymax, fill = "black", alpha = .2, color = NA) +
+        geom_hline(yintercept = get_mean(random_data$random)) +
+        ggplot2::annotate("rect", xmin = -Inf, xmax = Inf, ymin = get_se(random_data$random)$ymin,
+                          ymax = get_se(random_data$random)$ymax, fill = "black", alpha = .2, color = NA) +
         theme_bw() +
         if (x_labels == "Predictors") {
             theme(element_blank(),

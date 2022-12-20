@@ -15,8 +15,8 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
     if (no_kfold) { y_label <- paste0("Prediction Accuracy\n(", y_axis, ")") }
     grouped_box_plot <- ggplot(data = results_df, aes(x = x_order, y = results_order)) +
         scale_x_discrete() +
-        stat_summary(fun = absmean, geom = "point", shape = 20, size = 5, color = "#3c7ea3", position = position_dodge(.75)) +
-        stat_summary(fun.data = absse, geom = "errorbar", color = "#3c7ea3", aes(group = question_type, width = 0.5), position = position_dodge(.75)) +
+        stat_summary(fun = mean, geom = "point", shape = 20, size = 5, color = "#3c7ea3", position = position_dodge(.75)) +
+        stat_summary(fun.data = get_se, geom = "errorbar", color = "#3c7ea3", aes(group = question_type, width = 0.5), position = position_dodge(.75)) +
         ggtitle(paste0("Willingness Predictions with ", x_labels)) +
         xlab(x_labels) +
         ylab(y_label) +
@@ -54,8 +54,8 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
 
     if(!is.null(random_data)) {
         grouped_box_plot <- grouped_box_plot +
-            geom_hline(yintercept = absmean(random_data$random)) +
-        ggplot2::annotate("rect", xmin = -Inf, xmax = Inf, ymin = absse(random_data$random)$ymin, ymax = absse(random_data$random)$ymax, fill = "black", alpha = .2, color = NA)
+            geom_hline(yintercept = get_mean(random_data$random)) +
+        ggplot2::annotate("rect", xmin = -Inf, xmax = Inf, ymin = get_se(random_data$random)$ymin, ymax = get_se(random_data$random)$ymax, fill = "black", alpha = .2, color = NA)
     }
 
     if(y_axis == "F1 Score") {
@@ -138,32 +138,4 @@ MakeGroupedBarPlotImages <- function(LifelinesPlot, data_plot_long) {
     }
 
     return(plot_images)
-}
-
-
-MakeSentimentBarPlot <- function(data, n_plots, plot_names) {
-    "
-    Plot the sentiment bar graph in order of ascending willing scores.
-    Input: data_long, n_plots, plot_names
-    Output: the sentiment bar graph by ascending willing scores
-    "
-
-    sentiment_df <- OrderSentimentDataframe(data, n_plots, plot_names)
-    sentiment_bar_plot <- ggplot(sentiment_df, aes(x = plot_names, y = mean)) +
-        geom_bar(position = "dodge", stat = "identity", fill = "darkorange") +
-        geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), width = .2,
-                      position = position_dodge(.9)) +
-        ggtitle("Mean Sentiment Scores by Ascending WTP Scores") +
-        xlab("Trailer Experience Clusters") +
-        ylab("Mean Sentiment Score") +
-        theme(
-            plot.title = element_blank(), #element_text(color = "black", size=31, face="bold", hjust = 0.5),
-            text = element_text(color = "black", size = 25),
-            axis.title.y = element_text(color = "black", size = 30, face = "bold"),
-            axis.title.x = element_text(color = "black", size = 30, face = "bold"),
-            axis.text.x = element_blank(),
-            axis.ticks.x = element_blank()
-        )
-
-    return(sentiment_bar_plot)
 }
