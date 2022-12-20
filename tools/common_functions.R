@@ -71,7 +71,7 @@ CrossValidationAnalysis <- function(dat, fold_amount = 10,
                 errors_list <- append(errors_list, list(errors_e))
             }
 
-            # Collect mean r's of each run
+            # Collect r's of each run
             results_all <- data.frame("1" = results_list[[1]])
             for (i in 2:n_reps) {
                 col_name <- i
@@ -80,7 +80,7 @@ CrossValidationAnalysis <- function(dat, fold_amount = 10,
 
             names(results_all) <- (1:n_reps * fold_amount)
 
-            # Collect mean RMSE's of each run
+            # Collect RMSE's of each run
             errors_all <- data.frame("1" = errors_list[[1]])
             for (i in 2:n_reps) {
                 col_name <- i
@@ -99,7 +99,7 @@ CrossValidationAnalysis <- function(dat, fold_amount = 10,
         }
     }
 
-    # ----------------------------- Now we have the results, sort the data and plot -----------------------------
+    # ----------------------------- Now that we have the results, sort the data and plot -----------------------------
 
     predictors <- predictors[!predictors %in% 'random']
     if (length(dep_var) == 1) {  # Studies with single question
