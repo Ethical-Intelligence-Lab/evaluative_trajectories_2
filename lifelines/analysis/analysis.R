@@ -469,7 +469,7 @@ if (FALSE) {
     MakeWordClouds(data_long, n_plots, plot_names) #make word cloud images
     arranged_word_clouds <- ArrangeWordClouds(data_long) #arrange word clouds into a grid
 
-    pdf(file = "lifelines_word_clouds.pdf", width = 18, height = 8)
+    pdf(file = "data_word_clouds.pdf", width = 18, height = 8)
     plot(arranged_word_clouds)
     dev.off()
 
