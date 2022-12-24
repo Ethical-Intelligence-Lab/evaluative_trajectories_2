@@ -262,6 +262,9 @@ GetMainEffects <- function(data, data_long, n_plots, plot_names, my_embeddings) 
     print(summary(effect_mod))
     print('-----------------------------------------------------')
 
+    print("Effect size: ")
+    print(etaSquared(lm(effect_mod)))
+
     print('Which question type scored higher?')
     t_mod <- t.test(data$score_n ~ data$question_type, paired = TRUE)
     print(t_mod)
@@ -289,6 +292,10 @@ GetMainEffects <- function(data, data_long, n_plots, plot_names, my_embeddings) 
     print('First, the linear fit:')
     meaning_pd_diff_lin <- lm(meaning_pd_diff ~ data_plot$order_num)
     print(summary(meaning_pd_diff_lin))
+
+    print("Effect size: ")
+    print(etaSquared(lm(meaning_pd_diff_lin)))
+
     linear_plot <- ggplot(meaning_pd_diff_lin, aes(data_plot$order_num, meaning_pd_diff)) +
         theme_classic() +
         geom_point() +
@@ -309,6 +316,9 @@ GetMainEffects <- function(data, data_long, n_plots, plot_names, my_embeddings) 
               axis.title.y = element_blank(),
               axis.title.x = element_blank())
     print('-----------------------------------------------------')
+
+    print("Effect size: ")
+    print(etaSquared(lm(meaning_pd_diff_quadratic)))
 
     print('Difference between linear and quadratic models:')
     meaning_pd_diff_lrt <- lrtest(meaning_pd_diff_lin, meaning_pd_diff_quadratic)

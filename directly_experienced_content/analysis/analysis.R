@@ -38,7 +38,8 @@ pacman::p_load('data.table', #rename data frame columns
                'broom',
                'rcompanion',
                'pscl',
-               'splitstackshape'
+               'splitstackshape',
+               'lsr'
 )
 
 source('./plotting.R')
@@ -126,7 +127,12 @@ Get_stats <- function(data, n_plots) {
 
 GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
     print("*-*-*-*-*-*-*-*-*-*-*-* We found a significant effect of cluster type on willingness to buy *-*-*-*-*-*-*-*-*-*-*-*")
-    print(summary(lm(data = data, willing ~ cluster_labels)))
+    model <- lm(data = data, willing ~ cluster_labels)
+    print(summary(model))
+
+    print("Effect size: ")
+    print(etaSquared(model))
+
 }
 
 
