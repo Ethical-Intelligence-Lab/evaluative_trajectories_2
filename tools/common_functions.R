@@ -1,9 +1,9 @@
 pacman::p_load('qdapDictionaries')
-pacman::p_unload('hash')
-pacman::p_load('hash')
 
 CrossValidationAnalysis <- function(dat, fold_amount = 10,
                                     n_reps = 1, load_results = FALSE, dep_var = 'hiring_likelihood') {
+    pacman::p_unload('hash')
+    pacman::p_load('hash')
     print("Running cross validation...")
     dir.create('cv_results', showWarnings = FALSE)
 

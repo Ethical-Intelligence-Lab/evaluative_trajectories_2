@@ -36,7 +36,8 @@ pacman::p_load('data.table', #rename data frame columns
                'tidyverse', #used in conjunction with tidyr; contains dplyr, used for select(); load last because of conflict!
                'slam', #utility functions for sparse matrices 
                'broom', #install separately if does not work
-               'hash'
+               'hash',
+               'effsize'
 )
 
 source('../../tools/common_functions.R')
@@ -264,6 +265,10 @@ GetMainEffects <- function(data, data_long, n_plots, plot_names, my_embeddings) 
 
     print('Which question type scored higher?')
     t_mod <- t.test(data$score_n ~ data$question_type, paired = TRUE)
+    
+    print('Cohen\'s D:')
+    cohen.d(data$score_n ~ data$question_type)
+    
     print(t_mod)
     print(paste('Means: ', unique(data$question_type), ': ', tapply(data$score_n, data$question_type, mean)))
     print(paste('SDs: ', unique(data$question_type), ': ', tapply(data$score_n, data$question_type, sd)))
