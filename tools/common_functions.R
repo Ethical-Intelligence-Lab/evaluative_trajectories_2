@@ -115,8 +115,9 @@ CrossValidationAnalysis <- function(dat, fold_amount = 10,
         ordered_pred <- means_h[order(-means_h$x),]
         cat("\n")
         for (i in ordered_pred$Group.1) {
-            print(sprintf("%-50s: %f *-*-*-*-* Mean RMSE:  %f", paste0('Mean predictor result, ', i),
-                          means_h[means_h$Group.1 == i, 'x'], mean(as.numeric(errors_e[i,]))))
+            print(sprintf("%-50s: %#.2f *-*-*-*-* Mean RMSE:  %#.2f", paste0('Mean predictor result, ', i),
+                          round(means_h[means_h$Group.1 == i, 'x'], digits=2),
+                          round(mean(as.numeric(errors_e[i,])), digits=2)))
         }
 
         predictors_results_ordered <- data.frame(predictors_order = results_e_long$new_order,
@@ -210,8 +211,9 @@ CrossValidationAnalysis <- function(dat, fold_amount = 10,
             cat("\n")
             print(paste("*********", dv, "*********"))
             for (i in ordered_pred$Group.1) {
-                print(sprintf("%-50s: %f *-*-*-*-* Mean RMSE:  %f", paste0('Mean predictor result, ', i),
-                              means_h[means_h$Group.1 == i, 'x'], mean(as.numeric(errors_e[i,]))))
+                print(sprintf("%-50s: %#.2f *-*-*-*-* Mean RMSE:  %#.2f", paste0('Mean predictor result, ', i),
+                              round(means_h[means_h$Group.1 == i, 'x'], digits=2),
+                              round(mean(as.numeric(errors_e[i,])), digits=2)))
             }
         }
 
