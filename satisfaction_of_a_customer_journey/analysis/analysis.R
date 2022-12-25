@@ -35,8 +35,7 @@ pacman::p_load('data.table', #rename data frame columns
                'tidyverse', #used in conjunction with tidyr; contains dplyr, used for select(); load last because of conflict!
                'slam', #utility functions for sparse matrices
                'broom', #install separately if does not work
-               'hash',
-               'lsr'
+               'hash'
 )
 
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #set working directory to current directory
@@ -290,9 +289,6 @@ GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
     effect_mod <- lmer(score_n ~ question_type_n + plot_type_n + (1 | subject_n), data = data)
     print(summary(effect_mod))
 
-    print("Effect size: ")
-    print(etaSquared(lm(effect_mod)))
-
     print('*-*-*-*-*-*-*-*-* Does willingness to pay correlate with satisfaction ratings? *-*-*-*-*-*-*-*-*')
     wtp_satisfaction_corr <- cor.test(data$willingness_to_pay[data$question_type == "satisfaction"],
                                       data$score_n[data$question_type == "satisfaction"])
@@ -302,6 +298,8 @@ GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
     wtp_pd_corr <- cor.test(data$willingness_to_pay[data$question_type == "personal_desirability"],
                             data$score_n[data$question_type == "personal_desirability"])
     print(wtp_pd_corr)
+
+    # 4. Difference between linear and quadratic models for satisfaction and personal desirability
 
     # Get the order of average satisfaction scores
     stats <- Get_stats(d_long, n_plots)
@@ -337,10 +335,6 @@ GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
     print('Second, the quadratic fit:')
     satisfaction_pd_diff_quadratic <- lm(satisfaction_pd_diff ~ data_plot$order_num + I(data_plot$order_num^2))
     print(summary(satisfaction_pd_diff_quadratic))
-
-    print("Effect size: ")
-    print(etaSquared(satisfaction_pd_diff_quadratic))
-
     quadratic_plot <- ggplot(satisfaction_pd_diff_quadratic, aes(data_plot$order_num, satisfaction_pd_diff)) +
         theme_classic() +
         geom_point() +
@@ -352,7 +346,6 @@ GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
 
     print('*-*-*-*-*-*-*-*-* Difference between linear and quadratic models: *-*-*-*-*-*-*-*-*')
     satisfaction_pd_diff_lrt <- lrtest(satisfaction_pd_diff_lin, satisfaction_pd_diff_quadratic)
-
     print(satisfaction_pd_diff_lrt)
     print('-----------------------------------------------------')
 

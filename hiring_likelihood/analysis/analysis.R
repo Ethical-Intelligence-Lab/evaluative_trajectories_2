@@ -37,8 +37,7 @@ pacman::p_load('ggplot2', #plot stuff
                'tidyverse', #used in conjunction with tidyr; contains dplyr, used for select(); load last because of conflict!
                'slam', #utility functions for sparse matrices 
                'broom', #install separately if does not work
-               'filesstrings',
-               'lsr'
+               'filesstrings'
 )
 
 # Call in the Lifelines_Generate_Plots.R script from the Lifelines folder for plot images
@@ -223,9 +222,6 @@ GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
     effect_mod <- lm(data = data[data['question_type'] == "hiring_likelihood",], score ~ plot_type_n + subject_n)
     print(summary(effect_mod))
     print('-----------------------------------------------------')
-
-    print("Effect size:")
-    print(etaSquared(effect_mod))
 
     return()
 
