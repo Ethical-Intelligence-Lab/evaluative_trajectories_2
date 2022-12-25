@@ -149,54 +149,6 @@ CreateDataFeaturesDF <- function(data) {
 
 }
 
-MakePCAFunction <- function(score_features_df) {
-    "
-    Perform mixed-effects regression based on PCA-reduced features of our predictors.
-    Input: score_features_df
-    Output: the structure of the PCA fit, the PCA correlation values for both willing and pd
-    scores, and score_features_df (now with the addition of PC1 through PC5 scores)
-    "
-
-    # Define the columns that we want for the PCA: from embeddings to integral and the D1 & D2 predictors.
-    score_features_ss <- subset(score_features_df, select = c(number_peaks:d2_avg_weight_end, embeddings:sentiment_score))
-
-    # Fit the PCA
-    my_PCA <- principal(score_features_ss, 5, rotate = "promax")
-    print(my_PCA)
-    colnames(my_PCA$Structure) <- c("PC1", "PC2", "PC3", "PC4", "PC5")
-    colnames(my_PCA$scores) <- c("PC1", "PC2", "PC3", "PC4", "PC5")
-
-    # Print, then save the features corrplot
-    corrplot(my_PCA$Structure, method = "circle", mar = c(0, 0, 2, 0))
-    mtext("Features Correlation Matrix \nover PCs", at = 1, line = 1, cex = 1.5)
-    pdf(file = "./plots/analysis_plots/features_corrplot.pdf")
-    corrplot(my_PCA$Structure, method = "circle", mar = c(0, 0, 4, 0))
-    mtext("Features Correlation Matrix \nover PCs", at = 1, line = 1, cex = 1.5)
-    dev.off()
-
-    print('principal components by features')
-    print(my_PCA$Structure)
-
-    # Bind the PC1 through PC5 scores to the score_features_df data frame
-    score_features_df <- cbind(score_features_df, my_PCA$scores)
-
-    # 1. Fit mixed effects regression predicting willing
-    willing_features <- lmer(data = score_features_df,
-                             willing ~ PC1 +
-                                 PC2 +
-                                 PC3 +
-                                 PC4 +
-                                 PC5 +
-                                 (1 | Unnamed..0) +
-                                 (1 | genre))
-
-    print('WTP vs. features:')
-    print(summary(willing_features, correlation = TRUE))
-
-    return(score_features_df)
-
-}
-
 simulate_f1_score <- function(dat) {
     pm <- as.numeric(dat$genre == genres[match(dat$movie_choice, movies)])
     n_participants <- dim(dat)[1] / n_plots
@@ -551,12 +503,6 @@ pdf(file = paste0("./plots/analysis_plots/customer_journeys_bar_plot_", "k=", n_
 ggdraw(insert_xaxis_grob(grouped_bar_plot, plot_images, position = "bottom"))
 dev.off()
 
-print("Does percentages of raffle choices predict cluster type?")
-summary(lm(data_plot_long$score ~ data_plot_long$raffle_percentage))
-
-print("Does percentages of raffle choices correlate with mean WTP?")
-cor.test(data_plot_long$score, data_plot_long$raffle_percentage)
-
 ## ============================================== (2) Analysis =====================================================
 print("-----------------------------------------------------------------------------------------------------------------------------------------")
 print("*-*-*-* !!!! Exclusions and line fitting is in 'main.ipynb', and clustering analyses are in 'TimeSeriesClustering.ipynb file !!!! *-*-*-*")
@@ -574,6 +520,9 @@ write.csv(data.frame(word = d_long), fname, row.names = FALSE) #create word anal
 
 #### RUN DESCRIPTIVE ANALYSES
 GetMainEffects(d_long, n_plots, plot_names, my_embeddings)
+
+print("Do percentages of raffle choices correlate with mean WTP?")
+print(cor.test(data_plot_long$score, data_plot_long$raffle_percentage))
 
 # Create a dataframe of features and subject scores
 dat <- d_long
@@ -602,8 +551,8 @@ plot(results_list[[1]])
 dev.off()
 
 print("Same significant features predicting willingness to pay were significant for predicting the raffle choice")
-cor.test(c(0.75, 0.73, 0.72, 0.71, 0.67, 0.63, 0.63, 0.56, 0.54, 0.44, 0.17),
-         c(0.37, 0.36, 0.37, 0.35, 0.36, 0.34, 0.35, 0.30, 0.33, 0.28, 0.23))
+print(cor.test(c(0.75, 0.73, 0.72, 0.71, 0.67, 0.63, 0.63, 0.56, 0.54, 0.44, 0.17),
+               c(0.37, 0.36, 0.37, 0.35, 0.36, 0.34, 0.35, 0.30, 0.33, 0.28, 0.23)))
 
 avg_f1s <- append(avg_f1s, results_list[[2]])
 max_f1s <- append(max_f1s, results_list[[3]])

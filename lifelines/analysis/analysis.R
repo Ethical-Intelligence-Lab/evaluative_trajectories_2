@@ -265,11 +265,11 @@ GetMainEffects <- function(data, data_long, n_plots, plot_names, my_embeddings) 
 
     print('Which question type scored higher?')
     t_mod <- t.test(data$score_n ~ data$question_type, paired = TRUE)
+    print(t_mod)
     
     print('Cohen\'s D:')
-    cohen.d(data$score_n ~ data$question_type)
+    print(cohen.d(data$score_n ~ data$question_type))
     
-    print(t_mod)
     print(paste('Means: ', unique(data$question_type), ': ', tapply(data$score_n, data$question_type, mean)))
     print(paste('SDs: ', unique(data$question_type), ': ', tapply(data$score_n, data$question_type, sd)))
     print('-----------------------------------------------------')
