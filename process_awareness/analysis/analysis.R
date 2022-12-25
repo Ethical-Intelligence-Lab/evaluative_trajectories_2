@@ -1,4 +1,4 @@
-## Analysis Script for 'Evaluative Summaries'
+rm(list=ls())
 
 ## Import libraries
 if (!require(pacman)) {install.packages("pacman")}
@@ -169,7 +169,10 @@ GetRankings <- function(data, old_labs, new_labs) {
     
     # Perform rank order analysis, using aggregation to find the optimal rank order 
     set.seed(123)
-    RankAggreg(feature_wide, length(new_labs), verbose = TRUE)
+    ragg <- RankAggreg(feature_wide, length(new_labs), verbose = FALSE)
+    
+    print("----- Rank Aggregation Results: ------")
+    print(ragg)
 
     # Order by mean ranking
     agg_tbl <- feature_rankings %>% group_by(features) %>%
@@ -178,7 +181,9 @@ GetRankings <- function(data, old_labs, new_labs) {
 
     print("----- By Mean Ranking: ------")
     print(agg_tbl[order(agg_tbl$mean_ranking),])
-    return( agg_tbl[order(agg_tbl$mean_ranking),] )
+    #return( agg_tbl[order(agg_tbl$mean_ranking),] )
+    
+    return(ragg$top.list)
     
     #BruteAggreg(feature_wide, length(new_labs)) #this BruteAggreg() function is apparently preferred, but because we have more than 10 features and a large number of participants, R does not have enough memory to perform the calculation.
     # Source: https://www.rdocumentation.org/packages/RankAggreg/versions/0.6.6/topics/BruteAggreg ("This approach works for small problems only and should not be attempted if k is relatively large (k > 10)."); https://www.r-bloggers.com/2021/03/rank-order-analysis-in-r/ 
@@ -216,11 +221,14 @@ d <- PerformExclusions(d_raw) #num_rows = num_ss
 d_n_after_exclusions <- d$d_n_after_exclusions[1]
 
 # Perform rank order analysis 
-rankings <- GetRankings(d, old_names, new_names)
+rankings <- data.frame(GetRankings(d, old_names, new_names))
 
 true_ranking <- c('sentiment_score', 'end_value', 'd1_avg_unweight', 'embeddings', 'min', 'integral', 'max', 'number_peaks', 'interestingness', 'number_valleys', 'number_extrema', 'd2_avg_unweight')
 labels <- c('Sentiment Score', 'End Value', 'Slope', 'Embeddings', 'Minimum', 'Integral', 'Maximum', 'Number of Peaks', 'Interestingness',  'Num. of Valleys', 'Number of\nTotal Extrema', 'Acceleration')
 GetTrueRank <- function(x) {
+  print(x)
+  print(true_ranking)
+  print(which(x == true_ranking))
   return( which(x == true_ranking)[[1]] ); 
 }
 
@@ -228,11 +236,11 @@ GetLabel <- function(x) {
   return( labels[which(x == true_ranking)[[1]]] );
 }
 
-rankings$true_ranking <- sapply(rankings$features, GetTrueRank)
-rankings$labels <- sapply(rankings$features, GetLabel)
-rankings$ranking <- (1:12)
+rankings$true_ranking <- sapply(rankings[,1], GetTrueRank)
+rankings$labels <- sapply(rankings[,1], GetLabel)
+rankings$predicted_ranking <- (1:12)
 
-plot <- ggplot(data = rankings, aes(x = ranking, y = true_ranking, size=24), asp=1) +        
+plot <- ggplot(data = rankings, aes(x = predicted_ranking, y = true_ranking, size=24), asp=1) +        
   geom_point(aes(size = 16), alpha = 0.2) +
   xlab("Predicted Rank (Study 2)") + ylab("True Rank (Study 1)") + 
   scale_x_continuous(breaks = seq(0, 12, by = 1)) +
@@ -247,7 +255,7 @@ plot
 ggsave("fig.png", plot = plot, width=30, height=30, units = "cm")
 
 print("When correlating the predicted ranks from study 2 with the true ranks of study 1, we see no evidence of a systematic relationship")
-print(cor.test(rankings$ranking, rankings$true_ranking))
+print(cor.test(rankings$predicted_ranking, rankings$true_ranking))
 
 ## ================================= (4) Plot rankings ========================================
 
