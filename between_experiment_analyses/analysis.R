@@ -8,25 +8,6 @@ pacman::p_load('RcppHungarian', 'ggplot2', 'ggpubr', 'rjson')
 
 source('../tools/Lifelines_Generate_Plots.R')
 
-# Create R equations
-create_equation <- function(eqn) {
-    eqn <- fromJSON(eqn)
-
-    if (length(eqn) <= 1) { print("error") }
-    return(function(x) {
-        l <- length(eqn) - 1
-
-        sum <- 0
-        count <- 0
-        for (p in l:0) {
-            count <- count + 1
-            sum <- sum + eqn[count] * `^`(x * 8 / 9, p)
-        }
-
-        return(sum)
-    })
-}
-
 ### Load Data ###
 d_customer_journeys <- read.csv('../satisfaction_of_a_customer_journey/analysis/data/dat.csv')
 d_interview_performance <- read.csv('../hiring_likelihood/analysis/data/dat.csv')
