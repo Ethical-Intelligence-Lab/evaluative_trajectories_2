@@ -1,4 +1,4 @@
-"word.subject","word.cluster_labels","word.question_type","word.score","word.sentiment_score"
+"subject","cluster_labels","question_type","score","sentiment_score"
 1,4,"willing",20,-0.771744713187218
 1,0,"willing",62,0.75802755355835
 1,7,"willing",61,0.573689103126526

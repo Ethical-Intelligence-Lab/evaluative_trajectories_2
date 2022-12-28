@@ -525,8 +525,8 @@ main_effects
 dev.off()
 
 #create word analysis csv for google colab code
-write.csv(data.frame(word = d_long), "./data/d_long.csv", row.names = FALSE) 
-write.csv(data.frame(word = dat), "./data/dat.csv", row.names = FALSE)
+write.csv(data.frame(d_long), "./data/d_long.csv", row.names = FALSE) 
+write.csv(data.frame(dat), "./data/dat.csv", row.names = FALSE)
 
 
 #### (3.2) RUN DESCRIPTIVE ANALYSES

@@ -482,15 +482,15 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
 # Read Data
 d_raw <- read.csv("./data/data.csv")
 d_s1 <- read.csv("../../satisfaction_of_a_customer_journey/analysis/data/dat.csv")
-d_s1_mean <- aggregate(d_s1, list(d_s1$word.plot_names, d_s1$word.question_type), mean)
-d_s1_m <- aggregate(d_s1, list(d_s1$word.plot_names), mean)
-d_s1_order <- d_s1_m[order(d_s1_m$word.sentiment_score),]
+d_s1_mean <- aggregate(d_s1, list(d_s1$plot_names, d_s1$question_type), mean)
+d_s1_m <- aggregate(d_s1, list(d_s1$plot_names), mean)
+d_s1_order <- d_s1_m[order(d_s1_m$sentiment_score),]
 
 d_s1_mean_satis <- d_s1_mean[d_s1_mean$Group.2 == 'satisfaction',]
-d_s1_order_satisfaction <- d_s1_mean_satis[order(d_s1_mean_satis$word.sentiment_score),]
+d_s1_order_satisfaction <- d_s1_mean_satis[order(d_s1_mean_satis$sentiment_score),]
 
 d_s1_mean_pd <- d_s1_mean[d_s1_mean$Group.2 == 'personal_desirability',]
-d_s1_order_pd <- d_s1_mean_pd[order(d_s1_mean_pd$word.sentiment_score),]
+d_s1_order_pd <- d_s1_mean_pd[order(d_s1_mean_pd$sentiment_score),]
 
 # Process Data
 d <- PerformExclusions(d_raw) #num_rows = num_ss
@@ -528,24 +528,24 @@ ordered_d <- sentiment_df[[1]] %>%
     arrange(factor(plot_names, levels = d_s1_order[, 1]))
 
 print("Do sentiment scores from study 1 correlate with study S1 sentiment results (sentence)?")
-print(cor.test(d_s1_order$word.sentiment_score, ordered_d[ordered_d$question_type == 'sentence', 'mean']))
+print(cor.test(d_s1_order$sentiment_score, ordered_d[ordered_d$question_type == 'sentence', 'mean']))
 
 print("Do sentiment scores from study 1 correlate with study S1 sentiment results (word)?")
-print(cor.test(d_s1_order$word.sentiment_score, ordered_d[ordered_d$question_type == 'word', 'mean']))
+print(cor.test(d_s1_order$sentiment_score, ordered_d[ordered_d$question_type == 'word', 'mean']))
 
 
 
 print("Do satisfaction scores from study 1 correlate with study S1 sentiment results (word)?")
-print(cor.test(d_s1_order_satisfaction$word.score, ordered_d[ordered_d$question_type == 'word', 'mean']))
+print(cor.test(d_s1_order_satisfaction$score, ordered_d[ordered_d$question_type == 'word', 'mean']))
 
 print("Do satisfaction scores from study 1 correlate with study S1 sentiment results (sentence)?")
-print(cor.test(d_s1_order_satisfaction$word.score, ordered_d[ordered_d$question_type == 'sentence', 'mean']))
+print(cor.test(d_s1_order_satisfaction$score, ordered_d[ordered_d$question_type == 'sentence', 'mean']))
 
 print("Do personal desirability scores from study 1 correlate with study S1 sentiment results (word)?")
-print(cor.test(d_s1_order_pd$word.score, ordered_d[ordered_d$question_type == 'word', 'mean']))
+print(cor.test(d_s1_order_pd$score, ordered_d[ordered_d$question_type == 'word', 'mean']))
 
 print("Do personal desirability scores from study 1 correlate with study S1 sentiment results (sentence)?")
-print(cor.test(d_s1_order_pd$word.score, ordered_d[ordered_d$question_type == 'sentence', 'mean']))
+print(cor.test(d_s1_order_pd$score, ordered_d[ordered_d$question_type == 'sentence', 'mean']))
 
 
 vt <- var.test(sentiment_df[[2]][sentiment_df[[2]]$question_type == 'sentence', 'sentiment_score'],

@@ -523,7 +523,7 @@ if (sentence_data) {
 d_long[, "is_word"] <- lapply(d_long["word"], is.word)
 
 if (sentence_data) { fname <- "./data/d_long_sentence.csv" } else { fname <- "./data/d_long.csv" }
-write.csv(data.frame(word = d_long), fname, row.names = FALSE) #create word analysis csv for google colab code
+write.csv(data.frame(d_long), fname, row.names = FALSE) #create word analysis csv for google colab code
 
 #### RUN DESCRIPTIVE ANALYSES
 GetMainEffects(d_long, n_plots, plot_names, my_embeddings, data_plot_long)
@@ -537,7 +537,7 @@ d_long <- CreateDataFeaturesDF(d_long)
 
 d_for_comparison <- gather(dat, key = question_type, value = score, willing)
 d_for_comparison <- dplyr::select(d_for_comparison, subject, cluster_labels, question_type, score, sentiment_score) #rows = num_ss*num_plots*num_questions
-write.csv(data.frame(word = d_for_comparison), "./data/dat_for_comparison.csv", row.names = FALSE) #create word analysis csv for google colab code
+write.csv(data.frame(d_for_comparison), "./data/dat_for_comparison.csv", row.names = FALSE) #create word analysis csv for google colab code
 
 
 ##### RUN PREDICTIVE ANALYSES

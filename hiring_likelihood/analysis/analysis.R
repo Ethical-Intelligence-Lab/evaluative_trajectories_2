@@ -292,7 +292,7 @@ analyze_words <- GetWordAnalysis(d_long, n_plots)
 words_df <- as.data.frame(matrix(unlist(analyze_words), ncol = length(unlist(analyze_words[1]))))
 analyze_words_df <- cbind(plot_names = plot_names, words = words_df$V1)
 write.csv(analyze_words_df, "./data/word_analysis.csv", row.names = FALSE) #create word analysis csv for google colab code
-write.csv(data.frame(word = d_long), "./data/d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
+write.csv(data.frame(d_long), "./data/d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
 
 ### (ii) CREATE SEMANTIC EMBEDDINGS DATAFRAME [**NB: YOU NEED TO HAVE ALREADY EXTRACTED EMBEDDINGS FOR word_analysis.csv]
 my_embeddings <- read.csv("data/embeddings_long.csv", header = TRUE)
@@ -361,8 +361,8 @@ Get main statistical effects, and run descriptive and predictive analyses
 dat <- gather(d_long, key = question_type, value = score, hiring_likelihood)
 dat <- dplyr::select(dat, subject, plot_names, question_type, score, sentiment_score) #rows = num_ss*num_plots*num_questions
 
-write.csv(data.frame(word = d_long), "./data/d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
-write.csv(data.frame(word = dat), "./data/dat.csv", row.names = FALSE) #create word analysis csv for google colab code
+write.csv(data.frame(d_long), "./data/d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
+write.csv(data.frame(dat), "./data/dat.csv", row.names = FALSE) #create word analysis csv for google colab code
 
 main_effects <- GetMainEffects(dat, n_plots, plot_names, my_embeddings, data_plot_long)
 pdf(file = "linear_vs_quadratic_fit.pdf", width = 13, height = 6.5)

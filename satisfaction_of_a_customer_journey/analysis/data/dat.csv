@@ -1,4 +1,4 @@
-"word.subject","word.plot_names","word.question_type","word.score","word.willingness_to_pay","word.sentiment_score","word.wtp_original"
+"subject","plot_names","question_type","score","willingness_to_pay","sentiment_score","wtp_original"
 1,"linear_rise","satisfaction",90,10.9034875525361,0.776275396347046,20000
 1,"linear_fall","satisfaction",10,9.51719319141624,-0.782345414161682,5000
 1,"linear_low","satisfaction",0,8.60090245954208,-0.766147941350937,2000

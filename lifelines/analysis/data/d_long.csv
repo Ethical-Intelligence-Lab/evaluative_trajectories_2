@@ -1,4 +1,4 @@
-"word.subject","word.plot_names","word.question_type","word.score"
+"subject","plot_names","question_type","score"
 1,"linear_rise","meaningfulness",70
 1,"linear_fall","meaningfulness",41
 1,"linear_low","meaningfulness",52

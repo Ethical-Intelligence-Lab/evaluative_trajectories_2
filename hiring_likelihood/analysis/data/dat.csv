@@ -1,4 +1,4 @@
-"word.subject","word.plot_names","word.question_type","word.score","word.sentiment_score"
+"subject","plot_names","question_type","score","sentiment_score"
 1,"linear_rise","hiring_likelihood",93,0.569373607635498
 1,"linear_fall","hiring_likelihood",0,-0.802764624357224
 1,"linear_low","hiring_likelihood",0,-0.799973487854004

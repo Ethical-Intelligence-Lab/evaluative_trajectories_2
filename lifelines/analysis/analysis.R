@@ -500,7 +500,7 @@ Get main statistical effects, and run descriptive and predictive analyses
 # Get dataframe for analysis (dat_final), with nrows = num_ss*num_plots*num_questions
 dat <- gather(data_long, key = question_type, value = score, meaningfulness, personal_desirability)
 dat <- dplyr::select(dat, subject, plot_names, question_type, score) #rows = num_ss*num_plots*num_questions
-write.csv(data.frame(word = dat), "./data/d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
+write.csv(data.frame(dat), "./data/d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
 
 # Get main statistical effects
 main_effects <- GetMainEffects(dat, data_long, n_plots, plot_names, my_embeddings, data_plot_long)

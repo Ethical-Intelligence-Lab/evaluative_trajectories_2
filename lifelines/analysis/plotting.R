@@ -304,7 +304,7 @@ TopicModeling <- function(dat_long, n_plots, plot_names) {
     # Visualization using word clouds
     set.seed(1)
     words_gathered <- words_prob_terms %>%
-        mutate(word = rownames(words_prob_terms)) %>%
+        mutate(rownames(words_prob_terms)) %>%
         gather(topic, weight, -word)
 
     n <- 50
