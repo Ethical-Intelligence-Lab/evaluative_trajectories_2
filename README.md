@@ -12,7 +12,7 @@ Julian De Freitas, Pechthida Kim, Tomer Ullman
   * Setup sentiment.ai (For more information: https://benwiseman.github.io/sentiment.ai/#Installation__Setup)
   * Set calculate_sentiment to TRUE.
 
-### For Analyses Comparing Different Studies:
+### For All Analyses Comparing Different Studies:
 * Run `between_experiment_analyses/analysis.R`
 
 ### Study 1 - Satisfaction of a Customer Journey:

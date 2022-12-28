@@ -33,7 +33,7 @@ d_interview_performance <- read.csv('../hiring_likelihood/analysis/data/dat.csv'
 d_lifelines <- read.csv('../lifelines/analysis/data/d_long.csv')
 d_first_person <- read.csv('../directly_experienced_content/analysis/data/dat_for_comparison.csv')
 
-cluster_polynomials <- read.csv('../directly_experienced_content/analysis/data/cluster_polynomials.csv')
+cluster_centers <- read.csv('../directly_experienced_content/analysis/data/cluster_centers.csv')
 
 #correlation between WTP and satisfaction, and WTP and desirability
 
@@ -88,8 +88,11 @@ n_clusters <- length(table(d_first_person$cluster_labels))
 #########   First run 'tools/Lifelines_Generate_Plots.R'     #########
 
 plotter <- function(i, exp, eqn1, eqn2) {
-    base <- ggplot() + xlim(0, 80) + ylim(0, 100) +
-        geom_function(fun = eqn1, colour="#00AF50", aes(size = 2)) +
+    cluster_line_df <- data.frame(eqn1, head(seq(from = 0, to = 80, by = 8/90), -1))
+    colnames(cluster_line_df) <- c("yy", "xx")
+
+    base <- ggplot(data=cluster_line_df, aes( x=xx, y=yy, group=1)) + xlim(0, 80) + ylim(0, 100) +
+        geom_point(colour="#00AF50", aes(size = 2)) +
         geom_function(fun = eqn2, colour="firebrick3", aes(size = 2)) +
         xlab("") + ylab("") +
         theme(legend.position="none")
@@ -106,13 +109,12 @@ exp <- 'customer_journeys'
 # Compare each cluster with each curve in other studies
 mses = matrix(nrow = 27, ncol = 27)
 for (i in 1:27) {  # Each cluster
-    cluster_poly <- create_equation(cluster_polynomials[i, 2])
-
+    cluster_center <- cluster_centers[, i + 1]
     for (k in 1:27) { # Each curve in other studies
         curr_error <- 0
 
-        for (j in 0:80) {
-            curr_error <- sum(c(curr_error, (cluster_poly(j * 9 / 8) - eqns[[k]](j))^2))  # equations for lifelines
+        for (j in 1:900) {
+            curr_error <- sum(c(curr_error, (cluster_center[j] - eqns[[k]]((j - 1) * 80 / 900))^2)) # equations for lifelines
         }
 
         curr_error <- curr_error / 80
@@ -126,12 +128,10 @@ errors <- list()
 for (i in (1:27)) { errors <- append(errors, mses[i, result[[2]][, 2][i]]) }
 print(paste0("Total error: ", Reduce("+", errors)))
 
-
-png(file = (paste0("cluster_match_exp=", exp, ".png")), width = 480, height = 480)
 plot_list <- list()
 for (i in 1:27) {
     print(paste0('Cluster ', i, ' matches with line ', result[[2]][, 2][i]))
-    plot_list[[i]] <- plotter(i, exp, create_equation(cluster_polynomials[i, 2]), eqns[[result[[2]][, 2][i]]])
+    plot_list[[i]] <- plotter(i, exp, cluster_centers[, i + 1], eqns[[result[[2]][, 2][i]]])
 }
 
 
@@ -166,7 +166,6 @@ d_cj <- d_interview_performance[d_interview_performance$word.question_type == "h
 print(cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
          aggregate(d_ll, list(d_ll$corresponding_plots), mean)$word.score))
 
-})
 
 ############## Check if corresponding clusters correlate in Lifelines ##############
 
@@ -179,3 +178,5 @@ print('***** Lifelines PD v. WTP *****')
 d_cj <- d_lifelines[d_lifelines$word.question_type == "personal_desirability",]
 print(cor.test(aggregate(d_cj, list(d_cj$word.plot_names), mean)$word.score,
          aggregate(d_ll, list(d_ll$corresponding_plots), mean)$word.score))
+
+})
