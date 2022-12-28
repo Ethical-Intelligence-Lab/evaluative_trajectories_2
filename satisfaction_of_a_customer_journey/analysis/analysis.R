@@ -269,7 +269,7 @@ Get_stats <- function(data, n_plots) {
 ## FUNCTIONS FOR ANALYSIS ##
 ##========================##
 
-GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
+GetMainEffects <- function(data, n_plots, plot_names, my_embeddings, data_plot_long) {
     "
     This function gets various correlations and main effects of the participant data.
     Input: This function takes as input a dataframe with rows = num_ss*num_plots*num_questions.
@@ -278,15 +278,23 @@ GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
     "
 
     # 1. Question & Plot Types
+    data_plot_long$index <- 1:nrow(data_plot_long)
+    get_plot_index <- function(row) {
+        return(data_plot_long[data_plot_long$plot_names == row['plot_names'] &
+                              data_plot_long$question_type == 'satisfaction_score_avg', 'index'])
+    }
 
-    data$plot_type_n <- as.numeric(factor(data$plot_names)) #create numeric version of plot_names
+    data$plot_type_n <- apply(data, 1, get_plot_index)
     data$score_n <- as.numeric(data$score) #create numeric version of score (which are characters)
     data$question_type_n <- as.numeric(factor(data$question_type, levels = unique(data$question_type)))
     data$willingness_to_pay <- as.numeric(data$willingness_to_pay) #create numeric version of willingness_to_pay
     data$subject_n <- as.numeric(factor(data$subject))
 
     print('*-*-*-*-*-*-*-*-* Did answers vary depending on question and plot type? *-*-*-*-*-*-*-*-*')
-    effect_mod <- lmer(score_n ~ question_type_n + plot_type_n + (1 | subject_n), data = data)
+    effect_mod <- lmer(score_n ~ question_type_n * plot_type_n + (1 | subject_n), data = data)
+
+    #plot(data$plot_type_n, data$score_n)
+    plot(effect_mod)
     print(summary(effect_mod))
 
     print('*-*-*-*-*-*-*-*-* Does willingness to pay correlate with satisfaction ratings? *-*-*-*-*-*-*-*-*')
@@ -511,7 +519,7 @@ Get main statistical effects, and run descriptive and predictive analyses
 dat <- gather(d_long, key = question_type, value = score, satisfaction, personal_desirability)
 dat <- dplyr::select(dat, subject, plot_names, question_type, score, willingness_to_pay, sentiment_score, wtp_original) #rows = num_ss*num_plots*num_questions
 
-main_effects <- GetMainEffects(dat, n_plots, plot_names, my_embeddings)
+main_effects <- GetMainEffects(dat, n_plots, plot_names, my_embeddings, data_plot_long)
 pdf(file = "linear_vs_quadratic_fit.pdf", width = 13, height = 6.5)
 main_effects
 dev.off()

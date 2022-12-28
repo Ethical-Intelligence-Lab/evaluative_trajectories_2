@@ -124,9 +124,16 @@ Get_stats <- function(data, n_plots) {
 ## FUNCTIONS FOR ANALYSIS ##
 ##========================##
 
-GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
+GetMainEffects <- function(data, n_plots, plot_names, my_embeddings, data_plot_long) {
     print("*-*-*-*-*-*-*-*-*-*-*-* We found a significant effect of cluster type on willingness to buy *-*-*-*-*-*-*-*-*-*-*-*")
-    print(summary(lm(data = data, willing ~ cluster_labels)))
+    data_plot_long$index <- 1:nrow(data_plot_long)
+    get_index <- function(row) {
+        return(data_plot_long[data_plot_long$cluster_names == paste0('cluster_', as.numeric(row['cluster_labels'])), 'index'])
+    }
+
+    data$cluster_n <- apply(data, 1, get_index)
+
+    print(summary(lm(data = data, willing ~ cluster_n)))
 }
 
 
@@ -519,7 +526,7 @@ if (sentence_data) { fname <- "./data/d_long_sentence.csv" } else { fname <- "./
 write.csv(data.frame(word = d_long), fname, row.names = FALSE) #create word analysis csv for google colab code
 
 #### RUN DESCRIPTIVE ANALYSES
-GetMainEffects(d_long, n_plots, plot_names, my_embeddings)
+GetMainEffects(d_long, n_plots, plot_names, my_embeddings, data_plot_long)
 
 print("Do percentages of raffle choices correlate with mean WTP?")
 print(cor.test(data_plot_long$score, data_plot_long$raffle_percentage))

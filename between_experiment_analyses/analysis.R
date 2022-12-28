@@ -107,25 +107,24 @@ eqns <- equations
 exp <- 'customer_journeys'
 
 # Compare each cluster with each curve in other studies
-mses = matrix(nrow = 27, ncol = 27)
+errors_matrix = matrix(nrow = 27, ncol = 27)
 for (i in 1:27) {  # Each cluster
     cluster_center <- cluster_centers[, i + 1]
     for (k in 1:27) { # Each curve in other studies
         curr_error <- 0
 
         for (j in 1:900) {
-            curr_error <- sum(c(curr_error, (cluster_center[j] - eqns[[k]]((j - 1) * 80 / 900))^2)) # equations for lifelines
+            curr_error <- sum(c(curr_error, abs(cluster_center[j] - eqns[[k]]((j - 1) * 80 / 900)))) # equations for lifelines
         }
 
-        curr_error <- curr_error / 80
-        mses[i, k] <- curr_error
+        errors_matrix[i, k] <- curr_error
     }
 }
 
-result <- HungarianSolver(mses)
+result <- HungarianSolver(errors_matrix)
 
 errors <- list()
-for (i in (1:27)) { errors <- append(errors, mses[i, result[[2]][, 2][i]]) }
+for (i in (1:27)) { errors <- append(errors, errors_matrix[i, result[[2]][, 2][i]]) }
 print(paste0("Total error: ", Reduce("+", errors)))
 
 plot_list <- list()

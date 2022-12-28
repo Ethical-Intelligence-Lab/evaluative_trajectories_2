@@ -208,12 +208,13 @@ Get_stats <- function(data, n_plots) {
     return(equations)
 }
 
+GetMainEffects <- function(data, n_plots, plot_names, my_embeddings, data_plot_long) {
+    data_plot_long$index <- 1:nrow(data_plot_long)
+    get_plot_index <- function(row) {
+        return(data_plot_long[data_plot_long$plot_names == row['plot_names'], 'index'])
+    }
 
-##================================================================================================================
-##FUNCTIONS FOR ANALYSIS##
-##================================================================================================================
-GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
-    data$plot_type_n <- as.numeric(factor(data$plot_names)) #create numeric version of plot_names
+    data$plot_type_n <- apply(data, 1, get_plot_index)
     data$score_n <- as.numeric(data$score) #create numeric version of score (which are characters)
     data$question_type_n <- as.numeric(factor(data$question_type, levels = unique(data$question_type)))
     data$subject_n <- as.numeric(factor(data$subject))
@@ -226,7 +227,6 @@ GetMainEffects <- function(data, n_plots, plot_names, my_embeddings) {
     return()
 
 }
-
 
 CreateDataFeaturesDF <- function(data, dat_final, features_df, n_after_exclusions, num_subjects_and_plots) {
     #Bind the three dataframes: data, sentiment score, and standardize(features), i.e., the standardized plot features.
@@ -364,7 +364,7 @@ dat <- dplyr::select(dat, subject, plot_names, question_type, score, sentiment_s
 write.csv(data.frame(word = d_long), "./data/d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
 write.csv(data.frame(word = dat), "./data/dat.csv", row.names = FALSE) #create word analysis csv for google colab code
 
-main_effects <- GetMainEffects(dat, n_plots, plot_names, my_embeddings)
+main_effects <- GetMainEffects(dat, n_plots, plot_names, my_embeddings, data_plot_long)
 pdf(file = "linear_vs_quadratic_fit.pdf", width = 13, height = 6.5)
 #plot(main_effects)
 #dev.off()

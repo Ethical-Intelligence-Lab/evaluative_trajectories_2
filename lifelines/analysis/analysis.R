@@ -245,7 +245,7 @@ Get_stats <- function(data, n_plots) {
 ##================================================================================================================
 ##FUNCTIONS FOR ANALYSIS##
 ##================================================================================================================
-GetMainEffects <- function(data, data_long, n_plots, plot_names, my_embeddings) {
+GetMainEffects <- function(data, data_long, n_plots, plot_names, my_embeddings, data_plot_long) {
     "
     This function gets various correlations and main effects of the participant data.
     Input: This function takes as input a dataframe with rows = num_ss*num_plots*num_questions.
@@ -253,7 +253,13 @@ GetMainEffects <- function(data, data_long, n_plots, plot_names, my_embeddings) 
     Output: various correlation and linear regression results; also, linear and quadratic plots ordered by meaningfulness scores
     "
 
-    data$plot_type_n <- as.numeric(factor(data$plot_names)) #create numeric version of plot_names
+    data_plot_long$index <- 1:nrow(data_plot_long)
+    get_plot_index <- function(row) {
+        return(data_plot_long[data_plot_long$plot_names == row['plot_names'] &
+                              data_plot_long$question_type == 'meaning_score_avg', 'index'])
+    }
+
+    data$plot_type_n <- apply(data, 1, get_plot_index) #create numeric version of plot_names
     data$score_n <- as.numeric(data$score) #create numeric version of score (which are characters)
     data$question_type_n <- as.numeric(factor(data$question_type))
     data$subject_n <- as.numeric(factor(data$subject))
@@ -497,7 +503,7 @@ dat <- dplyr::select(dat, subject, plot_names, question_type, score) #rows = num
 write.csv(data.frame(word = dat), "./data/d_long.csv", row.names = FALSE) #create word analysis csv for google colab code
 
 # Get main statistical effects
-main_effects <- GetMainEffects(dat, data_long, n_plots, plot_names, my_embeddings)
+main_effects <- GetMainEffects(dat, data_long, n_plots, plot_names, my_embeddings, data_plot_long)
 pdf(file = "linear_vs_quadratic_fit.pdf", width = 13, height = 6.5)
 plot(main_effects)
 main_effects
