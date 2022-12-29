@@ -33,8 +33,8 @@ pacman::p_load('plotrix', #for standard error
                'tidyverse', #used in conjunction with tidyr; contains dplyr, used for select(); load last because of conflict!
                'slam', #utility functions for sparse matrices 
                'broom', #install separately if does not work 
-               'filesstrings' #create and move files
-                               #'sentiment.ai'
+               'filesstrings', #create and move files
+               'effsize'
 )
 
 PerformExclusions <- function(data) {
@@ -185,7 +185,7 @@ Get_sentence_sentiment <- function(dat_long, n_plts) {
     # condition_clean <- removeWords(condition_clean, stopwords("en")) #remove stopwords like "I", "me", "my", "the", etc.
     condition_clean <- gsub("\\s+", " ", condition_clean) #remove extra whitespace 
 
-    # Sort words by plot type
+    # Gather words by plot type
     sentiment_sorted <- c()
     for (i in 1:n_plts) {
         sentiment_sorted[[i]] <- condition_clean[seq(i, length(condition_clean), n_plts)]
@@ -480,6 +480,7 @@ CV_plotter <- function(results_df, x_order, results_order, ques_type, x_labels, 
 
 ##================================================================================================================
 # Read Data
+# Ordering satisfaction, personal desirability, and both
 d_raw <- read.csv("./data/data.csv")
 d_s1 <- read.csv("../../satisfaction_of_a_customer_journey/analysis/data/dat.csv")
 d_s1_mean <- aggregate(d_s1, list(d_s1$plot_names, d_s1$question_type), mean)
@@ -547,13 +548,13 @@ print(cor.test(d_s1_order_pd$score, ordered_d[ordered_d$question_type == 'word',
 print("Do personal desirability scores from study 1 correlate with study S1 sentiment results (sentence)?")
 print(cor.test(d_s1_order_pd$score, ordered_d[ordered_d$question_type == 'sentence', 'mean']))
 
-
-vt <- var.test(sentiment_df[[2]][sentiment_df[[2]]$question_type == 'sentence', 'sentiment_score'],
-               sentiment_df[[2]][sentiment_df[[2]]$question_type == 'word', 'sentiment_score'])
-
 print("Sentence vs. Word:")
-print(t.test(sentiment_df[[2]][sentiment_df[[2]]$question_type == 'sentence', 'sentiment_score'],
-       sentiment_df[[2]][sentiment_df[[2]]$question_type == 'word', 'sentiment_score']))
+vt <- var.test(sentiment_df[[1]][sentiment_df[[1]]$question_type == 'sentence', 'mean'],
+       sentiment_df[[1]][sentiment_df[[1]]$question_type == 'word', 'mean'])
+print(t.test(sentiment_df[[1]][sentiment_df[[1]]$question_type == 'sentence', 'mean'],
+       sentiment_df[[1]][sentiment_df[[1]]$question_type == 'word', 'mean']), paired=TRUE, var.equal=vt$p.value > 0.05)
+
+print(cohen.d(sentiment_df[[1]][sentiment_df[[1]]$question_type == 'sentence', 'mean'], sentiment_df[[1]][sentiment_df[[1]]$question_type == 'word', 'mean']))
 
 n_ss <- dim(data_long)[1] / n_plots
 

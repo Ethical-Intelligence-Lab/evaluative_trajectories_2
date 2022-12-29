@@ -311,9 +311,9 @@ if (calculate_sentiment) {
     pacman::p_load('sentiment.ai')
 
     ####### Run only first time if you are using this package #######
-    #init_sentiment.ai()
     #install_sentiment.ai()
-
+    #init_sentiment.ai()
+    
     d_long[, "sentiment_score"] <- sapply(d_long["word_gen"], CalculateSentiment, model_type = 'ai')
     write.csv(data.frame(sentiment_score = d_long[, "sentiment_score"]), "./data/sentiment_scores.csv", row.names = FALSE)
 } else {
