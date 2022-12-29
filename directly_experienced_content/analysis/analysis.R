@@ -191,27 +191,27 @@ simulate_f1_score <- function(dat) {
     print(cm_r)
 }
 
-#simulate_f1_score(d_long)
-
 CrossValidationAnalysisForRaffle <- function(dat, n_plots, fold_amount = 10,
-                                             perf_metric = "F1", predicted_willing = data.frame(),
-                                             sample_all_ones = FALSE, weight = 7, n_reps = 10, load_results = FALSE) {
+                                             perf_metric = "F1", weight = 7, n_reps = 10, load_results = FALSE) {
     print("----------- Running cross validation analysis for raffle choice... -----------")
     choices <- data.frame()
 
     pm <- as.numeric(dat$genre == genres[match(dat$movie_choice, movies)])
     dat$picked_movie <- pm
 
-    if (dim(predicted_willing)[1] != 0) { predicted_willing$picked_movie <- pm }
-
+    # Get max willingness in each
     maxs <- aggregate(dat$willing, by = list(dat$Unnamed..0), max)
     maxs <- maxs[rep(seq_len(nrow(maxs)), each = 8),]
 
     dat$max_willing <- as.numeric(dat$willing == maxs$x)
 
+    # Indexes of participants who do not have more than one max willingness rating
+    ip <- which((colSums(matrix(dat$max_willing, nrow=8)) > 1) == FALSE)
+    dat_exc <- dat[dat$Unnamed..0 %in% (ip - 1),]
+
     # For each participant, find highest wtp value
-    for (i in 1:n_subjects) {
-        curr <- dat[dat$subject == i,]
+    for (i in dat_exc$subject) {
+        curr <- dat_exc[dat_exc$subject == i,]
         max <- curr[which.max(curr$willing),]
         selected_genre <- genres[match(max$movie_choice, movies)]
 
@@ -222,6 +222,7 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, fold_amount = 10,
         choices[i, 'willing'] <- curr[curr$genre == selected_genre,]$willing
     }
 
+    choices <- na.omit(choices)
     counts <- choices %>% count(correct)
     print(paste0('Percentage of subjects that picked the movie with the highest willingness that they scored: ',
                  counts[counts$correct == TRUE,]$n / sum(counts$n)))
@@ -311,11 +312,9 @@ CrossValidationAnalysisForRaffle <- function(dat, n_plots, fold_amount = 10,
     print(paste0("Mean F1 Score of all for fold amount ", fold_amount, ": ", mean(as.matrix(t_results_raffle))))
     print(paste0("Max F1 Score of all for fold amount ", fold_amount, ": ", max(cm)))
 
-    colnames(t_results_raffle) <- predictors
     results_raffle_long <- gather(t_results_raffle, key = predictors, value = predictors_results, colnames(t_results_raffle)) #length(predictors)*n_folds
     willing_new_order <- with(results_raffle_long, reorder(predictors, predictors_results, get_mean))
     results_raffle_long["willing_new_order"] <- willing_new_order
-
 
     means_h <- aggregate(results_raffle_long$predictors_results, list(results_raffle_long$predictors), FUN = mean)
     ordered_pred <- means_h[order(-means_h$x),]
@@ -530,6 +529,10 @@ GetMainEffects(d_long, n_plots, plot_names, my_embeddings, data_plot_long)
 
 print("Do percentages of raffle choices correlate with mean WTP?")
 print(cor.test(data_plot_long$score, data_plot_long$raffle_percentage))
+
+
+# Simulating F1 Score
+simulate_f1_score(d_long)
 
 # Create a dataframe of features and subject scores
 dat <- d_long
