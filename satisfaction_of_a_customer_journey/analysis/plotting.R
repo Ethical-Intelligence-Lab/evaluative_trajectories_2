@@ -1,7 +1,7 @@
 ########## ---- CONTAINS FUNCTIONS ONLY FOR PLOTTING (Common ones are in '/tools/common_functions.R') ---- #########
 ## For Study: Customer Journeys
 
-MakeGroupedBarPlot <- function(data_plot_long, wtp = FALSE) {
+MakeGroupedBarPlot <- function(data_plot_long, wtp = FALSE, plot_only_satisfaction=TRUE) {
     "
     Plot the grouped bar graph in order of ascending satisfaction scores
     Input: data_plot_long
@@ -9,6 +9,10 @@ MakeGroupedBarPlot <- function(data_plot_long, wtp = FALSE) {
     "
 
     print("Generating bar plot...")
+    ylab <- "Mean Rating"
+    if(plot_only_satisfaction) {
+        ylab <- "Mean Satisfaction"
+    }
 
     if (wtp) {
         data_plot_long <- data_plot_long[data_plot_long$question_type == "wtp_score_avg",]
@@ -18,7 +22,7 @@ MakeGroupedBarPlot <- function(data_plot_long, wtp = FALSE) {
                           position = position_dodge(.9)) +
             ggtitle("Summarizing the Satisfaction and Desirability of Different Customer Journeys") +
             xlab("Customer Journey Plots") +
-            ylab("Mean Rating") +
+            ylab(ylab) +
             theme(
                 plot.title = element_blank(),
                 legend.title = element_blank(),
@@ -42,6 +46,10 @@ MakeGroupedBarPlot <- function(data_plot_long, wtp = FALSE) {
         return(grouped_bar_plot)
     }
 
+    if(plot_only_satisfaction) {
+        data_plot_long <- data_plot_long[data_plot_long$question_type == 'satisfaction_score_avg',]
+    }
+
     data_plot_long <- data_plot_long[data_plot_long['question_type'] != 'wtp_score_avg',]
     grouped_bar_plot <- ggplot(data_plot_long, aes(x = plot_names, y = score, fill = question_type)) +
         geom_bar(position = "dodge", stat = "identity") +
@@ -49,7 +57,7 @@ MakeGroupedBarPlot <- function(data_plot_long, wtp = FALSE) {
                       position = position_dodge(.9)) +
         ggtitle("Summarizing the Satisfaction and Desirability of Different Customer Journeys") +
         xlab("Customer Journey Plots") +
-        ylab("Mean Rating") +
+        ylab(ylab) +
         scale_y_continuous(breaks = seq(0, 80, 40)) +
         theme(
             plot.title = element_blank(), #element_text(color = "black", size=30, face="bold", hjust = 0.5),
@@ -84,9 +92,17 @@ MakeGroupedBarPlotImages <- function(LifelinesPlot, plot_names) {
     "
 
     # Make "clean" (no labels) version of individual images for x-axis
-    Plotter_2 <- function(equation, x_range, y_range) {
+    Plotter_2 <- function(equation, index=10) {
+        if(index %in% c(3,2,7,26,21,9,13)) {
+            color <- "#a30202"
+        } else if(index %in% c(5,8,1,6,20,11,27)) {
+            color <- "#2fa302"
+        } else {
+            color <- "#b37d00"
+        }
+
         plot(equation, lwd = 30, xlim = c(start_age, end_age), ylim = c(0, end_y_axis), main = "",
-             xlab = "", ylab = "", axes = FALSE, col = "firebrick3")
+             xlab = "", ylab = "", axes = FALSE, col = color)
 
         return(Plotter_2)
     }
@@ -94,7 +110,8 @@ MakeGroupedBarPlotImages <- function(LifelinesPlot, plot_names) {
     # Print the images that will comprise the x-axis
     for (i in 1:length(my_equations)) { #print individual plots
         png(file = paste0(plot_names[i], "_plot.png", ""))
-        sapply(my_equations[i], Plotter_2)
+        eqn <- my_equations[i]
+        sapply(eqn, function(eqn)Plotter_2(equation = eqn, index=i))
         dev.off()
     }
 

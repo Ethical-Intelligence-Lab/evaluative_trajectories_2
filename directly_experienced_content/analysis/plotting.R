@@ -102,7 +102,7 @@ MakeGroupedBarPlot <- function(data_plot_long, raffle_percentage=FALSE) {
                       position = position_dodge(.9)) +
         ggtitle("Summarizing the willing of Different Customer Journeys") +
         xlab("Trailer Experience Clusters") +
-        ylab("Mean Rating") +
+        ylab("Mean Willingness to Pay") +
         theme(
             plot.title = element_blank(),
             legend.title = element_blank(),
