@@ -1,7 +1,7 @@
 ########## ---- CONTAINS FUNCTIONS ONLY FOR PLOTTING (Common ones are in '/tools/common_functions.R') ---- #########
 ## For Study: Customer Journeys
 
-MakeGroupedBarPlot <- function(data_plot_long, wtp = FALSE, plot_only_satisfaction=TRUE) {
+MakeGroupedBarPlot <- function(data_plot_long, wtp = FALSE, plot_only_satisfaction=FALSE) {
     "
     Plot the grouped bar graph in order of ascending satisfaction scores
     Input: data_plot_long
@@ -93,16 +93,8 @@ MakeGroupedBarPlotImages <- function(LifelinesPlot, plot_names) {
 
     # Make "clean" (no labels) version of individual images for x-axis
     Plotter_2 <- function(equation, index=10) {
-        if(index %in% c(3,2,7,26,21,9,13)) {
-            color <- "#a30202"
-        } else if(index %in% c(5,8,1,6,20,11,27)) {
-            color <- "#2fa302"
-        } else {
-            color <- "#b37d00"
-        }
-
         plot(equation, lwd = 30, xlim = c(start_age, end_age), ylim = c(0, end_y_axis), main = "",
-             xlab = "", ylab = "", axes = FALSE, col = color)
+             xlab = "", ylab = "", axes = FALSE, col = "firebrick3")
 
         return(Plotter_2)
     }
@@ -110,8 +102,7 @@ MakeGroupedBarPlotImages <- function(LifelinesPlot, plot_names) {
     # Print the images that will comprise the x-axis
     for (i in 1:length(my_equations)) { #print individual plots
         png(file = paste0(plot_names[i], "_plot.png", ""))
-        eqn <- my_equations[i]
-        sapply(eqn, function(eqn)Plotter_2(equation = eqn, index=i))
+        sapply(my_equations[i], Plotter_2)
         dev.off()
     }
 
